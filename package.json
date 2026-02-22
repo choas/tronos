@@ -1,0 +1,39 @@
+{
+  "name": "tronos",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "tronos": "./bin/tronos.ts"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "cli": "bun run bin/tronos.ts",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@types/path-browserify": "^1.0.3",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-web-links": "^0.12.0",
+    "@xterm/xterm": "^6.0.0",
+    "idb": "^8.0.3",
+    "js-yaml": "^4.1.1",
+    "path-browserify": "^1.0.1",
+    "solid-js": "^1.9.10"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^24.10.1",
+    "@vitest/ui": "^4.0.18",
+    "typescript": "~5.9.3",
+    "vite": "^7.2.4",
+    "vite-plugin-solid": "^2.11.10",
+    "vitest": "^4.0.18",
+    "@types/bun": "latest"
+  },
+  "module": "src/index.tsx",
+  "private": true
+}

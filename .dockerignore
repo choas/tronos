@@ -1,0 +1,56 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+dist
+build
+
+# Git
+.git
+.gitignore
+
+# IDE and editor
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage
+.nyc_output
+
+# Environment files (handle via docker env vars)
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+*.env
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Misc
+README.md
+LICENSE
+CHANGELOG.md
+docs
+*.md
+
+# Docker files (no need to copy these into the build context)
+Dockerfile*
+docker-compose*.yml
+.docker*
