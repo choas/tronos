@@ -132,7 +132,7 @@ const COMMAND_HELP: Record<string, { usage: string; description: string; example
   config: {
     usage: 'config [show|set <key> <value>|reset|ui]',
     description: 'Configure AI settings. Use "config show" to display current settings, "config set" to change values.',
-    examples: ['config show', 'config set apiKey sk-...', 'config set provider anthropic', 'config reset']
+    examples: ['config show', 'config set apiKey sk-...', 'config set provider anthropic', 'config set accept-terms true', 'config reset']
   },
   tpkg: {
     usage: 'tpkg <command> [arguments]',

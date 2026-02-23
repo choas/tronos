@@ -215,6 +215,18 @@ body, #root {
   margin-bottom: 8px;
 }
 
+.config-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.config-checkbox-label input[type="checkbox"] {
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+}
+
 .config-value {
   color: var(--accent-primary);
   font-weight: bold;
@@ -481,4 +493,302 @@ body, #root {
 
 .reset-warning li:last-child {
   margin-bottom: 0;
+}
+
+/* ── Marketplace Modal ─────────────────────────────────────── */
+
+.marketplace-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--overlay-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.marketplace-modal {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  width: 95%;
+  max-width: 900px;
+  height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px var(--shadow-color);
+}
+
+.marketplace-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-primary);
+  flex-shrink: 0;
+}
+
+.marketplace-header h2 {
+  margin: 0;
+  font-family: monospace;
+  font-size: 16px;
+  color: var(--fg-primary);
+  font-weight: normal;
+}
+
+.marketplace-close {
+  background: none;
+  border: none;
+  color: var(--fg-secondary);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.marketplace-close:hover {
+  color: var(--fg-primary);
+}
+
+.marketplace-search {
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-primary);
+  flex-shrink: 0;
+}
+
+.marketplace-search input {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: monospace;
+  font-size: 14px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 4px;
+  color: var(--fg-primary);
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.marketplace-search input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.marketplace-search input::placeholder {
+  color: var(--fg-secondary);
+}
+
+.marketplace-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border-primary);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.marketplace-tab {
+  padding: 6px 12px;
+  font-family: monospace;
+  font-size: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-primary);
+  background: transparent;
+  color: var(--fg-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.marketplace-tab:hover {
+  background-color: var(--hover-bg);
+  color: var(--fg-primary);
+}
+
+.marketplace-tab.active {
+  background-color: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+.marketplace-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  align-content: start;
+}
+
+.marketplace-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.2s;
+}
+
+.marketplace-card:hover {
+  border-color: var(--accent-primary);
+}
+
+.marketplace-card.enterprise {
+  opacity: 0.7;
+}
+
+.marketplace-card-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.marketplace-card-name {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--fg-primary);
+}
+
+.marketplace-card-desc {
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--fg-secondary);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.marketplace-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+}
+
+.marketplace-card-version {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--fg-secondary);
+}
+
+/* Collection badges */
+.marketplace-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  font-family: monospace;
+  font-size: 10px;
+  border-radius: 8px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.marketplace-badge-games { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
+.marketplace-badge-editors { background: rgba(33, 150, 243, 0.2); color: #2196f3; }
+.marketplace-badge-devtools { background: rgba(255, 152, 0, 0.2); color: #ff9800; }
+.marketplace-badge-viz { background: rgba(156, 39, 176, 0.2); color: #ce93d8; }
+.marketplace-badge-productivity { background: rgba(0, 188, 212, 0.2); color: #00bcd4; }
+.marketplace-badge-network { background: rgba(255, 87, 34, 0.2); color: #ff5722; }
+.marketplace-badge-files { background: rgba(121, 85, 72, 0.2); color: #a1887f; }
+.marketplace-badge-enterprise { background: rgba(255, 215, 0, 0.2); color: #ffd700; }
+
+/* Tier badges */
+.marketplace-badge-pro {
+  background: rgba(255, 152, 0, 0.25);
+  color: #ffb74d;
+}
+
+.marketplace-badge-ent {
+  background: rgba(255, 215, 0, 0.25);
+  color: #ffd700;
+}
+
+/* Installed badge */
+.marketplace-badge-installed {
+  background: rgba(76, 175, 80, 0.25);
+  color: #66bb6a;
+}
+
+/* Action buttons */
+.marketplace-btn-install,
+.marketplace-btn-uninstall,
+.marketplace-btn-coming,
+.marketplace-btn-login,
+.marketplace-btn-upgrade {
+  padding: 5px 12px;
+  font-family: monospace;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: none;
+  transition: background-color 0.2s, opacity 0.2s;
+}
+
+.marketplace-btn-install {
+  background-color: var(--accent-primary);
+  color: white;
+}
+
+.marketplace-btn-install:hover {
+  background-color: var(--accent-hover);
+}
+
+.marketplace-btn-uninstall {
+  background-color: transparent;
+  border: 1px solid var(--error-primary);
+  color: var(--error-primary);
+}
+
+.marketplace-btn-uninstall:hover {
+  background-color: rgba(244, 71, 71, 0.1);
+}
+
+.marketplace-btn-coming {
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  color: var(--fg-secondary);
+  cursor: default;
+  font-style: italic;
+}
+
+.marketplace-btn-login {
+  background: rgba(255, 215, 0, 0.15);
+  border: 1px solid #ffd700;
+  color: #ffd700;
+  cursor: pointer;
+}
+
+.marketplace-btn-login:hover {
+  background: rgba(255, 215, 0, 0.25);
+}
+
+.marketplace-btn-upgrade {
+  background: transparent;
+  border: 1px solid var(--fg-secondary);
+  color: var(--fg-secondary);
+  cursor: default;
+  font-style: italic;
+}
+
+.marketplace-btn-install:disabled,
+.marketplace-btn-uninstall:disabled,
+.marketplace-btn-upgrade:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.marketplace-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 20px;
+  font-family: monospace;
+  font-size: 14px;
+  color: var(--fg-secondary);
 }

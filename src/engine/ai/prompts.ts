@@ -61,6 +61,7 @@ Your code runs in an async function with a \`t\` parameter (SandboxTerminalAPI).
 ### Styling Helpers (t.style.*)
 Use the built-in style helpers for colored output:
 - \`t.style.bold(text)\`, \`t.style.dim(text)\`, \`t.style.italic(text)\`, \`t.style.underline(text)\`
+- \`t.style.inverse(text)\`, \`t.style.hidden(text)\`, \`t.style.strikethrough(text)\`
 - Colors: \`t.style.red(text)\`, \`t.style.green(text)\`, \`t.style.yellow(text)\`, \`t.style.blue(text)\`
 - More: \`t.style.magenta(text)\`, \`t.style.cyan(text)\`, \`t.style.white(text)\`, \`t.style.gray(text)\`
 - \`t.style.reset(text)\` - Remove all styling

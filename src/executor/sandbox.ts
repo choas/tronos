@@ -179,6 +179,9 @@ export interface SandboxTerminalAPI {
     dim: (text: string) => string;
     italic: (text: string) => string;
     underline: (text: string) => string;
+    inverse: (text: string) => string;
+    hidden: (text: string) => string;
+    strikethrough: (text: string) => string;
     red: (text: string) => string;
     green: (text: string) => string;
     yellow: (text: string) => string;
@@ -232,6 +235,9 @@ const ANSI = {
   dim: '\x1b[2m',
   italic: '\x1b[3m',
   underline: '\x1b[4m',
+  inverse: '\x1b[7m',
+  hidden: '\x1b[8m',
+  strikethrough: '\x1b[9m',
   // Foreground colors
   red: '\x1b[31m',
   green: '\x1b[32m',
@@ -252,6 +258,9 @@ function createStyleHelpers() {
     dim: (text: string) => `${ANSI.dim}${text}${ANSI.reset}`,
     italic: (text: string) => `${ANSI.italic}${text}${ANSI.reset}`,
     underline: (text: string) => `${ANSI.underline}${text}${ANSI.reset}`,
+    inverse: (text: string) => `${ANSI.inverse}${text}${ANSI.reset}`,
+    hidden: (text: string) => `${ANSI.hidden}${text}${ANSI.reset}`,
+    strikethrough: (text: string) => `${ANSI.strikethrough}${text}${ANSI.reset}`,
     red: (text: string) => `${ANSI.red}${text}${ANSI.reset}`,
     green: (text: string) => `${ANSI.green}${text}${ANSI.reset}`,
     yellow: (text: string) => `${ANSI.yellow}${text}${ANSI.reset}`,

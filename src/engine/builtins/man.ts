@@ -575,6 +575,7 @@ const MAN_PAGES: Record<string, ManPage> = {
         'config show                    Show all settings',
         'config set provider anthropic  Set AI provider',
         'config set apiKey <key>        Set API key',
+        'config set accept-terms true   Accept TronOS AI terms',
         'config reset                   Reset to defaults'
       ]},
       { name: 'SEE ALSO', content: ['session(1), @ai(1)'] }

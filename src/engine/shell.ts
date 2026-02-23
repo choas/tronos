@@ -584,6 +584,7 @@ class ShellEngine {
     return new Promise(resolve => {
       let line = '';
       let cursorPos = 0; // Track cursor position within line
+      let lastPasteTime = 0; // Timestamp of last paste handled by onData
       this.term.write(this.getPrompt());
 
       // Helper to redraw line with cursor at correct position
@@ -607,6 +608,8 @@ class ShellEngine {
             // Insert at cursor position
             line = line.slice(0, cursorPos) + sanitized + line.slice(cursorPos);
             cursorPos += sanitized.length;
+            // Mark paste time so onKey skips duplicate chars arriving immediately after
+            lastPasteTime = Date.now();
             redrawLine();
           }
         }
@@ -797,6 +800,10 @@ class ShellEngine {
             break;
           default:
             if (printable) {
+              // Skip characters already handled by onData paste handler
+              if (Date.now() - lastPasteTime < 100) {
+                break;
+              }
               // Insert character at cursor position
               line = line.slice(0, cursorPos) + key.key + line.slice(cursorPos);
               cursorPos++;

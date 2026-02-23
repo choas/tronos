@@ -48,18 +48,18 @@ export const createNodeTerminalAPI = (): TerminalAPI => {
   const dataHandlers: Set<(data: string) => void> = new Set();
 
   // Set up input handling
+  // Matches xterm.js behavior: onData for pasted text, onKey for individual keypresses
   process.stdin.on('data', (chunk: string) => {
-    // Parse the input to create KeyEvent objects
-    for (const handler of keyHandlers) {
-      // Create a simulated KeyEvent
-      const keyEvent = parseInputToKeyEvent(chunk);
-      handler(keyEvent);
-    }
-
-    // Also call data handlers for pasted content
-    if (chunk.length > 1) {
+    if (chunk.length > 1 && !chunk.startsWith('\x1b')) {
+      // Multi-char non-escape input = pasted text → only call data handlers
       for (const handler of dataHandlers) {
         handler(chunk);
+      }
+    } else {
+      // Single char or escape sequence = keypress → only call key handlers
+      for (const handler of keyHandlers) {
+        const keyEvent = parseInputToKeyEvent(chunk);
+        handler(keyEvent);
       }
     }
   });
@@ -84,6 +84,26 @@ export const createNodeTerminalAPI = (): TerminalAPI => {
     // Handle control characters
     if (input.length === 1) {
       const code = input.charCodeAt(0);
+
+      // Tab (code 9 / Ctrl+I)
+      if (code === 9) {
+        return { key: '\t', domEvent: createMockDomEvent('Tab') };
+      }
+
+      // Escape (code 27)
+      if (code === 27) {
+        return { key: '\x1b', domEvent: createMockDomEvent('Escape') };
+      }
+
+      // Enter / Return (code 13)
+      if (code === 13) {
+        return { key: '\r', domEvent: createMockDomEvent('Enter') };
+      }
+
+      // Backspace (code 127)
+      if (code === 127) {
+        return { key: '\x7f', domEvent: createMockDomEvent('Backspace') };
+      }
 
       // Ctrl+A to Ctrl+Z (codes 1-26)
       if (code >= 1 && code <= 26) {
@@ -119,6 +139,10 @@ export const createNodeTerminalAPI = (): TerminalAPI => {
           return { key: '\x1b[F', domEvent: createMockDomEvent('End') };
         case '\x1b[3~':
           return { key: '\x1b[3~', domEvent: createMockDomEvent('Delete') };
+        case '\x1b[5~':
+          return { key: '\x1b[5~', domEvent: createMockDomEvent('PageUp') };
+        case '\x1b[6~':
+          return { key: '\x1b[6~', domEvent: createMockDomEvent('PageDown') };
       }
     }
 

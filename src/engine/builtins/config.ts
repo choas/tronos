@@ -4,11 +4,14 @@ import {
   setAIConfig,
   setAIProvider,
   resetAIConfig,
-  maskApiKey
+  maskApiKey,
+  hasAcceptedTerms,
+  acceptTerms,
+  resetTermsConfig
 } from "../../stores";
 import type { AIProvider } from "../../stores";
 
-const VALID_KEYS = ["provider", "model", "baseURL", "apiKey", "temperature", "maxTokens"] as const;
+const VALID_KEYS = ["provider", "model", "baseURL", "apiKey", "temperature", "maxTokens", "accept-terms"] as const;
 const VALID_PROVIDERS: AIProvider[] = ["tronos", "anthropic", "openai", "ollama", "openrouter"];
 
 export const config: BuiltinCommand = async (args: string[], _context: ExecutionContext): Promise<CommandResult> => {
@@ -18,14 +21,18 @@ export const config: BuiltinCommand = async (args: string[], _context: Execution
     case "show": {
       const cfg = getAIConfig();
       const maskedKey = cfg.apiKey ? maskApiKey(cfg.apiKey) : "(not set)";
-      const output = [
+      const lines = [
         `provider: ${cfg.provider}`,
         `model: ${cfg.model}`,
         `baseURL: ${cfg.baseURL}`,
         `apiKey: ${maskedKey}`,
         `temperature: ${cfg.temperature}`,
         `maxTokens: ${cfg.maxTokens}`
-      ].join("\n");
+      ];
+      if (cfg.provider === "tronos") {
+        lines.push(`accept-terms: ${hasAcceptedTerms()}`);
+      }
+      const output = lines.join("\n");
 
       return { stdout: output + "\n", stderr: "", exitCode: 0 };
     }
@@ -47,6 +54,28 @@ export const config: BuiltinCommand = async (args: string[], _context: Execution
           stdout: "",
           stderr: `Invalid key: ${key}. Valid keys: ${VALID_KEYS.join(", ")}\n`,
           exitCode: 1
+        };
+      }
+
+      // Handle accept-terms specially - delegates to terms store
+      if (key === "accept-terms") {
+        const boolVal = value.toLowerCase();
+        if (boolVal !== "true" && boolVal !== "false") {
+          return {
+            stdout: "",
+            stderr: "accept-terms must be true or false\n",
+            exitCode: 1
+          };
+        }
+        if (boolVal === "true") {
+          acceptTerms();
+        } else {
+          resetTermsConfig();
+        }
+        return {
+          stdout: `Set accept-terms = ${boolVal}\n`,
+          stderr: "",
+          exitCode: 0
         };
       }
 

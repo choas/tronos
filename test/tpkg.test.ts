@@ -43,7 +43,7 @@ describe('tpkg builtin', () => {
       expect(result.stdout).toContain('tpkg - TronOS Package Manager');
       expect(result.stdout).toContain('install');
       expect(result.stdout).toContain('uninstall');
-      expect(result.stdout).toContain('update');
+      expect(result.stdout).toContain('marketplace');
       expect(result.stdout).toContain('search');
       expect(result.stdout).toContain('list');
     });
@@ -281,42 +281,29 @@ describe('tpkg builtin', () => {
       expect(result.stderr).toContain('Usage: tpkg search');
     });
 
-    it('should search packages in the index', async () => {
-      // Pre-populate the package index
-      vfs.mkdir('/var/cache/tpkg', true);
-      vfs.write('/var/cache/tpkg/index.json', JSON.stringify([
-        { name: 'weather', version: '1.0.0', description: 'Weather forecast' },
-        { name: 'calendar', version: '1.0.0', description: 'Calendar app' }
-      ]));
-
+    it('should search marketplace packages by name', async () => {
       const result = await tpkg(['search', 'weather'], context);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('weather');
       expect(result.stdout).toContain('Weather forecast');
-      expect(result.stdout).not.toContain('calendar');
     });
 
     it('should search by description', async () => {
-      vfs.mkdir('/var/cache/tpkg', true);
-      vfs.write('/var/cache/tpkg/index.json', JSON.stringify([
-        { name: 'forecast', version: '1.0.0', description: 'Weather forecast' },
-        { name: 'calendar', version: '1.0.0', description: 'Calendar app' }
-      ]));
-
-      const result = await tpkg(['search', 'weather'], context);
+      const result = await tpkg(['search', 'dungeon'], context);
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('forecast');
+      expect(result.stdout).toContain('roguelike');
+    });
+
+    it('should search by collection', async () => {
+      const result = await tpkg(['search', 'games'], context);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain('2048');
     });
 
     it('should show no results message', async () => {
-      vfs.mkdir('/var/cache/tpkg', true);
-      vfs.write('/var/cache/tpkg/index.json', JSON.stringify([
-        { name: 'package1', version: '1.0.0', description: 'Package 1' }
-      ]));
-
-      const result = await tpkg(['search', 'nonexistent'], context);
+      const result = await tpkg(['search', 'xyznonexistent'], context);
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain("No packages found matching 'nonexistent'");
+      expect(result.stdout).toContain("No packages found matching 'xyznonexistent'");
     });
 
     it('should work with s alias', async () => {
@@ -456,23 +443,18 @@ describe('tpkg builtin', () => {
   });
 
   describe('available subcommand', () => {
-    it('should list available packages from bundled index', async () => {
-      global.fetch = vi.fn().mockResolvedValue(new Response('', { status: 404 }));
-
+    it('should list marketplace packages', async () => {
       const result = await tpkg(['available'], context);
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('Available packages');
+      expect(result.stdout).toContain('TronOS Marketplace');
       expect(result.stdout).toContain('weather');
-      expect(result.stdout).toContain('pomodoro');
-      expect(result.stdout).toContain('notes');
+      expect(result.stdout).toContain('Games');
     });
 
     it('should work with avail alias', async () => {
-      global.fetch = vi.fn().mockResolvedValue(new Response('', { status: 404 }));
-
       const result = await tpkg(['avail'], context);
       expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('Available packages');
+      expect(result.stdout).toContain('TronOS Marketplace');
     });
 
     it('should show installed status for packages', async () => {
@@ -482,25 +464,9 @@ describe('tpkg builtin', () => {
         { name: 'weather', version: '1.0.0', installedAt: '2024-01-01', files: ['/bin/weather.trx'] }
       ]));
 
-      global.fetch = vi.fn().mockResolvedValue(new Response('', { status: 404 }));
-
       const result = await tpkg(['available'], context);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('[installed]');
-    });
-
-    it('should show update available indicator', async () => {
-      // Pre-install at older version
-      vfs.mkdir('/etc/tpkg', true);
-      vfs.write('/etc/tpkg/installed.json', JSON.stringify([
-        { name: 'weather', version: '0.9.0', installedAt: '2024-01-01', files: ['/bin/weather.trx'] }
-      ]));
-
-      global.fetch = vi.fn().mockResolvedValue(new Response('', { status: 404 }));
-
-      const result = await tpkg(['available'], context);
-      expect(result.exitCode).toBe(0);
-      expect(result.stdout).toContain('update available');
     });
   });
 
@@ -764,12 +730,6 @@ describe('tpkg builtin', () => {
       vfs.mkdir('/etc/tpkg', true);
       vfs.write('/etc/tpkg/installed.json', JSON.stringify([
         { name: 'weather', version: '1.0.0', installedAt: '2024-01-01', files: ['/bin/weather.trx'] }
-      ]));
-
-      // Pre-populate the package index
-      vfs.mkdir('/var/cache/tpkg', true);
-      vfs.write('/var/cache/tpkg/index.json', JSON.stringify([
-        { name: 'weather', version: '1.0.0', description: 'Weather forecast' }
       ]));
 
       const result = await tpkg(['search', 'weather'], context);

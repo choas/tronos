@@ -11,6 +11,7 @@ import {
   type AIProvider,
   type AIConfig
 } from "../stores/ai";
+import { hasAcceptedTerms, acceptTerms, resetTermsConfig } from "../stores/terms";
 
 interface ConfigModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export function ConfigModal(props: ConfigModalProps) {
   const [baseURL, setBaseURL] = createSignal(aiConfigState.config.baseURL);
   const [temperature, setTemperature] = createSignal(aiConfigState.config.temperature);
   const [maxTokens, setMaxTokens] = createSignal(aiConfigState.config.maxTokens);
+  const [termsAccepted, setTermsAccepted] = createSignal(hasAcceptedTerms());
 
   // Ollama CORS check state: null = not checked, true = ok, string = error
   const [ollamaStatus, setOllamaStatus] = createSignal<null | true | string>(null);
@@ -55,6 +57,7 @@ export function ConfigModal(props: ConfigModalProps) {
       setBaseURL(aiConfigState.config.baseURL);
       setTemperature(aiConfigState.config.temperature);
       setMaxTokens(aiConfigState.config.maxTokens);
+      setTermsAccepted(hasAcceptedTerms());
 
       // Auto-check Ollama connectivity when modal opens with Ollama selected
       if (aiConfigState.config.provider === "ollama") {
@@ -98,6 +101,16 @@ export function ConfigModal(props: ConfigModalProps) {
     // First set provider to apply defaults, then override with our values
     setAIProvider(provider());
     setAIConfig(config);
+
+    // Handle terms acceptance for tronos provider
+    if (provider() === "tronos") {
+      if (termsAccepted()) {
+        acceptTerms();
+      } else {
+        resetTermsConfig();
+      }
+    }
+
     props.onClose();
   };
 
@@ -166,6 +179,23 @@ export function ConfigModal(props: ConfigModalProps) {
                   {provider() === "tronos"
                     ? "TronOS provides free AI access - no API key needed!"
                     : "Ollama runs locally and doesn't require an API key"}
+                </span>
+              </div>
+            </Show>
+
+            {/* Accept Terms - only for TronOS provider */}
+            <Show when={provider() === "tronos"}>
+              <div class="config-field">
+                <label class="config-label config-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted()}
+                    onChange={(e) => setTermsAccepted(e.currentTarget.checked)}
+                  />
+                  Accept Terms &amp; Conditions
+                </label>
+                <span class="config-hint">
+                  Required to use TronOS AI. View terms with: <code>@ai show-terms</code>
                 </span>
               </div>
             </Show>

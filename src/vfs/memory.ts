@@ -141,14 +141,16 @@ export class InMemoryVFS {
               children: [],
             } as DirectoryNode);
           }
+          // Ensure default system files exist (may be missing from older storage)
+          this.ensureDefaultFS();
+          await this.sync();
         } else {
           // No existing filesystem, create default structure
           this.initDefaultFS();
           // Save the default filesystem to storage
           await this.sync();
         }
-        // Ensure default files have version history (also handles existing sessions)
-        await this.initDefaultVersions();
+        // Version history uses IndexedDB, skip in CLI mode
       }
       // Check if IndexedDB is available (browser environment)
       else if (typeof indexedDB !== 'undefined') {
@@ -178,6 +180,8 @@ export class InMemoryVFS {
               children: [],
             } as DirectoryNode);
           }
+          // Ensure default system files exist (may be missing from older storage)
+          this.ensureDefaultFS();
         } else {
           // No existing filesystem, create default structure
           this.initDefaultFS();
@@ -227,7 +231,22 @@ export class InMemoryVFS {
     }
   }
 
-  private initDefaultFS(): void {
+  /**
+   * Ensure default system directories and files exist in a loaded filesystem.
+   * Calls initDefaultFS() in "fill" mode — directories are created with
+   * recursive=true (idempotent) and files are only written if missing.
+   */
+  private ensureDefaultFS(): void {
+    this.initDefaultFS(true);
+  }
+
+  private initDefaultFS(onlyMissing = false): void {
+    // Helper: write file, but skip if onlyMissing and file already exists
+    const writeDefault = (path: string, content: string) => {
+      if (onlyMissing && this.exists(path)) return;
+      this.write(path, content);
+    };
+
     // Create essential directories
     this.mkdir('/home/tronos', true);
     this.mkdir('/bin', true);
@@ -238,13 +257,13 @@ export class InMemoryVFS {
     this.mkdir('/usr/share/man/man1', true);
 
     // Create a welcome message
-    this.write('/etc/motd',
+    writeDefault('/etc/motd',
 `Welcome to TronOS!
 This is a simulated operating system running in your browser.
 `);
 
     // Create a default user profile with aliases
-    this.write('/home/tronos/.profile',
+    writeDefault('/home/tronos/.profile',
 `# Default aliases
 alias ll='ls -l'
 alias la='ls -la'
@@ -252,7 +271,7 @@ alias ..='cd ..'
 `);
 
     // Create /bin/help.trx - Display help information
-    this.write('/bin/help.trx',
+    writeDefault('/bin/help.trx',
 `#!/tronos
 // @name: help
 // @description: Display help information
@@ -295,7 +314,7 @@ alias ..='cd ..'
 `);
 
     // Create /bin/countdown.trx - Countdown timer with argument support
-    this.write('/bin/countdown.trx',
+    writeDefault('/bin/countdown.trx',
 `#!/tronos
 // @name: countdown
 // @description: Countdown timer with argument support
@@ -329,7 +348,7 @@ alias ..='cd ..'
 `);
 
     // Create /bin/tictactoe.trx - Two-player tic-tac-toe game
-    this.write('/bin/tictactoe.trx',
+    writeDefault('/bin/tictactoe.trx',
 `#!/tronos
 // @name: tictactoe
 // @description: Two-player tic-tac-toe game
@@ -482,7 +501,7 @@ alias ..='cd ..'
     this.mkdir('/usr/share/tronos', true);
 
     // Create AI context documentation file for user reference
-    this.write('/usr/share/tronos/ai-context.md',
+    writeDefault('/usr/share/tronos/ai-context.md',
 `# TronOS AI Context Documentation
 
 This file documents the Terminal API and executable format for TronOS.
@@ -564,7 +583,7 @@ For more examples, run: cat /bin/*.trx
 `);
 
     // Create update mechanism concept document
-    this.write('/usr/share/tronos/update-concept.md',
+    writeDefault('/usr/share/tronos/update-concept.md',
 `# TronOS Update Mechanism
 
 ## Overview

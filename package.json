@@ -1,7 +1,28 @@
 {
   "name": "tronos",
-  "version": "0.1.0",
+  "version": "1.1.0",
+  "description": "TronOS - The AI-Native Operating System. A simulated OS with virtual filesystem, package manager, and AI assistant that runs in your terminal or browser.",
   "type": "module",
+  "license": "Apache-2.0",
+  "author": "TronOS Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/choas/tronos.git"
+  },
+  "homepage": "https://github.com/choas/tronos",
+  "bugs": {
+    "url": "https://github.com/choas/tronos/issues"
+  },
+  "keywords": [
+    "tronos",
+    "terminal",
+    "os",
+    "ai",
+    "virtual-filesystem",
+    "cli",
+    "shell",
+    "package-manager"
+  ],
   "bin": {
     "tronos": "./bin/tronos.ts"
   },
@@ -10,6 +31,7 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "cli": "bun run bin/tronos.ts",
+    "build:cli": "bun build bin/tronos.ts --target node --minify --outfile dist/tronos.js --define 'import.meta.env={}' --define 'process.env.NODE_ENV=\"production\"'",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "check": "tsc --noEmit"
@@ -34,6 +56,5 @@
     "vitest": "^4.0.18",
     "@types/bun": "latest"
   },
-  "module": "src/index.tsx",
-  "private": true
+  "module": "src/index.tsx"
 }

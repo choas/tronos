@@ -11,7 +11,7 @@
 declare const __BUILD_TIME__: string | undefined;
 
 /** Base TronOS version number */
-const BASE_VERSION = '0.1.0';
+const BASE_VERSION = '1.1.0';
 
 /**
  * Check if running in development mode.

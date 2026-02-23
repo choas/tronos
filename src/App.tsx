@@ -3,6 +3,7 @@ import TerminalComponent from './components/Terminal';
 import { TabBar } from './components/TabBar';
 import { StatusBar } from './components/StatusBar';
 import { ConfigModal } from './components/ConfigModal';
+import { MarketplaceModal } from './components/MarketplaceModal';
 import { ResetDialog } from './components/ResetDialog';
 import { Terminal } from '@xterm/xterm';
 import { createTerminalAPI } from './terminal/api';
@@ -12,10 +13,12 @@ import { initSessions, getActiveSession, updateSession, loadPersistedAIConfig, l
 import { sessionState } from './stores/sessions';
 import { importSession, parseDiskImage, mergeSession, formatMergeResult, diffDiskImage, recordImportHistory, type ConflictStrategy, type MergeConflict } from './engine/builtins/session';
 import { performFactoryReset } from './engine/builtins/reset';
+import { tpkg, getAuthStatus } from './engine/builtins/tpkg';
 
 function App() {
   const [currentDirectory] = createSignal('/home/user');
   const [configModalOpen, setConfigModalOpen] = createSignal(false);
+  const [marketplaceOpen, setMarketplaceOpen] = createSignal(false);
   const [resetDialogOpen, setResetDialogOpen] = createSignal(false);
   const aiModel = () => getAIConfig().model;
   let fileInputRef: HTMLInputElement | undefined;
@@ -236,6 +239,8 @@ function App() {
           pendingMergeStrategy = strategy;
           // Trigger merge file input click
           mergeFileInputRef?.click();
+        } else if (request === 'showMarketplace') {
+          setMarketplaceOpen(true);
         } else if (request === 'showFactoryResetDialog') {
           setResetDialogOpen(true);
         } else if (request.startsWith('showDiffDialog:')) {
@@ -270,6 +275,59 @@ function App() {
     });
 
     await shell.boot();
+  };
+
+  const getInstalledPackages = (): Set<string> => {
+    try {
+      const vfs = currentShell ? (currentShell as any).vfs : undefined;
+      if (!vfs) return new Set();
+      const raw = vfs.read('/etc/tpkg/installed.json');
+      if (!raw) return new Set();
+      const data = JSON.parse(raw);
+      return new Set(Object.keys(data));
+    } catch {
+      return new Set();
+    }
+  };
+
+  const handleMarketplaceInstall = async (name: string): Promise<boolean> => {
+    if (!currentShell) return false;
+    const session = getActiveSession();
+    const result = await tpkg(['install', name], {
+      env: session.env,
+      vfs: (currentShell as any).vfs,
+    } as any);
+    if (result.stdout) currentShell.writeOutput(result.stdout);
+    if (result.stderr) currentShell.writeOutput(result.stderr);
+    return result.exitCode === 0;
+  };
+
+  const handleMarketplaceUninstall = async (name: string): Promise<boolean> => {
+    if (!currentShell) return false;
+    const session = getActiveSession();
+    const result = await tpkg(['uninstall', name], {
+      env: session.env,
+      vfs: (currentShell as any).vfs,
+    } as any);
+    if (result.stdout) currentShell.writeOutput(result.stdout);
+    if (result.stderr) currentShell.writeOutput(result.stderr);
+    return result.exitCode === 0;
+  };
+
+  const getMarketplaceAuthStatus = (): { loggedIn: boolean; tier: string | null } | null => {
+    if (!currentShell) return null;
+    const vfs = (currentShell as any).vfs;
+    if (!vfs) return null;
+    const session = getActiveSession();
+    return getAuthStatus({ env: session.env, vfs } as any);
+  };
+
+  const handleAuthLogin = () => {
+    // Close marketplace and prompt user to run tpkg auth login in terminal
+    setMarketplaceOpen(false);
+    if (currentShell) {
+      currentShell.writeOutput('\r\nRun \x1b[1mtpkg auth login\x1b[0m to authenticate for enterprise packages.\r\n\r\n');
+    }
   };
 
   return (
@@ -326,6 +384,15 @@ function App() {
         isOpen={resetDialogOpen()}
         onClose={() => setResetDialogOpen(false)}
         onConfirm={handleFactoryReset}
+      />
+      <MarketplaceModal
+        isOpen={marketplaceOpen()}
+        onClose={() => setMarketplaceOpen(false)}
+        getInstalledPackages={getInstalledPackages}
+        onInstall={handleMarketplaceInstall}
+        onUninstall={handleMarketplaceUninstall}
+        getAuthStatus={getMarketplaceAuthStatus}
+        onAuthLogin={handleAuthLogin}
       />
     </div>
   );
