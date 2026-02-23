@@ -1,6 +1,6 @@
 {
   "name": "tronos",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "TronOS - The AI-Native Operating System. A simulated OS with virtual filesystem, package manager, and AI assistant that runs in your terminal or browser.",
   "type": "module",
   "license": "Apache-2.0",
