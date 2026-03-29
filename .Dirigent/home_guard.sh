@@ -4,14 +4,21 @@
 # recursively search from the home directory root.
 INPUT=$(cat)
 HOME_DIR="${HOME:-/Users/$(whoami)}"
-PROJECT_ROOT="/Users/lars/test/ralph_test/tron_oss/tronos"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(cd "$(dirname "$0")" && pwd)")"
 
 # 1. Block explicit references to personal sub-directories.
 for DIR in Documents Desktop Downloads Photos Pictures Movies Music Library Applications .ssh .gnupg; do
     BLOCKED="$HOME_DIR/$DIR"
-    # Skip if the project root lives under this blocked directory.
-    case "$PROJECT_ROOT" in "$BLOCKED"|"$BLOCKED"/*) continue ;; esac
     if echo "$INPUT" | grep -qF "$BLOCKED"; then
+        # If the repo lives under this blocked dir, strip repo-root paths from
+        # the input and re-check.  Only the stripped copy is tested so that
+        # references *outside* the repo subtree are still caught.
+        case "$REPO_ROOT" in "$BLOCKED"|"$BLOCKED"/*)
+            STRIPPED=$(echo "$INPUT" | sed "s|$REPO_ROOT[^ \"']*||g")
+            if ! echo "$STRIPPED" | grep -qF "$BLOCKED"; then
+                continue   # every matched path was inside the repo
+            fi
+            ;; esac
         echo "Blocked by Dirigent: access to ~/$DIR is restricted. Disable the home-folder guard in Dirigent Settings to override."
         exit 2
     fi
