@@ -240,18 +240,21 @@ export function getContextState(sessionId?: string): ContextState {
 
 // ─── Persistence ────────────────────────────────────────────────────────────
 
-let persistTimer: ReturnType<typeof setTimeout> | null = null;
+const persistTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 
 /**
- * Schedule an async flush to IndexedDB (debounced 2s).
+ * Schedule an async flush to IndexedDB (debounced 2s per session).
  */
 function persistContextAsync(sessionId?: string): void {
-  if (persistTimer) clearTimeout(persistTimer);
-  persistTimer = setTimeout(() => {
-    persistContextNow(sessionId).catch(err => {
+  const id = sessionId ?? activeSessionId;
+  const existing = persistTimers.get(id);
+  if (existing) clearTimeout(existing);
+  persistTimers.set(id, setTimeout(() => {
+    persistTimers.delete(id);
+    persistContextNow(id).catch(err => {
       console.warn('Failed to persist context:', err);
     });
-  }, 2000);
+  }, 2000));
 }
 
 /**
