@@ -277,6 +277,22 @@ describe('VFS /proc Integration', () => {
       const themeDir = contents.find(n => n.name === 'theme');
       expect(themeDir).toBeDefined();
       expect(themeDir?.type).toBe('directory');
+
+      const ctx = contents.find(n => n.name === 'context');
+      expect(ctx).toBeDefined();
+      expect(ctx?.type).toBe('directory');
+
+      const events = contents.find(n => n.name === 'events');
+      expect(events).toBeDefined();
+      expect(events?.type).toBe('directory');
+
+      const agents = contents.find(n => n.name === 'agents');
+      expect(agents).toBeDefined();
+      expect(agents?.type).toBe('directory');
+
+      const guard = contents.find(n => n.name === 'guard');
+      expect(guard).toBeDefined();
+      expect(guard?.type).toBe('directory');
     });
 
     it('should list /proc/ai contents with details', () => {
