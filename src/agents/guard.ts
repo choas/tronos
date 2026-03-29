@@ -9,7 +9,7 @@
  * @module agents/guard
  */
 
-import { matchGlob } from '../utils/glob';
+import { matchGlob } from "../utils/glob";
 
 /**
  * A pending approval request.
@@ -18,12 +18,12 @@ export interface GuardRequest {
   id: string;
   agent_id: string;
   agent_name: string;
-  action: 'read' | 'write' | 'mcp' | 'network' | 'spawn';
+  action: "read" | "write" | "mcp" | "network" | "spawn";
   target: string;
   data_preview?: string;
   reason?: string;
   requested_at: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: "pending" | "approved" | "rejected";
   resolved_at?: string;
 }
 
@@ -53,38 +53,43 @@ export class GuardQueue {
   private pending: Map<string, GuardRequest> = new Map();
   private log: GuardRequest[] = [];
   private policy: Map<string, { auto_approve: AutoApproveRule[] }> = new Map();
-  private resolvers: Map<string, (approved: boolean) => void> = new Map();
+  private resolvers: Map<
+    string,
+    { resolve: (approved: boolean) => void; reject: (error: Error) => void }
+  > = new Map();
 
   /**
    * Submit a request for approval.
    * Returns a promise that resolves when approved/rejected.
    */
-  async request(req: Omit<GuardRequest, 'id' | 'requested_at' | 'status'>): Promise<boolean> {
+  async request(
+    req: Omit<GuardRequest, "id" | "requested_at" | "status">,
+  ): Promise<boolean> {
     // Check auto-approve policy first
     if (this.isAutoApproved(req.agent_name, req.action, req.target)) {
       const fullReq: GuardRequest = {
         ...req,
-        id: `guard-${String(++requestCounter).padStart(4, '0')}`,
+        id: `guard-${String(++requestCounter).padStart(4, "0")}`,
         requested_at: new Date().toISOString(),
-        status: 'approved',
+        status: "approved",
         resolved_at: new Date().toISOString(),
       };
       this.log.push(fullReq);
       return true;
     }
 
-    const id = `guard-${String(++requestCounter).padStart(4, '0')}`;
+    const id = `guard-${String(++requestCounter).padStart(4, "0")}`;
     const fullReq: GuardRequest = {
       ...req,
       id,
       requested_at: new Date().toISOString(),
-      status: 'pending',
+      status: "pending",
     };
 
     this.pending.set(id, fullReq);
 
-    return new Promise<boolean>((resolve) => {
-      this.resolvers.set(id, resolve);
+    return new Promise<boolean>((resolve, reject) => {
+      this.resolvers.set(id, { resolve, reject });
     });
   }
 
@@ -95,14 +100,14 @@ export class GuardQueue {
     const req = this.pending.get(id);
     if (!req) return false;
 
-    req.status = 'approved';
+    req.status = "approved";
     req.resolved_at = new Date().toISOString();
     this.log.push(req);
     this.pending.delete(id);
 
     const resolver = this.resolvers.get(id);
     if (resolver) {
-      resolver(true);
+      resolver.resolve(true);
       this.resolvers.delete(id);
     }
 
@@ -116,14 +121,14 @@ export class GuardQueue {
     const req = this.pending.get(id);
     if (!req) return false;
 
-    req.status = 'rejected';
+    req.status = "rejected";
     req.resolved_at = new Date().toISOString();
     this.log.push(req);
     this.pending.delete(id);
 
     const resolver = this.resolvers.get(id);
     if (resolver) {
-      resolver(false);
+      resolver.resolve(false);
       this.resolvers.delete(id);
     }
 
@@ -159,7 +164,7 @@ export class GuardQueue {
    * Get the current policy.
    */
   getPolicy(): GuardPolicy {
-    const result: GuardPolicy = {};
+    const result: GuardPolicy = Object.create(null) as GuardPolicy;
     this.policy.forEach((entry, name) => {
       result[name] = { auto_approve: [...entry.auto_approve] };
     });
@@ -191,20 +196,23 @@ export class GuardQueue {
   /**
    * Check if an action is auto-approved by policy.
    */
-  private isAutoApproved(agentName: string, action: string, target: string): boolean {
+  private isAutoApproved(
+    agentName: string,
+    action: string,
+    target: string,
+  ): boolean {
     const agentPolicy = this.policy.get(agentName);
     if (!agentPolicy) return false;
 
     for (const rule of agentPolicy.auto_approve) {
-      if (rule.action === action || rule.action === '*') {
-        if (rule.path_pattern === '*' || matchGlob(target, rule.path_pattern)) {
+      if (rule.action === action || rule.action === "*") {
+        if (rule.path_pattern === "*" || matchGlob(target, rule.path_pattern)) {
           return true;
         }
       }
     }
     return false;
   }
-
 }
 
 /** Singleton guard queue */
