@@ -422,6 +422,10 @@ describe('VFS /dev Integration', () => {
       const random = contents.find(n => n.name === 'random');
       expect(random).toBeDefined();
       expect(random?.type).toBe('file');
+
+      const guard = contents.find(n => n.name === 'guard');
+      expect(guard).toBeDefined();
+      expect(guard?.type).toBe('file');
     });
 
     it('should throw for listing a /dev file in detail', () => {
