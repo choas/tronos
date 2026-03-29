@@ -97,6 +97,32 @@ describe('Agent Runtime', () => {
     const found = runtime.getAgentByPid(agent.pid);
     expect(found).toBe(agent);
   });
+
+  it('should prevent overlapping runs of the same agent', async () => {
+    let concurrency = 0;
+    let maxConcurrency = 0;
+    const executor = async () => {
+      concurrency++;
+      maxConcurrency = Math.max(maxConcurrency, concurrency);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      concurrency--;
+    };
+
+    const id = await runtime.start('test', 'Goal', emptyPermissions(), { type: 'manual' }, executor);
+
+    // Fire two runs concurrently — second should be skipped
+    await Promise.all([
+      runtime.executeAgent(id),
+      runtime.executeAgent(id),
+    ]);
+
+    expect(maxConcurrency).toBe(1);
+
+    const agent = runtime.getAgent(id)!;
+    // Only one 'executed' log entry because the second call was skipped
+    const executedEntries = agent.log.filter(e => e.action === 'executed');
+    expect(executedEntries.length).toBe(1);
+  });
 });
 
 describe('GuardQueue', () => {
