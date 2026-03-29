@@ -38,7 +38,7 @@ export interface ContextFocus {
  */
 export interface ContextHistoryEntry {
   ts: string;
-  type: 'shell' | 'ai' | 'ai-pipeline-step';
+  type: "shell" | "ai" | "ai-pipeline-step";
   cmd?: string;
   prompt?: string;
   cwd: string;
@@ -63,7 +63,7 @@ const MAX_RECENT_FILES = 10;
 const sessionContexts: Map<string, ContextState> = new Map();
 
 /** The currently active session ID. */
-let activeSessionId = 'default';
+let activeSessionId = "default";
 
 /**
  * Get or create the context state for a session.
@@ -74,8 +74,8 @@ function getSessionContext(sessionId: string): ContextState {
     ctx = {
       workspace: { updated: new Date().toISOString() },
       focus: {
-        last_command: '',
-        cwd: '/home/tronos',
+        last_command: "",
+        cwd: "/home/tronos",
         recent_files: [],
         session: sessionId,
         updated: new Date().toISOString(),
@@ -118,15 +118,25 @@ export function writeWorkspace(data: string, sessionId: string): void {
   const ctx = getSessionContext(sessionId);
   try {
     const parsed = JSON.parse(data);
-    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    if (
+      parsed !== null &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed)
+    ) {
       ctx.workspace = { ...parsed, updated: new Date().toISOString() };
     } else {
       // Primitive or array JSON — store as description
-      ctx.workspace = { description: data.trim(), updated: new Date().toISOString() };
+      ctx.workspace = {
+        description: data.trim(),
+        updated: new Date().toISOString(),
+      };
     }
   } catch {
     // If not valid JSON, store as description
-    ctx.workspace = { description: data.trim(), updated: new Date().toISOString() };
+    ctx.workspace = {
+      description: data.trim(),
+      updated: new Date().toISOString(),
+    };
   }
   persistContextAsync(sessionId);
 }
@@ -149,7 +159,7 @@ export function updateFocus(
   command: string,
   cwd: string,
   touchedFiles: string[] | undefined,
-  sessionId: string
+  sessionId: string,
 ): void {
   const ctx = getSessionContext(sessionId);
   ctx.focus.last_command = command;
@@ -181,7 +191,7 @@ export function updateFocus(
  */
 export function readHistory(sessionId: string): string {
   const ctx = getSessionContext(sessionId);
-  return ctx.history.map(e => JSON.stringify(e)).join('\n');
+  return ctx.history.map((e) => JSON.stringify(e)).join("\n");
 }
 
 /**
@@ -190,12 +200,12 @@ export function readHistory(sessionId: string): string {
 export function appendShellHistory(
   cmd: string,
   cwd: string,
-  sessionId: string
+  sessionId: string,
 ): void {
   const ctx = getSessionContext(sessionId);
   ctx.history.push({
     ts: new Date().toISOString(),
-    type: 'shell',
+    type: "shell",
     cmd,
     cwd,
   });
@@ -210,12 +220,12 @@ export function appendAIHistory(
   prompt: string,
   cwd: string,
   contextSnapshot: string | undefined,
-  sessionId: string
+  sessionId: string,
 ): void {
   const ctx = getSessionContext(sessionId);
   ctx.history.push({
     ts: new Date().toISOString(),
-    type: 'ai',
+    type: "ai",
     prompt,
     cwd,
     context_snapshot: contextSnapshot,
@@ -252,12 +262,15 @@ const persistTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 function persistContextAsync(sessionId: string): void {
   const existing = persistTimers.get(sessionId);
   if (existing) clearTimeout(existing);
-  persistTimers.set(sessionId, setTimeout(() => {
-    persistTimers.delete(sessionId);
-    persistContextNow(sessionId).catch(err => {
-      console.warn('Failed to persist context:', err);
-    });
-  }, 2000));
+  persistTimers.set(
+    sessionId,
+    setTimeout(() => {
+      persistTimers.delete(sessionId);
+      persistContextNow(sessionId).catch((err) => {
+        console.warn("Failed to persist context:", err);
+      });
+    }, 2000),
+  );
 }
 
 /**
@@ -268,15 +281,19 @@ async function persistContextNow(sessionId: string): Promise<void> {
   if (!ctx) return;
 
   try {
-    if (typeof indexedDB !== 'undefined') {
-      const { getDB } = await import('../persistence/db');
+    if (typeof indexedDB !== "undefined") {
+      const { getDB } = await import("../persistence/db");
       const db = getDB();
       const key = `tronos:context:${sessionId}`;
-      await db.put('config', {
-        workspace: ctx.workspace,
-        focus: ctx.focus,
-        history: ctx.history,
-      }, key);
+      await db.put(
+        "config",
+        {
+          workspace: ctx.workspace,
+          focus: ctx.focus,
+          history: ctx.history,
+        },
+        key,
+      );
     }
   } catch {
     // Non-critical: context persistence failing shouldn't crash anything
@@ -288,17 +305,64 @@ async function persistContextNow(sessionId: string): Promise<void> {
  */
 export async function loadPersistedContext(sessionId: string): Promise<void> {
   try {
-    if (typeof indexedDB !== 'undefined') {
-      const { getDB } = await import('../persistence/db');
+    if (typeof indexedDB !== "undefined") {
+      const { getDB } = await import("../persistence/db");
       const db = getDB();
       const key = `tronos:context:${sessionId}`;
-      const data = await db.get('config', key);
-      if (data && typeof data === 'object') {
-        const persisted = data as Partial<ContextState>;
+      const data = await db.get("config", key);
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        const persisted = data as Record<string, unknown>;
         const ctx = getSessionContext(sessionId);
-        if (persisted.workspace) ctx.workspace = persisted.workspace;
-        if (persisted.focus) ctx.focus = persisted.focus;
-        if (persisted.history) ctx.history = persisted.history;
+
+        // Validate workspace: must be a plain object
+        if (
+          persisted.workspace &&
+          typeof persisted.workspace === "object" &&
+          !Array.isArray(persisted.workspace)
+        ) {
+          ctx.workspace = persisted.workspace as ContextWorkspace;
+        }
+
+        // Validate focus: must be an object with expected fields
+        if (
+          persisted.focus &&
+          typeof persisted.focus === "object" &&
+          !Array.isArray(persisted.focus)
+        ) {
+          const f = persisted.focus as Record<string, unknown>;
+          ctx.focus = {
+            last_command:
+              typeof f.last_command === "string" ? f.last_command : "",
+            cwd: typeof f.cwd === "string" ? f.cwd : "/home/tronos",
+            recent_files: Array.isArray(f.recent_files)
+              ? (
+                  f.recent_files.filter(
+                    (x: unknown) => typeof x === "string",
+                  ) as string[]
+                ).slice(0, MAX_RECENT_FILES)
+              : [],
+            session: sessionId,
+            updated:
+              typeof f.updated === "string"
+                ? f.updated
+                : new Date().toISOString(),
+          };
+        }
+
+        // Validate history: must be an array
+        if (Array.isArray(persisted.history)) {
+          ctx.history = (persisted.history as unknown[]).filter(
+            (e): e is ContextHistoryEntry =>
+              e !== null &&
+              typeof e === "object" &&
+              typeof (e as Record<string, unknown>).ts === "string" &&
+              typeof (e as Record<string, unknown>).cwd === "string" &&
+              ["shell", "ai", "ai-pipeline-step"].includes(
+                (e as Record<string, unknown>).type as string,
+              ),
+          );
+          trimHistory(ctx);
+        }
       }
     }
   } catch {
@@ -319,29 +383,37 @@ export function extractFilesFromCommand(cmd: string, cwd: string): string[] {
   for (let i = 1; i < parts.length; i++) {
     const arg = parts[i];
     // Skip flags
-    if (arg.startsWith('-')) continue;
+    if (arg.startsWith("-")) continue;
     // Stop on pipe — piped commands are separate contexts
-    if (arg === '|') break;
+    if (arg === "|") break;
     // Chain operators — skip and keep scanning
-    if (arg === '&&' || arg === '||') continue;
+    if (arg === "&&" || arg === "||") continue;
     // Redirection operators — grab the next token as a file path
-    if (arg === '>' || arg === '>>' || arg === '<') {
+    if (arg === ">" || arg === ">>" || arg === "<") {
       if (i + 1 < parts.length) {
         const target = parts[++i];
-        if (!target.startsWith('-')) {
-          const resolved = target.startsWith('/') ? target :
-            target.startsWith('~') ? target.replace('~', '/home/tronos') :
-            (cwd === '/' ? '/' + target : cwd + '/' + target);
+        if (!target.startsWith("-")) {
+          const resolved = target.startsWith("/")
+            ? target
+            : target.startsWith("~")
+              ? target.replace("~", "/home/tronos")
+              : cwd === "/"
+                ? "/" + target
+                : cwd + "/" + target;
           files.push(resolved);
         }
       }
       continue;
     }
     // Looks like a path if it contains / or . or ends with common extensions
-    if (arg.includes('/') || arg.includes('.') || arg.startsWith('~')) {
-      const resolved = arg.startsWith('/') ? arg :
-        arg.startsWith('~') ? arg.replace('~', '/home/tronos') :
-        (cwd === '/' ? '/' + arg : cwd + '/' + arg);
+    if (arg.includes("/") || arg.includes(".") || arg.startsWith("~")) {
+      const resolved = arg.startsWith("/")
+        ? arg
+        : arg.startsWith("~")
+          ? arg.replace("~", "/home/tronos")
+          : cwd === "/"
+            ? "/" + arg
+            : cwd + "/" + arg;
       files.push(resolved);
     }
   }
