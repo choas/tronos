@@ -175,6 +175,10 @@ class ShellEngine {
   public async switchToSession(session: { fsNamespace: string; env?: Record<string, string>; aliases?: Record<string, string>; history?: string[] }): Promise<void> {
     await this.vfs.switchNamespace(session.fsNamespace);
 
+    // Update context bus for the new session
+    setActiveSession(session.fsNamespace);
+    await loadPersistedContext(session.fsNamespace).catch(() => {});
+
     // Update environment
     if (session.env) {
       this.env = { ...session.env };
@@ -499,6 +503,9 @@ class ShellEngine {
       if (sessionSwitch) {
         try {
           await this.vfs.switchNamespace(sessionSwitch.fsNamespace);
+          // Update context bus for the new session
+          setActiveSession(sessionSwitch.fsNamespace);
+          await loadPersistedContext(sessionSwitch.fsNamespace).catch(() => {});
           // Update shell env and aliases from the new session
           if (sessionSwitch.env) {
             this.env = { ...sessionSwitch.env };
