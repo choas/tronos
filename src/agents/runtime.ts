@@ -20,6 +20,16 @@ import { getNextRunTime } from '../engine/cron';
 export type AgentStatus = 'running' | 'waiting' | 'suspended' | 'done' | 'error';
 
 /**
+ * Error thrown when an agent operation is cancelled due to suspend/kill.
+ */
+export class AgentCancelledError extends Error {
+  constructor(agentId: string) {
+    super(`Agent ${agentId} was cancelled (suspended or killed)`);
+    this.name = 'AgentCancelledError';
+  }
+}
+
+/**
  * Agent trigger configuration.
  */
 export interface AgentTrigger {
@@ -176,6 +186,15 @@ export class AgentRuntime {
   }
 
   /**
+   * Set or replace an agent's executor function.
+   */
+  setExecutor(id: string, executor: () => Promise<void>): void {
+    const agent = this.agents.get(id);
+    if (!agent) throw new Error(`Agent not found: ${id}`);
+    agent._executor = executor;
+  }
+
+  /**
    * List all agents.
    */
   listAgents(): AgentProcess[] {
@@ -199,8 +218,12 @@ export class AgentRuntime {
       if (agent._executor) {
         await agent._executor();
       }
+      // Re-check liveness — agent may have been suspended/killed during execution
+      const current = this.agents.get(id);
+      if (!current || current.status === 'suspended' || current.status === 'done') return;
       this.logAction(id, 'executed');
     } catch (err) {
+      if (err instanceof AgentCancelledError) return;
       const message = err instanceof Error ? err.message : String(err);
       agent.status = 'error';
       this.logAction(id, 'error', undefined, undefined, message);
@@ -277,6 +300,11 @@ export class AgentRuntime {
           if (!approved) {
             throw new Error(`Write to ${path} rejected by guard`);
           }
+          // Re-check agent liveness after awaiting guard approval
+          const current = runtime.getAgent(agentId);
+          if (!current || current.status === 'suspended' || current.status === 'done') {
+            throw new AgentCancelledError(agentId);
+          }
         }
         return vfs.write(path, data);
       },
@@ -294,6 +322,11 @@ export class AgentRuntime {
           });
           if (!approved) {
             throw new Error(`Write to ${path} rejected by guard`);
+          }
+          // Re-check agent liveness after awaiting guard approval
+          const current = runtime.getAgent(agentId);
+          if (!current || current.status === 'suspended' || current.status === 'done') {
+            throw new AgentCancelledError(agentId);
           }
         }
         return vfs.append(path, data);

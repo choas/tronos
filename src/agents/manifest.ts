@@ -145,17 +145,23 @@ export async function startFromManifest(
   const runtime = getAgentRuntime();
   const guardQueue = getGuardQueue();
 
-  // Create executor from body
-  let executor: (() => Promise<void>) | undefined;
+  const goal = manifest.description || manifest.name;
+  const id = await runtime.start(
+    manifest.name,
+    goal,
+    manifest.permissions || emptyPermissions(),
+    manifest.trigger || { type: 'manual' },
+  );
 
+  // Create executor from body, closing over the captured id
   if (manifest.body) {
     const extractResult = extractAgentFunctionBody(manifest.body);
     if (extractResult.success && extractResult.code) {
       const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
       const code = extractResult.code;
 
-      executor = async () => {
-        const agent = runtime.listAgents().find(a => a.name === manifest.name);
+      const executor = async () => {
+        const agent = runtime.listAgents().find(a => a.id === id);
         if (!agent) return;
 
         // Build the agent API (a)
@@ -186,17 +192,10 @@ export async function startFromManifest(
         const fn = new AsyncFunction('a', code);
         await fn(agentAPI);
       };
+
+      runtime.setExecutor(id, executor);
     }
   }
-
-  const goal = manifest.description || manifest.name;
-  const id = await runtime.start(
-    manifest.name,
-    goal,
-    manifest.permissions || emptyPermissions(),
-    manifest.trigger || { type: 'manual' },
-    executor
-  );
 
   return id;
 }
