@@ -11,6 +11,7 @@
 import type { AgentPermissions, AgentViolation } from "./permissions";
 import { canRead, canWrite, matchesGlob } from "./permissions";
 import type { GuardQueue } from "./guard";
+import { getGuardQueue } from "./guard";
 import { getEventBus } from "../events/bus";
 import { getNextRunTime } from "../engine/cron";
 import type { InMemoryVFS } from "../vfs/memory";
@@ -63,6 +64,7 @@ export interface AgentProcess {
   name: string;
   goal: string;
   permissions: AgentPermissions;
+  escalate: "never" | "always" | "out-of-scope";
   status: AgentStatus;
   trigger: AgentTrigger;
   log: AgentLogEntry[];
@@ -97,6 +99,7 @@ export class AgentRuntime {
     goal: string,
     permissions: AgentPermissions,
     trigger: AgentTrigger,
+    escalate: "never" | "always" | "out-of-scope" = "out-of-scope",
     executor?: () => Promise<void>,
   ): Promise<string> {
     const id = String(++agentCounter).padStart(3, "0");
@@ -107,6 +110,7 @@ export class AgentRuntime {
       name,
       goal,
       permissions,
+      escalate,
       status: "running",
       trigger,
       log: [],
@@ -139,6 +143,7 @@ export class AgentRuntime {
     if (!agent) throw new Error(`Agent not found: ${id}`);
     if (agent.status === "suspended") return;
 
+    getGuardQueue().rejectAllForAgent(id, new AgentCancelledError(id));
     this.clearTrigger(agent);
     agent.status = "suspended";
     this.logAction(id, "suspended");
@@ -164,6 +169,7 @@ export class AgentRuntime {
     const agent = this.agents.get(id);
     if (!agent) throw new Error(`Agent not found: ${id}`);
 
+    getGuardQueue().rejectAllForAgent(id, new AgentCancelledError(id));
     this.clearTrigger(agent);
     agent.status = "done";
     this.logAction(id, "killed");
@@ -301,25 +307,27 @@ export class AgentRuntime {
     const runtime = this;
     return {
       async read(path: string): Promise<string> {
-        if (!runtime.checkPermission(agentId, "read", path)) {
-          throw new Error(`Agent not permitted to read ${path}`);
+        const fullPath = vfs.resolve(path);
+        if (!runtime.checkPermission(agentId, "read", fullPath)) {
+          throw new Error(`Agent not permitted to read ${fullPath}`);
         }
-        return vfs.read(path);
+        return vfs.read(fullPath);
       },
       async write(path: string, data: string): Promise<void> {
-        if (!runtime.checkPermission(agentId, "write", path)) {
+        const fullPath = vfs.resolve(path);
+        if (!runtime.checkPermission(agentId, "write", fullPath)) {
           // Route through guard queue
           const agent = runtime.getAgent(agentId);
           const approved = await guardQueue.request({
             agent_id: agentId,
             agent_name: agent?.name || agentId,
             action: "write",
-            target: path,
+            target: fullPath,
             data_preview: data.substring(0, 200),
             reason: "Write outside declared permissions",
           });
           if (!approved) {
-            throw new Error(`Write to ${path} rejected by guard`);
+            throw new Error(`Write to ${fullPath} rejected by guard`);
           }
           // Re-check agent liveness after awaiting guard approval
           const current = runtime.getAgent(agentId);
@@ -331,22 +339,23 @@ export class AgentRuntime {
             throw new AgentCancelledError(agentId);
           }
         }
-        return vfs.write(path, data);
+        return vfs.write(fullPath, data);
       },
       async append(path: string, data: string): Promise<void> {
-        if (!runtime.checkPermission(agentId, "write", path)) {
+        const fullPath = vfs.resolve(path);
+        if (!runtime.checkPermission(agentId, "write", fullPath)) {
           // Route through guard queue
           const agent = runtime.getAgent(agentId);
           const approved = await guardQueue.request({
             agent_id: agentId,
             agent_name: agent?.name || agentId,
             action: "write",
-            target: path,
+            target: fullPath,
             data_preview: data.substring(0, 200),
             reason: "Write outside declared permissions",
           });
           if (!approved) {
-            throw new Error(`Write to ${path} rejected by guard`);
+            throw new Error(`Write to ${fullPath} rejected by guard`);
           }
           // Re-check agent liveness after awaiting guard approval
           const current = runtime.getAgent(agentId);
@@ -358,40 +367,50 @@ export class AgentRuntime {
             throw new AgentCancelledError(agentId);
           }
         }
-        return vfs.append(path, data);
+        return vfs.append(fullPath, data);
       },
       exists(path: string): boolean {
-        if (!runtime.checkPermission(agentId, "read", path)) {
+        const fullPath = vfs.resolve(path);
+        if (!runtime.checkPermission(agentId, "read", fullPath)) {
           return false;
         }
-        return vfs.exists(path);
+        return vfs.exists(fullPath);
       },
       list(path: string): string[] {
-        if (!runtime.checkPermission(agentId, "read", path)) {
-          throw new Error(`Agent not permitted to read ${path}`);
+        const resolvedPath = vfs.resolve(path);
+        if (!runtime.checkPermission(agentId, "read", resolvedPath)) {
+          throw new Error(`Agent not permitted to read ${resolvedPath}`);
         }
-        const entries: string[] = vfs.list(path);
+        const entries: string[] = vfs.list(resolvedPath);
         return entries.filter((name: string) => {
-          const fullPath = path === "/" ? `/${name}` : `${path}/${name}`;
-          return runtime.checkPermission(agentId, "read", fullPath);
+          const entryPath =
+            resolvedPath === "/" ? `/${name}` : `${resolvedPath}/${name}`;
+          return runtime.checkPermission(agentId, "read", entryPath);
         });
       },
       async readdir(
         path: string,
       ): Promise<Array<{ name: string; path: string; mtime: number }>> {
-        if (!runtime.checkPermission(agentId, "read", path)) {
-          throw new Error(`Agent not permitted to read ${path}`);
+        const resolvedPath = vfs.resolve(path);
+        if (!runtime.checkPermission(agentId, "read", resolvedPath)) {
+          throw new Error(`Agent not permitted to read ${resolvedPath}`);
         }
-        const entries = vfs.list(path);
+        const entries = vfs.list(resolvedPath);
         return entries
           .filter((name: string) => {
-            const fullPath = path === "/" ? `/${name}` : `${path}/${name}`;
-            return runtime.checkPermission(agentId, "read", fullPath);
+            const entryPath =
+              resolvedPath === "/" ? `/${name}` : `${resolvedPath}/${name}`;
+            return runtime.checkPermission(agentId, "read", entryPath);
           })
           .map((name: string) => {
-            const fullPath = path === "/" ? `/${name}` : `${path}/${name}`;
-            const stat = vfs.stat(fullPath);
-            return { name, path: fullPath, mtime: stat?.meta?.updatedAt || 0 };
+            const entryPath =
+              resolvedPath === "/" ? `/${name}` : `${resolvedPath}/${name}`;
+            const stat = vfs.stat(entryPath);
+            return {
+              name,
+              path: entryPath,
+              mtime: stat?.meta?.updatedAt || 0,
+            };
           });
       },
     };
