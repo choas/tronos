@@ -12,7 +12,7 @@
 import type { AIMode } from './parser';
 import type { InMemoryVFS } from '../../vfs/memory';
 import { getAIContext, getCondensedAIContext } from './tronos-ai-context';
-import { getContextState } from '../../context/state';
+import { getContextState, getActiveSession } from '../../context/state';
 
 /**
  * Context information for AI prompts
@@ -211,7 +211,7 @@ async function main(t) {
  */
 function buildSessionContextSection(): string {
   try {
-    const state = getContextState();
+    const state = getContextState(getActiveSession());
     const parts: string[] = [];
     parts.push('## Current Session Context');
     parts.push(`Working directory: ${state.focus.cwd}`);

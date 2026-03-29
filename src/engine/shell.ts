@@ -113,6 +113,7 @@ class ShellEngine {
   private onAliasChange?: (aliases: Record<string, string>) => void;
   private onUIRequest?: (request: string) => void;
   private skipBootAnimation: boolean;
+  private sessionId = 'default';
   private exitRequested = false;
   private exitCode = 0;
 
@@ -224,9 +225,9 @@ class ShellEngine {
     await this.vfs.init();
 
     // Initialize context bus for this session
-    const sessionId = (this.vfs as any).namespace || 'default';
-    setActiveSession(sessionId);
-    await loadPersistedContext(sessionId).catch(() => {});
+    this.sessionId = (this.vfs as any).namespace || 'default';
+    setActiveSession(this.sessionId);
+    await loadPersistedContext(this.sessionId).catch(() => {});
 
     // Load custom theme presets from /etc/themes/*.json
     this.loadCustomThemes();
@@ -425,8 +426,8 @@ class ShellEngine {
     // Update context bus after every command
     const cwd = this.vfs.cwd();
     const touchedFiles = extractFilesFromCommand(line, cwd);
-    updateFocus(line, cwd, touchedFiles);
-    appendShellHistory(line, cwd);
+    updateFocus(line, cwd, touchedFiles, this.sessionId);
+    appendShellHistory(line, cwd, this.sessionId);
   }
 
   private async executeCommand(command: ParsedCommand) {
@@ -437,7 +438,8 @@ class ShellEngine {
       terminal: this.term,
       history: this.history,
       aliases: this.aliases,
-      size: this.term.getSize()
+      size: this.term.getSize(),
+      sessionId: this.sessionId,
     };
 
     try {

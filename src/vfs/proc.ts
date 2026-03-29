@@ -22,6 +22,7 @@ import {
   writeWorkspace,
   readFocus,
   readHistory,
+  getActiveSession,
 } from '../context/state';
 import { getEventBus } from '../events/bus';
 import { getAgentRuntime } from '../agents/runtime';
@@ -138,9 +139,9 @@ export const procGenerators: Record<string, ProcGenerator> = {
   '/proc/theme/active': () => getTheme(),
 
   // Context bus
-  '/proc/context/workspace': () => readWorkspace(),
-  '/proc/context/focus': () => readFocus(),
-  '/proc/context/history': () => readHistory(),
+  '/proc/context/workspace': () => readWorkspace(getActiveSession()),
+  '/proc/context/focus': () => readFocus(getActiveSession()),
+  '/proc/context/history': () => readHistory(getActiveSession()),
 
   // Event bus
   '/proc/events/stream': () => {
@@ -167,7 +168,7 @@ export const procGenerators: Record<string, ProcGenerator> = {
  * Map of /proc paths to write handlers (for writable proc files)
  */
 export const procWriteHandlers: Record<string, ProcWriteHandler> = {
-  '/proc/context/workspace': (data: string) => writeWorkspace(data),
+  '/proc/context/workspace': (data: string) => writeWorkspace(data, getActiveSession()),
 };
 
 // Register write handlers for /proc/theme/colors/*

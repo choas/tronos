@@ -194,6 +194,7 @@ export interface ExecutionContext {
   history?: string[];
   aliases?: Map<string, string>;
   size?: { cols: number; rows: number };
+  sessionId?: string;
 }
 
 /**

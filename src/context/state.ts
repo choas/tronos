@@ -68,9 +68,8 @@ let activeSessionId = 'default';
 /**
  * Get or create the context state for a session.
  */
-function getSessionContext(sessionId?: string): ContextState {
-  const id = sessionId ?? activeSessionId;
-  let ctx = sessionContexts.get(id);
+function getSessionContext(sessionId: string): ContextState {
+  let ctx = sessionContexts.get(sessionId);
   if (!ctx) {
     ctx = {
       workspace: { updated: new Date().toISOString() },
@@ -78,12 +77,12 @@ function getSessionContext(sessionId?: string): ContextState {
         last_command: '',
         cwd: '/home/tronos',
         recent_files: [],
-        session: id,
+        session: sessionId,
         updated: new Date().toISOString(),
       },
       history: [],
     };
-    sessionContexts.set(id, ctx);
+    sessionContexts.set(sessionId, ctx);
   }
   return ctx;
 }
@@ -107,7 +106,7 @@ export function getActiveSession(): string {
 /**
  * Read the current workspace as JSON string.
  */
-export function readWorkspace(sessionId?: string): string {
+export function readWorkspace(sessionId: string): string {
   const ctx = getSessionContext(sessionId);
   return JSON.stringify(ctx.workspace, null, 2);
 }
@@ -115,7 +114,7 @@ export function readWorkspace(sessionId?: string): string {
 /**
  * Write to the workspace (full replace from JSON string).
  */
-export function writeWorkspace(data: string, sessionId?: string): void {
+export function writeWorkspace(data: string, sessionId: string): void {
   const ctx = getSessionContext(sessionId);
   try {
     const parsed = JSON.parse(data);
@@ -137,7 +136,7 @@ export function writeWorkspace(data: string, sessionId?: string): void {
 /**
  * Read the current focus as JSON string.
  */
-export function readFocus(sessionId?: string): string {
+export function readFocus(sessionId: string): string {
   const ctx = getSessionContext(sessionId);
   return JSON.stringify(ctx.focus, null, 2);
 }
@@ -149,8 +148,8 @@ export function readFocus(sessionId?: string): string {
 export function updateFocus(
   command: string,
   cwd: string,
-  touchedFiles?: string[],
-  sessionId?: string
+  touchedFiles: string[] | undefined,
+  sessionId: string
 ): void {
   const ctx = getSessionContext(sessionId);
   ctx.focus.last_command = command;
@@ -180,7 +179,7 @@ export function updateFocus(
 /**
  * Read history as JSONL string.
  */
-export function readHistory(sessionId?: string): string {
+export function readHistory(sessionId: string): string {
   const ctx = getSessionContext(sessionId);
   return ctx.history.map(e => JSON.stringify(e)).join('\n');
 }
@@ -191,7 +190,7 @@ export function readHistory(sessionId?: string): string {
 export function appendShellHistory(
   cmd: string,
   cwd: string,
-  sessionId?: string
+  sessionId: string
 ): void {
   const ctx = getSessionContext(sessionId);
   ctx.history.push({
@@ -210,8 +209,8 @@ export function appendShellHistory(
 export function appendAIHistory(
   prompt: string,
   cwd: string,
-  contextSnapshot?: string,
-  sessionId?: string
+  contextSnapshot: string | undefined,
+  sessionId: string
 ): void {
   const ctx = getSessionContext(sessionId);
   ctx.history.push({
@@ -239,7 +238,7 @@ function trimHistory(ctx: ContextState): void {
 /**
  * Get the full context state (for AI prompt building).
  */
-export function getContextState(sessionId?: string): ContextState {
+export function getContextState(sessionId: string): ContextState {
   return getSessionContext(sessionId);
 }
 
@@ -250,13 +249,12 @@ const persistTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
 /**
  * Schedule an async flush to IndexedDB (debounced 2s per session).
  */
-function persistContextAsync(sessionId?: string): void {
-  const id = sessionId ?? activeSessionId;
-  const existing = persistTimers.get(id);
+function persistContextAsync(sessionId: string): void {
+  const existing = persistTimers.get(sessionId);
   if (existing) clearTimeout(existing);
-  persistTimers.set(id, setTimeout(() => {
-    persistTimers.delete(id);
-    persistContextNow(id).catch(err => {
+  persistTimers.set(sessionId, setTimeout(() => {
+    persistTimers.delete(sessionId);
+    persistContextNow(sessionId).catch(err => {
       console.warn('Failed to persist context:', err);
     });
   }, 2000));
@@ -265,16 +263,15 @@ function persistContextAsync(sessionId?: string): void {
 /**
  * Immediately persist context to IndexedDB.
  */
-async function persistContextNow(sessionId?: string): Promise<void> {
-  const id = sessionId ?? activeSessionId;
-  const ctx = sessionContexts.get(id);
+async function persistContextNow(sessionId: string): Promise<void> {
+  const ctx = sessionContexts.get(sessionId);
   if (!ctx) return;
 
   try {
     if (typeof indexedDB !== 'undefined') {
       const { getDB } = await import('../persistence/db');
       const db = getDB();
-      const key = `tronos:context:${id}`;
+      const key = `tronos:context:${sessionId}`;
       await db.put('config', {
         workspace: ctx.workspace,
         focus: ctx.focus,
@@ -289,18 +286,16 @@ async function persistContextNow(sessionId?: string): Promise<void> {
 /**
  * Load persisted context from IndexedDB.
  */
-export async function loadPersistedContext(sessionId?: string): Promise<void> {
-  const id = sessionId ?? activeSessionId;
-
+export async function loadPersistedContext(sessionId: string): Promise<void> {
   try {
     if (typeof indexedDB !== 'undefined') {
       const { getDB } = await import('../persistence/db');
       const db = getDB();
-      const key = `tronos:context:${id}`;
+      const key = `tronos:context:${sessionId}`;
       const data = await db.get('config', key);
       if (data && typeof data === 'object') {
         const persisted = data as Partial<ContextState>;
-        const ctx = getSessionContext(id);
+        const ctx = getSessionContext(sessionId);
         if (persisted.workspace) ctx.workspace = persisted.workspace;
         if (persisted.focus) ctx.focus = persisted.focus;
         if (persisted.history) ctx.history = persisted.history;

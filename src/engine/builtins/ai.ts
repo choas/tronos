@@ -18,7 +18,7 @@ import {
 } from "../../stores";
 import { TERMS_CONTENT, TERMS_VERSION } from "../terms-content";
 import { saveVersion } from "../../persistence/versions";
-import { appendAIHistory, readWorkspace, writeWorkspace } from "../../context/state";
+import { appendAIHistory, readWorkspace, writeWorkspace, getActiveSession } from "../../context/state";
 
 /**
  * @ai builtin command
@@ -196,10 +196,12 @@ export const ai: BuiltinCommand = async (
   const userMessageForHistory = buildUserMessageForHistory(parsed.mode, parsed.prompt, parsed.targetFile);
 
   // Track in context history
+  const sessionId = context.sessionId ?? getActiveSession();
   appendAIHistory(
     parsed.prompt,
     promptContext.cwd,
-    JSON.stringify({ mode: parsed.mode, programName: parsed.programName })
+    JSON.stringify({ mode: parsed.mode, programName: parsed.programName }),
+    sessionId
   );
 
   // Execute the AI request with conversation history
@@ -288,10 +290,10 @@ export const ai: BuiltinCommand = async (
           const parsed_output = JSON.parse(output.trim());
           if (parsed_output && typeof parsed_output === 'object' && !Array.isArray(parsed_output) &&
               (parsed_output._workspace === true || parsed_output.update === true)) {
-            const current = JSON.parse(readWorkspace());
+            const current = JSON.parse(readWorkspace(sessionId));
             const { _workspace, update, ...fields } = parsed_output;
             const merged = { ...current, ...fields };
-            writeWorkspace(JSON.stringify(merged));
+            writeWorkspace(JSON.stringify(merged), sessionId);
           }
         } catch {
           // Not JSON — that's fine, just pass through
@@ -300,7 +302,8 @@ export const ai: BuiltinCommand = async (
         appendAIHistory(
           parsed.prompt,
           promptContext.cwd,
-          JSON.stringify({ type: 'ai-pipeline-step', output_length: output.length })
+          JSON.stringify({ type: 'ai-pipeline-step', output_length: output.length }),
+          sessionId
         );
       }
 
