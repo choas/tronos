@@ -8,17 +8,22 @@
  * @module agents/runtime
  */
 
-import type { AgentPermissions, AgentViolation } from './permissions';
-import { canRead, canWrite, emptyPermissions, matchesGlob } from './permissions';
-import { getGuardQueue, type GuardQueue } from './guard';
-import { getEventBus } from '../events/bus';
-import { getNextRunTime } from '../engine/cron';
-import type { InMemoryVFS } from '../vfs/memory';
+import type { AgentPermissions, AgentViolation } from "./permissions";
+import { canRead, canWrite, matchesGlob } from "./permissions";
+import type { GuardQueue } from "./guard";
+import { getEventBus } from "../events/bus";
+import { getNextRunTime } from "../engine/cron";
+import type { InMemoryVFS } from "../vfs/memory";
 
 /**
  * Agent status.
  */
-export type AgentStatus = 'running' | 'waiting' | 'suspended' | 'done' | 'error';
+export type AgentStatus =
+  | "running"
+  | "waiting"
+  | "suspended"
+  | "done"
+  | "error";
 
 /**
  * Error thrown when an agent operation is cancelled due to suspend/kill.
@@ -26,7 +31,7 @@ export type AgentStatus = 'running' | 'waiting' | 'suspended' | 'done' | 'error'
 export class AgentCancelledError extends Error {
   constructor(agentId: string) {
     super(`Agent ${agentId} was cancelled (suspended or killed)`);
-    this.name = 'AgentCancelledError';
+    this.name = "AgentCancelledError";
   }
 }
 
@@ -34,9 +39,9 @@ export class AgentCancelledError extends Error {
  * Agent trigger configuration.
  */
 export interface AgentTrigger {
-  type: 'interval' | 'cron' | 'file' | 'context-change' | 'manual';
-  value?: string;      // e.g. "5m", "0 9 * * *", "/home/user/inbox"
-  intervalMs?: number;  // resolved interval in ms
+  type: "interval" | "cron" | "file" | "context-change" | "manual";
+  value?: string; // e.g. "5m", "0 9 * * *", "/home/user/inbox"
+  intervalMs?: number; // resolved interval in ms
 }
 
 /**
@@ -92,9 +97,9 @@ export class AgentRuntime {
     goal: string,
     permissions: AgentPermissions,
     trigger: AgentTrigger,
-    executor?: () => Promise<void>
+    executor?: () => Promise<void>,
   ): Promise<string> {
-    const id = String(++agentCounter).padStart(3, '0');
+    const id = String(++agentCounter).padStart(3, "0");
     const pid = ++pidCounter;
 
     const agent: AgentProcess = {
@@ -102,7 +107,7 @@ export class AgentRuntime {
       name,
       goal,
       permissions,
-      status: 'running',
+      status: "running",
       trigger,
       log: [],
       violations: [],
@@ -112,15 +117,15 @@ export class AgentRuntime {
     };
 
     this.agents.set(id, agent);
-    this.logAction(id, 'started', undefined, `Goal: ${goal}`);
+    this.logAction(id, "started", undefined, `Goal: ${goal}`);
 
     // Set up trigger
     this.setupTrigger(agent);
 
     // Emit event
     getEventBus().emit({
-      type: 'agent-action',
-      payload: { agent_id: id, action: 'start', agent_name: name },
+      type: "agent-action",
+      payload: { agent_id: id, action: "start", agent_name: name },
     });
 
     return id;
@@ -132,11 +137,11 @@ export class AgentRuntime {
   async suspend(id: string): Promise<void> {
     const agent = this.agents.get(id);
     if (!agent) throw new Error(`Agent not found: ${id}`);
-    if (agent.status === 'suspended') return;
+    if (agent.status === "suspended") return;
 
     this.clearTrigger(agent);
-    agent.status = 'suspended';
-    this.logAction(id, 'suspended');
+    agent.status = "suspended";
+    this.logAction(id, "suspended");
   }
 
   /**
@@ -145,11 +150,11 @@ export class AgentRuntime {
   async resume(id: string): Promise<void> {
     const agent = this.agents.get(id);
     if (!agent) throw new Error(`Agent not found: ${id}`);
-    if (agent.status !== 'suspended') return;
+    if (agent.status !== "suspended") return;
 
-    agent.status = 'running';
+    agent.status = "running";
     this.setupTrigger(agent);
-    this.logAction(id, 'resumed');
+    this.logAction(id, "resumed");
   }
 
   /**
@@ -160,12 +165,12 @@ export class AgentRuntime {
     if (!agent) throw new Error(`Agent not found: ${id}`);
 
     this.clearTrigger(agent);
-    agent.status = 'done';
-    this.logAction(id, 'killed');
+    agent.status = "done";
+    this.logAction(id, "killed");
 
     getEventBus().emit({
-      type: 'agent-action',
-      payload: { agent_id: id, action: 'kill', agent_name: agent.name },
+      type: "agent-action",
+      payload: { agent_id: id, action: "kill", agent_name: agent.name },
     });
   }
 
@@ -207,7 +212,7 @@ export class AgentRuntime {
    */
   async executeAgent(id: string): Promise<void> {
     const agent = this.agents.get(id);
-    if (!agent || agent.status !== 'running') return;
+    if (!agent || agent.status !== "running") return;
 
     // Prevent overlapping runs — skip if a previous execution is still in flight
     if (agent._inflight) return;
@@ -221,13 +226,18 @@ export class AgentRuntime {
       }
       // Re-check liveness — agent may have been suspended/killed during execution
       const current = this.agents.get(id);
-      if (!current || current.status === 'suspended' || current.status === 'done') return;
-      this.logAction(id, 'executed');
+      if (
+        !current ||
+        current.status === "suspended" ||
+        current.status === "done"
+      )
+        return;
+      this.logAction(id, "executed");
     } catch (err) {
       if (err instanceof AgentCancelledError) return;
       const message = err instanceof Error ? err.message : String(err);
-      agent.status = 'error';
-      this.logAction(id, 'error', undefined, undefined, message);
+      agent.status = "error";
+      this.logAction(id, "error", undefined, undefined, message);
     } finally {
       agent._inflight = false;
     }
@@ -236,25 +246,29 @@ export class AgentRuntime {
   /**
    * Check if an agent has permission for an operation.
    */
-  checkPermission(agentId: string, operation: 'read' | 'write' | 'mcp' | 'network' | 'spawn', path: string): boolean {
+  checkPermission(
+    agentId: string,
+    operation: "read" | "write" | "mcp" | "network" | "spawn",
+    path: string,
+  ): boolean {
     const agent = this.agents.get(agentId);
     if (!agent) return false;
 
     let allowed = false;
     switch (operation) {
-      case 'read':
+      case "read":
         allowed = canRead(agent.permissions, path);
         break;
-      case 'write':
+      case "write":
         allowed = canWrite(agent.permissions, path);
         break;
-      case 'mcp':
+      case "mcp":
         allowed = matchesGlob(path, agent.permissions.mcp);
         break;
-      case 'network':
+      case "network":
         allowed = agent.permissions.network;
         break;
-      case 'spawn':
+      case "spawn":
         allowed = agent.permissions.spawn;
         break;
     }
@@ -268,7 +282,13 @@ export class AgentRuntime {
         message: `Permission denied: ${operation} ${path}`,
       };
       agent.violations.push(violation);
-      this.logAction(agentId, 'violation', path, undefined, `${operation} denied`);
+      this.logAction(
+        agentId,
+        "violation",
+        path,
+        undefined,
+        `${operation} denied`,
+      );
     }
 
     return allowed;
@@ -281,85 +301,95 @@ export class AgentRuntime {
     const runtime = this;
     return {
       async read(path: string): Promise<string> {
-        if (!runtime.checkPermission(agentId, 'read', path)) {
+        if (!runtime.checkPermission(agentId, "read", path)) {
           throw new Error(`Agent not permitted to read ${path}`);
         }
         return vfs.read(path);
       },
       async write(path: string, data: string): Promise<void> {
-        if (!runtime.checkPermission(agentId, 'write', path)) {
+        if (!runtime.checkPermission(agentId, "write", path)) {
           // Route through guard queue
           const agent = runtime.getAgent(agentId);
           const approved = await guardQueue.request({
             agent_id: agentId,
             agent_name: agent?.name || agentId,
-            action: 'write',
+            action: "write",
             target: path,
             data_preview: data.substring(0, 200),
-            reason: 'Write outside declared permissions',
+            reason: "Write outside declared permissions",
           });
           if (!approved) {
             throw new Error(`Write to ${path} rejected by guard`);
           }
           // Re-check agent liveness after awaiting guard approval
           const current = runtime.getAgent(agentId);
-          if (!current || current.status === 'suspended' || current.status === 'done') {
+          if (
+            !current ||
+            current.status === "suspended" ||
+            current.status === "done"
+          ) {
             throw new AgentCancelledError(agentId);
           }
         }
         return vfs.write(path, data);
       },
       async append(path: string, data: string): Promise<void> {
-        if (!runtime.checkPermission(agentId, 'write', path)) {
+        if (!runtime.checkPermission(agentId, "write", path)) {
           // Route through guard queue
           const agent = runtime.getAgent(agentId);
           const approved = await guardQueue.request({
             agent_id: agentId,
             agent_name: agent?.name || agentId,
-            action: 'write',
+            action: "write",
             target: path,
             data_preview: data.substring(0, 200),
-            reason: 'Write outside declared permissions',
+            reason: "Write outside declared permissions",
           });
           if (!approved) {
             throw new Error(`Write to ${path} rejected by guard`);
           }
           // Re-check agent liveness after awaiting guard approval
           const current = runtime.getAgent(agentId);
-          if (!current || current.status === 'suspended' || current.status === 'done') {
+          if (
+            !current ||
+            current.status === "suspended" ||
+            current.status === "done"
+          ) {
             throw new AgentCancelledError(agentId);
           }
         }
         return vfs.append(path, data);
       },
       exists(path: string): boolean {
-        if (!runtime.checkPermission(agentId, 'read', path)) {
+        if (!runtime.checkPermission(agentId, "read", path)) {
           return false;
         }
         return vfs.exists(path);
       },
       list(path: string): string[] {
-        if (!runtime.checkPermission(agentId, 'read', path)) {
+        if (!runtime.checkPermission(agentId, "read", path)) {
           throw new Error(`Agent not permitted to read ${path}`);
         }
         const entries: string[] = vfs.list(path);
         return entries.filter((name: string) => {
-          const fullPath = path === '/' ? `/${name}` : `${path}/${name}`;
-          return runtime.checkPermission(agentId, 'read', fullPath);
+          const fullPath = path === "/" ? `/${name}` : `${path}/${name}`;
+          return runtime.checkPermission(agentId, "read", fullPath);
         });
       },
-      async readdir(path: string): Promise<Array<{ name: string; path: string; mtime: number }>> {
-        if (!runtime.checkPermission(agentId, 'read', path)) {
+      async readdir(
+        path: string,
+      ): Promise<Array<{ name: string; path: string; mtime: number }>> {
+        if (!runtime.checkPermission(agentId, "read", path)) {
           throw new Error(`Agent not permitted to read ${path}`);
         }
         const entries = vfs.list(path);
         return entries
           .filter((name: string) => {
-            const fullPath = path === '/' ? `/${name}` : `${path}/${name}`;
-            return runtime.checkPermission(agentId, 'read', fullPath);
+            const fullPath = path === "/" ? `/${name}` : `${path}/${name}`;
+            return runtime.checkPermission(agentId, "read", fullPath);
           })
           .map((name: string) => {
-            const fullPath = path === '/' ? `/${name}` : `${path}/${name}`;
+            const fullPath = path === "/" ? `/${name}` : `${path}/${name}`;
             const stat = vfs.stat(fullPath);
             return { name, path: fullPath, mtime: stat?.meta?.updatedAt || 0 };
           });
@@ -369,7 +399,13 @@ export class AgentRuntime {
 
   // ─── Private Helpers ────────────────────────────────────────────────────
 
-  private logAction(agentId: string, action: string, target?: string, result?: string, error?: string): void {
+  private logAction(
+    agentId: string,
+    action: string,
+    target?: string,
+    result?: string,
+    error?: string,
+  ): void {
     const agent = this.agents.get(agentId);
     if (!agent) return;
     agent.log.push({
@@ -386,39 +422,36 @@ export class AgentRuntime {
   }
 
   private setupTrigger(agent: AgentProcess): void {
-    if (agent.trigger.type === 'interval' && agent.trigger.intervalMs) {
+    if (agent.trigger.type === "interval" && agent.trigger.intervalMs) {
       agent._timerId = setInterval(() => {
-        if (agent.status === 'running') {
-          this.executeAgent(agent.id).catch(err => {
+        if (agent.status === "running") {
+          this.executeAgent(agent.id).catch((err) => {
             console.warn(`Agent ${agent.id} execution error:`, err);
           });
         }
       }, agent.trigger.intervalMs);
-    } else if (agent.trigger.type === 'file' && agent.trigger.value) {
+    } else if (agent.trigger.type === "file" && agent.trigger.value) {
       const bus = getEventBus();
       agent._eventSubId = bus.subscribe(
-        { type: 'file-changed', path: agent.trigger.value },
+        { type: "file-changed", path: agent.trigger.value },
         () => {
-          if (agent.status === 'running') {
-            this.executeAgent(agent.id).catch(err => {
+          if (agent.status === "running") {
+            this.executeAgent(agent.id).catch((err) => {
               console.warn(`Agent ${agent.id} execution error:`, err);
             });
           }
-        }
+        },
       );
-    } else if (agent.trigger.type === 'context-change') {
+    } else if (agent.trigger.type === "context-change") {
       const bus = getEventBus();
-      agent._eventSubId = bus.subscribe(
-        { type: 'context-changed' },
-        () => {
-          if (agent.status === 'running') {
-            this.executeAgent(agent.id).catch(err => {
-              console.warn(`Agent ${agent.id} execution error:`, err);
-            });
-          }
+      agent._eventSubId = bus.subscribe({ type: "context-changed" }, () => {
+        if (agent.status === "running") {
+          this.executeAgent(agent.id).catch((err) => {
+            console.warn(`Agent ${agent.id} execution error:`, err);
+          });
         }
-      );
-    } else if (agent.trigger.type === 'cron' && agent.trigger.value) {
+      });
+    } else if (agent.trigger.type === "cron" && agent.trigger.value) {
       this.scheduleCronRun(agent);
     }
   }
@@ -429,13 +462,13 @@ export class AgentRuntime {
 
     const delay = Math.max(0, nextRun - Date.now());
     agent._timerId = setTimeout(() => {
-      if (agent.status === 'running') {
+      if (agent.status === "running") {
         this.executeAgent(agent.id)
-          .catch(err => {
+          .catch((err) => {
             console.warn(`Agent ${agent.id} cron execution error:`, err);
           })
           .finally(() => {
-            if (agent.status === 'running') {
+            if (agent.status === "running") {
               this.scheduleCronRun(agent);
             }
           });
@@ -474,33 +507,37 @@ export function getAgentRuntime(): AgentRuntime {
 export function parseTrigger(value: string): AgentTrigger {
   value = value.trim();
 
-  if (value === '@manual') {
-    return { type: 'manual' };
+  if (value === "@manual") {
+    return { type: "manual" };
   }
 
-  if (value === '@context-change') {
-    return { type: 'context-change' };
+  if (value === "@context-change") {
+    return { type: "context-change" };
   }
 
-  if (value.startsWith('@file ')) {
-    return { type: 'file', value: value.substring(6).trim() };
+  if (value.startsWith("@file ")) {
+    return { type: "file", value: value.substring(6).trim() };
   }
 
-  if (value.startsWith('@every ')) {
+  if (value.startsWith("@every ")) {
     const interval = value.substring(7).trim();
-    return { type: 'interval', value: interval, intervalMs: parseInterval(interval) };
+    return {
+      type: "interval",
+      value: interval,
+      intervalMs: parseInterval(interval),
+    };
   }
 
-  if (value === '@daily') {
-    return { type: 'interval', value: '24h', intervalMs: 86400000 };
+  if (value === "@daily") {
+    return { type: "interval", value: "24h", intervalMs: 86400000 };
   }
 
-  if (value === '@hourly') {
-    return { type: 'interval', value: '1h', intervalMs: 3600000 };
+  if (value === "@hourly") {
+    return { type: "interval", value: "1h", intervalMs: 3600000 };
   }
 
   // Assume cron syntax
-  return { type: 'cron', value };
+  return { type: "cron", value };
 }
 
 /**
@@ -512,10 +549,15 @@ export function parseInterval(interval: string): number {
 
   const num = parseInt(match[1]);
   switch (match[2]) {
-    case 's': return num * 1000;
-    case 'm': return num * 60000;
-    case 'h': return num * 3600000;
-    case 'd': return num * 86400000;
-    default: return 300000;
+    case "s":
+      return num * 1000;
+    case "m":
+      return num * 60000;
+    case "h":
+      return num * 3600000;
+    case "d":
+      return num * 86400000;
+    default:
+      return 300000;
   }
 }
