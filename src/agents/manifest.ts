@@ -75,9 +75,7 @@ async function executeSandboxedAgentCode(
   code: string,
   agentAPI: Record<string, unknown>,
 ): Promise<void> {
-  const AsyncFunction = Object.getPrototypeOf(
-    async function () {},
-  ).constructor;
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
   // Build parameter list: 'a' (the agentAPI) followed by every blocked global
   const params = ["a", ...SANDBOXED_GLOBALS];
@@ -255,9 +253,6 @@ export async function startFromManifest(
   if (manifest.body) {
     const extractResult = extractAgentFunctionBody(manifest.body);
     if (extractResult.success && extractResult.code) {
-      const AsyncFunction = Object.getPrototypeOf(
-        async function () {},
-      ).constructor;
       const code = extractResult.code;
 
       const executor = async () => {
@@ -351,8 +346,7 @@ export async function startFromManifest(
           },
         };
 
-        const fn = new AsyncFunction("a", code);
-        await fn(agentAPI);
+        await executeSandboxedAgentCode(code, agentAPI);
       };
 
       runtime.setExecutor(id, executor);
