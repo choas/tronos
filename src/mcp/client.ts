@@ -247,12 +247,18 @@ export class MCPClient {
    * Uses the MCP protocol's tools/list method.
    */
   private async discoverTools(server: MCPServer): Promise<MCPTool[]> {
+    let tools: MCPTool[];
     if (server.transport === "sse") {
-      return this.discoverToolsSSE(server);
+      tools = await this.discoverToolsSSE(server);
     } else if (server.transport === "websocket") {
-      return this.discoverToolsWebSocket(server);
+      tools = await this.discoverToolsWebSocket(server);
+    } else {
+      throw new Error(`Transport ${server.transport} not supported in browser`);
     }
-    throw new Error(`Transport ${server.transport} not supported in browser`);
+    for (const tool of tools) {
+      validateMCPName(tool.name, "tool");
+    }
+    return tools;
   }
 
   /**
