@@ -18,7 +18,12 @@ import {
 } from "../../stores";
 import { TERMS_CONTENT, TERMS_VERSION } from "../terms-content";
 import { saveVersion } from "../../persistence/versions";
-import { appendAIHistory, readWorkspace, writeWorkspace, getActiveSession } from "../../context/state";
+import {
+  appendAIHistory,
+  readWorkspace,
+  writeWorkspace,
+  getActiveSession,
+} from "../../context/state";
 
 /**
  * @ai builtin command
@@ -34,7 +39,7 @@ import { appendAIHistory, readWorkspace, writeWorkspace, getActiveSession } from
  */
 export const ai: BuiltinCommand = async (
   args: string[],
-  context: ExecutionContext
+  context: ExecutionContext,
 ): Promise<CommandResult> => {
   // Handle clear/reset commands to clear conversation history
   if (args.length === 1 && (args[0] === "clear" || args[0] === "reset")) {
@@ -51,7 +56,8 @@ export const ai: BuiltinCommand = async (
     const config = getAIConfig();
     if (config.provider !== "tronos") {
       return {
-        stdout: "Terms acceptance is only required for the TronOS provider.\n" +
+        stdout:
+          "Terms acceptance is only required for the TronOS provider.\n" +
           `Your current provider is: ${config.provider}\n`,
         stderr: "",
         exitCode: 0,
@@ -83,7 +89,8 @@ export const ai: BuiltinCommand = async (
   if (!parsed) {
     return {
       stdout: "",
-      stderr: "Usage: @ai <question> or @ai <mode> [args...]\n" +
+      stderr:
+        "Usage: @ai <question> or @ai <mode> [args...]\n" +
         "Modes: create, edit, explain, fix, chat (default)\n" +
         "       @ai clear - Clear conversation history\n" +
         "       @ai accept-terms - Accept Terms & Conditions (TronOS provider)\n" +
@@ -106,7 +113,8 @@ export const ai: BuiltinCommand = async (
   if (!isAIConfigured()) {
     return {
       stdout: "",
-      stderr: 'AI not configured. Run "config set apiKey <your-key>" to set your API key.\n',
+      stderr:
+        'AI not configured. Run "config set apiKey <your-key>" to set your API key.\n',
       exitCode: 1,
     };
   }
@@ -117,9 +125,11 @@ export const ai: BuiltinCommand = async (
   // Terms gate: require acceptance for TronOS provider
   if (config.provider === "tronos" && !hasAcceptedTerms()) {
     return {
-      stdout: TERMS_CONTENT + "\n" +
+      stdout:
+        TERMS_CONTENT +
+        "\n" +
         "You must accept the Terms & Conditions before using @ai with the TronOS provider.\n" +
-        'Run: @ai accept-terms\n',
+        "Run: @ai accept-terms\n",
       stderr: "",
       exitCode: 1,
     };
@@ -142,7 +152,11 @@ export const ai: BuiltinCommand = async (
   }
 
   // Handle modes that require file content
-  if (parsed.mode === "edit" || parsed.mode === "explain" || parsed.mode === "fix") {
+  if (
+    parsed.mode === "edit" ||
+    parsed.mode === "explain" ||
+    parsed.mode === "fix"
+  ) {
     if (!context.vfs) {
       return {
         stdout: "",
@@ -152,7 +166,11 @@ export const ai: BuiltinCommand = async (
     }
 
     // Use resolveFilePath to find the file, including searching in /bin
-    const targetPath = resolveFilePath(parsed.targetFile!, promptContext.cwd, context.vfs);
+    const targetPath = resolveFilePath(
+      parsed.targetFile!,
+      promptContext.cwd,
+      context.vfs,
+    );
 
     // Check if file was found
     if (!targetPath) {
@@ -184,7 +202,8 @@ export const ai: BuiltinCommand = async (
 
   // Get conversation history for chat mode (preserves context across messages)
   // Only include history for chat and explain modes (conversational modes)
-  const shouldIncludeHistory = parsed.mode === "chat" || parsed.mode === "explain";
+  const shouldIncludeHistory =
+    parsed.mode === "chat" || parsed.mode === "explain";
   const conversationHistory: Message[] = shouldIncludeHistory
     ? getConversationHistory().map((msg: ConversationMessage) => ({
         role: msg.role,
@@ -193,7 +212,11 @@ export const ai: BuiltinCommand = async (
     : [];
 
   // Build user message for history (include the prompt context)
-  const userMessageForHistory = buildUserMessageForHistory(parsed.mode, parsed.prompt, parsed.targetFile);
+  const userMessageForHistory = buildUserMessageForHistory(
+    parsed.mode,
+    parsed.prompt,
+    parsed.targetFile,
+  );
 
   // Track in context history
   const sessionId = context.sessionId ?? getActiveSession();
@@ -201,7 +224,7 @@ export const ai: BuiltinCommand = async (
     parsed.prompt,
     promptContext.cwd,
     JSON.stringify({ mode: parsed.mode, programName: parsed.programName }),
-    sessionId
+    sessionId,
   );
 
   // Execute the AI request with conversation history
@@ -210,7 +233,8 @@ export const ai: BuiltinCommand = async (
     parsed.prompt,
     promptContext,
     parsed.programName,
-    conversationHistory
+    conversationHistory,
+    sessionId,
   );
 
   // Clear thinking indicator
@@ -249,7 +273,8 @@ export const ai: BuiltinCommand = async (
     });
 
     // Add assistant response
-    const assistantContent = parsedResponse.message || parsedResponse.code || response.content;
+    const assistantContent =
+      parsedResponse.message || parsedResponse.code || response.content;
     addConversationMessage({
       role: "assistant",
       content: assistantContent,
@@ -261,14 +286,18 @@ export const ai: BuiltinCommand = async (
   // Handle the result based on mode
   switch (parsed.mode) {
     case "create":
-      return await handleCreateMode(parsed.programName!, parsedResponse.code!, context);
+      return await handleCreateMode(
+        parsed.programName!,
+        parsedResponse.code!,
+        context,
+      );
 
     case "edit":
       return await handleEditMode(
         promptContext.targetFile!,
         parsedResponse.code!,
         context,
-        parsed.prompt
+        parsed.prompt,
       );
 
     case "fix":
@@ -276,20 +305,24 @@ export const ai: BuiltinCommand = async (
         promptContext.targetFile!,
         parsedResponse.code!,
         parsedResponse.message,
-        context
+        context,
       );
 
     case "explain":
     case "chat":
     default: {
-      const output = (parsedResponse.message || parsedResponse.code || "");
+      const output = parsedResponse.message || parsedResponse.code || "";
 
       // Agentic pipes: if output is JSON with workspace intent, merge into workspace
       if (isPipeline && output.trim()) {
         try {
           const parsed_output = JSON.parse(output.trim());
-          if (parsed_output && typeof parsed_output === 'object' && !Array.isArray(parsed_output) &&
-              (parsed_output._workspace === true || parsed_output.update === true)) {
+          if (
+            parsed_output &&
+            typeof parsed_output === "object" &&
+            !Array.isArray(parsed_output) &&
+            (parsed_output._workspace === true || parsed_output.update === true)
+          ) {
             const current = JSON.parse(readWorkspace(sessionId));
             const { _workspace, update, ...fields } = parsed_output;
             const merged = { ...current, ...fields };
@@ -302,8 +335,11 @@ export const ai: BuiltinCommand = async (
         appendAIHistory(
           parsed.prompt,
           promptContext.cwd,
-          JSON.stringify({ type: 'ai-pipeline-step', output_length: output.length }),
-          sessionId
+          JSON.stringify({
+            type: "ai-pipeline-step",
+            output_length: output.length,
+          }),
+          sessionId,
         );
       }
 
@@ -323,7 +359,7 @@ export const ai: BuiltinCommand = async (
 async function handleCreateMode(
   programName: string,
   code: string,
-  context: ExecutionContext
+  context: ExecutionContext,
 ): Promise<CommandResult> {
   if (!context.vfs) {
     return {
@@ -394,7 +430,7 @@ async function handleEditMode(
   targetPath: string,
   code: string,
   context: ExecutionContext,
-  editDescription?: string
+  editDescription?: string,
 ): Promise<CommandResult> {
   if (!context.vfs) {
     return {
@@ -449,7 +485,7 @@ async function handleFixMode(
   targetPath: string,
   code: string,
   explanation: string | null,
-  context: ExecutionContext
+  context: ExecutionContext,
 ): Promise<CommandResult> {
   if (!context.vfs) {
     return {
@@ -589,7 +625,7 @@ function resolveFilePath(path: string, cwd: string, vfs: any): string | null {
 function buildUserMessageForHistory(
   mode: string,
   prompt: string,
-  targetFile?: string | null
+  targetFile?: string | null,
 ): string {
   switch (mode) {
     case "explain":

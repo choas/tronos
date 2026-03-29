@@ -28,10 +28,10 @@
  * }
  */
 
-import type { AIConfig } from '../../stores/ai';
-import type { AIMode } from './parser';
-import type { PromptContext } from './prompts';
-import { buildSystemPrompt, buildUserMessage } from './prompts';
+import type { AIConfig } from "../../stores/ai";
+import type { AIMode } from "./parser";
+import type { PromptContext } from "./prompts";
+import { buildSystemPrompt, buildUserMessage } from "./prompts";
 
 /**
  * Response from an AI API call
@@ -68,7 +68,7 @@ export interface ParsedResponse {
  * Message format for API calls
  */
 export interface Message {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
 }
 
@@ -76,7 +76,7 @@ export interface Message {
  * Anthropic API message format
  */
 interface AnthropicMessage {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
 }
 
@@ -96,10 +96,10 @@ interface AnthropicRequest {
  */
 interface AnthropicResponse {
   id: string;
-  type: 'message';
-  role: 'assistant';
+  type: "message";
+  role: "assistant";
   content: Array<{
-    type: 'text';
+    type: "text";
     text: string;
   }>;
   model: string;
@@ -115,7 +115,7 @@ interface AnthropicResponse {
  * Anthropic API error response
  */
 interface AnthropicError {
-  type: 'error';
+  type: "error";
   error: {
     type: string;
     message: string;
@@ -126,7 +126,7 @@ interface AnthropicError {
  * OpenAI-compatible API message format
  */
 interface OpenAIMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: "system" | "user" | "assistant";
   content: string;
 }
 
@@ -146,13 +146,13 @@ interface OpenAIRequest {
  */
 interface OpenAIResponse {
   id: string;
-  object: 'chat.completion';
+  object: "chat.completion";
   created: number;
   model: string;
   choices: Array<{
     index: number;
     message: {
-      role: 'assistant';
+      role: "assistant";
       content: string;
     };
     finish_reason: string;
@@ -183,7 +183,7 @@ interface OllamaResponse {
   model: string;
   created_at: string;
   message: {
-    role: 'assistant';
+    role: "assistant";
     content: string;
   };
   done: boolean;
@@ -244,9 +244,10 @@ export class AIBridge {
     prompt: string,
     context: PromptContext,
     programName?: string | null,
-    conversationHistory?: Message[]
+    conversationHistory?: Message[],
+    sessionId?: string,
   ): { systemPrompt: string; messages: Message[] } {
-    const systemPrompt = buildSystemPrompt(mode, context);
+    const systemPrompt = buildSystemPrompt(mode, context, sessionId);
     const userMessage = buildUserMessage(mode, prompt, programName);
 
     // Build messages array with conversation history
@@ -258,11 +259,11 @@ export class AIBridge {
     }
 
     // Add the current user message
-    messages.push({ role: 'user', content: userMessage });
+    messages.push({ role: "user", content: userMessage });
 
     return {
       systemPrompt,
-      messages
+      messages,
     };
   }
 
@@ -271,15 +272,16 @@ export class AIBridge {
    */
   async callAnthropicAPI(
     systemPrompt: string,
-    messages: Message[]
+    messages: Message[],
   ): Promise<AIResponse> {
     const { apiKey, model, baseURL, temperature, maxTokens } = this.config;
 
     if (!apiKey) {
       return {
         success: false,
-        content: '',
-        error: 'API key not configured. Run "config set apiKey <your-key>" to set it.'
+        content: "",
+        error:
+          'API key not configured. Run "config set apiKey <your-key>" to set it.',
       };
     }
 
@@ -289,57 +291,60 @@ export class AIBridge {
       model,
       max_tokens: maxTokens,
       system: systemPrompt,
-      messages: messages.map(m => ({
+      messages: messages.map((m) => ({
         role: m.role,
-        content: m.content
+        content: m.content,
       })),
-      temperature
+      temperature,
     };
 
     try {
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        const errorData = await response.json() as AnthropicError;
-        const errorMessage = errorData.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+        const errorData = (await response.json()) as AnthropicError;
+        const errorMessage =
+          errorData.error?.message ||
+          `HTTP ${response.status}: ${response.statusText}`;
         return {
           success: false,
-          content: '',
-          error: `Anthropic API error: ${errorMessage}`
+          content: "",
+          error: `Anthropic API error: ${errorMessage}`,
         };
       }
 
-      const data = await response.json() as AnthropicResponse;
+      const data = (await response.json()) as AnthropicResponse;
 
       // Extract text content from response
       const textContent = data.content
-        .filter(block => block.type === 'text')
-        .map(block => block.text)
-        .join('');
+        .filter((block) => block.type === "text")
+        .map((block) => block.text)
+        .join("");
 
       return {
         success: true,
         content: textContent,
         usage: {
           inputTokens: data.usage.input_tokens,
-          outputTokens: data.usage.output_tokens
-        }
+          outputTokens: data.usage.output_tokens,
+        },
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       return {
         success: false,
-        content: '',
-        error: `Network error: ${errorMessage}`
+        content: "",
+        error: `Network error: ${errorMessage}`,
       };
     }
   }
@@ -350,25 +355,27 @@ export class AIBridge {
    */
   async callOpenAICompatibleAPI(
     systemPrompt: string,
-    messages: Message[]
+    messages: Message[],
   ): Promise<AIResponse> {
-    const { apiKey, model, baseURL, temperature, maxTokens, provider } = this.config;
+    const { apiKey, model, baseURL, temperature, maxTokens, provider } =
+      this.config;
 
     // TronOS and Ollama don't require an API key, but other providers do
-    if (!apiKey && provider !== 'tronos' && provider !== 'ollama') {
+    if (!apiKey && provider !== "tronos" && provider !== "ollama") {
       return {
         success: false,
-        content: '',
-        error: 'API key not configured. Run "config set apiKey <your-key>" to set it.'
+        content: "",
+        error:
+          'API key not configured. Run "config set apiKey <your-key>" to set it.',
       };
     }
 
     // Build the endpoint URL
     // For TronOS, use /chat; for Ollama, use /api/chat; for others, use /chat/completions
     let endpoint: string;
-    if (provider === 'tronos') {
+    if (provider === "tronos") {
       endpoint = `${baseURL}/chat`;
-    } else if (provider === 'ollama') {
+    } else if (provider === "ollama") {
       endpoint = `${baseURL}/api/chat`;
     } else {
       endpoint = `${baseURL}/chat/completions`;
@@ -376,11 +383,11 @@ export class AIBridge {
 
     // Build messages array with system prompt as first message
     const openAIMessages: OpenAIMessage[] = [
-      { role: 'system', content: systemPrompt },
-      ...messages.map(m => ({
-        role: m.role as 'user' | 'assistant',
-        content: m.content
-      }))
+      { role: "system", content: systemPrompt },
+      ...messages.map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      })),
     ];
 
     const requestBody: OpenAIRequest = {
@@ -388,7 +395,7 @@ export class AIBridge {
       messages: openAIMessages,
       max_tokens: maxTokens,
       temperature,
-      stream: false
+      stream: false,
     };
 
     // Serialize body once for both HMAC signing and the fetch request
@@ -396,12 +403,12 @@ export class AIBridge {
 
     // Build headers based on provider
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json'
+      "Content-Type": "application/json",
     };
 
-    if (provider === 'tronos') {
+    if (provider === "tronos") {
       // TronOS doesn't require authentication - it's the built-in provider
-      headers['X-TronOS-Client'] = 'TronOS Terminal';
+      headers["X-TronOS-Client"] = "TronOS Terminal";
 
       // HMAC request signing (if secret is configured)
       const hmacSecret = import.meta.env.VITE_TRONOS_HMAC_SECRET;
@@ -413,38 +420,46 @@ export class AIBridge {
         const encoder = new TextEncoder();
         const keyData = encoder.encode(hmacSecret);
         const key = await crypto.subtle.importKey(
-          'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+          "raw",
+          keyData,
+          { name: "HMAC", hash: "SHA-256" },
+          false,
+          ["sign"],
         );
-        const sig = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
+        const sig = await crypto.subtle.sign(
+          "HMAC",
+          key,
+          encoder.encode(payload),
+        );
         const signature = Array.from(new Uint8Array(sig))
-          .map(b => b.toString(16).padStart(2, '0'))
-          .join('');
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
 
-        headers['X-TronOS-Timestamp'] = timestamp;
-        headers['X-TronOS-Signature'] = signature;
+        headers["X-TronOS-Timestamp"] = timestamp;
+        headers["X-TronOS-Signature"] = signature;
       }
-    } else if (provider === 'openai') {
-      headers['Authorization'] = `Bearer ${apiKey}`;
-    } else if (provider === 'openrouter') {
-      headers['Authorization'] = `Bearer ${apiKey}`;
-      headers['HTTP-Referer'] = 'https://tronos.dev';
-      headers['X-Title'] = 'TronOS Terminal';
-    } else if (provider === 'ollama' && apiKey) {
+    } else if (provider === "openai") {
+      headers["Authorization"] = `Bearer ${apiKey}`;
+    } else if (provider === "openrouter") {
+      headers["Authorization"] = `Bearer ${apiKey}`;
+      headers["HTTP-Referer"] = "https://tronos.dev";
+      headers["X-Title"] = "TronOS Terminal";
+    } else if (provider === "ollama" && apiKey) {
       // Ollama can optionally use an API key if configured
-      headers['Authorization'] = `Bearer ${apiKey}`;
+      headers["Authorization"] = `Bearer ${apiKey}`;
     }
 
     try {
       const response = await fetch(endpoint, {
-        method: 'POST',
+        method: "POST",
         headers,
-        body: bodyStr
+        body: bodyStr,
       });
 
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
         try {
-          const errorData = await response.json() as OpenAIError;
+          const errorData = (await response.json()) as OpenAIError;
           if (errorData.error?.message) {
             errorMessage = errorData.error.message;
           }
@@ -453,8 +468,8 @@ export class AIBridge {
         }
         return {
           success: false,
-          content: '',
-          error: `${provider} API error: ${errorMessage}`
+          content: "",
+          error: `${provider} API error: ${errorMessage}`,
         };
       }
 
@@ -465,28 +480,35 @@ export class AIBridge {
       let content: string;
       let usage: { inputTokens: number; outputTokens: number } | undefined;
 
-      if (provider === 'ollama' && 'message' in data && data.message?.content !== undefined) {
+      if (
+        provider === "ollama" &&
+        "message" in data &&
+        data.message?.content !== undefined
+      ) {
         // Ollama response format
         const ollamaData = data as OllamaResponse;
         content = ollamaData.message.content;
 
         // Ollama provides token counts in different fields
-        if (ollamaData.prompt_eval_count !== undefined && ollamaData.eval_count !== undefined) {
+        if (
+          ollamaData.prompt_eval_count !== undefined &&
+          ollamaData.eval_count !== undefined
+        ) {
           usage = {
             inputTokens: ollamaData.prompt_eval_count,
-            outputTokens: ollamaData.eval_count
+            outputTokens: ollamaData.eval_count,
           };
         }
       } else {
         // OpenAI/OpenRouter response format
         const openAIData = data as OpenAIResponse;
-        content = openAIData.choices?.[0]?.message?.content || '';
+        content = openAIData.choices?.[0]?.message?.content || "";
 
         // Build usage info if available
         if (openAIData.usage) {
           usage = {
             inputTokens: openAIData.usage.prompt_tokens,
-            outputTokens: openAIData.usage.completion_tokens
+            outputTokens: openAIData.usage.completion_tokens,
           };
         }
       }
@@ -494,19 +516,21 @@ export class AIBridge {
       return {
         success: true,
         content,
-        usage
+        usage,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      let hint = '';
-      if (provider === 'ollama') {
-        const origin = typeof window !== 'undefined' ? window.location.origin : '*';
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      let hint = "";
+      if (provider === "ollama") {
+        const origin =
+          typeof window !== "undefined" ? window.location.origin : "*";
         hint = `\nQuit the Ollama desktop app, then run: OLLAMA_ORIGINS="${origin}" ollama serve`;
       }
       return {
         success: false,
-        content: '',
-        error: `Network error: ${errorMessage}${hint}`
+        content: "",
+        error: `Network error: ${errorMessage}${hint}`,
       };
     }
   }
@@ -529,23 +553,31 @@ export class AIBridge {
     prompt: string,
     context: PromptContext,
     programName?: string | null,
-    conversationHistory?: Message[]
+    conversationHistory?: Message[],
+    sessionId?: string,
   ): Promise<AIResponse> {
-    const { systemPrompt, messages } = this.buildMessages(mode, prompt, context, programName, conversationHistory);
+    const { systemPrompt, messages } = this.buildMessages(
+      mode,
+      prompt,
+      context,
+      programName,
+      conversationHistory,
+      sessionId,
+    );
 
     switch (this.config.provider) {
-      case 'anthropic':
+      case "anthropic":
         return this.callAnthropicAPI(systemPrompt, messages);
-      case 'tronos':
-      case 'openai':
-      case 'ollama':
-      case 'openrouter':
+      case "tronos":
+      case "openai":
+      case "ollama":
+      case "openrouter":
         return this.callOpenAICompatibleAPI(systemPrompt, messages);
       default:
         return {
           success: false,
-          content: '',
-          error: `Unknown provider: ${this.config.provider}`
+          content: "",
+          error: `Unknown provider: ${this.config.provider}`,
         };
     }
   }
@@ -556,13 +588,18 @@ export class AIBridge {
    */
   parseCode(response: string): string {
     // Try to extract from ```javascript or ``` blocks
-    const codeBlockMatch = response.match(/```(?:javascript|js|typescript|ts)?\s*\n?([\s\S]*?)```/);
+    const codeBlockMatch = response.match(
+      /```(?:javascript|js|typescript|ts)?\s*\n?([\s\S]*?)```/,
+    );
     if (codeBlockMatch) {
       return codeBlockMatch[1].trim();
     }
 
     // If response starts with shebang or metadata comment, treat as raw code
-    if (response.trim().startsWith('//') || response.trim().startsWith('async function')) {
+    if (
+      response.trim().startsWith("//") ||
+      response.trim().startsWith("async function")
+    ) {
       return response.trim();
     }
 
@@ -580,7 +617,9 @@ export class AIBridge {
    * Parse explanation from fix mode response
    */
   parseFixExplanation(response: string): string | null {
-    const explanationMatch = response.match(/<explanation>\s*([\s\S]*?)\s*<\/explanation>/);
+    const explanationMatch = response.match(
+      /<explanation>\s*([\s\S]*?)\s*<\/explanation>/,
+    );
     return explanationMatch ? explanationMatch[1].trim() : null;
   }
 
@@ -592,7 +631,7 @@ export class AIBridge {
     const trimmed = content.trim();
 
     // Check for shebang (#!/...)
-    if (trimmed.startsWith('#!')) {
+    if (trimmed.startsWith("#!")) {
       return true;
     }
 
@@ -602,17 +641,17 @@ export class AIBridge {
     }
 
     // Check for regular comments followed by code patterns
-    if (trimmed.startsWith('//') && trimmed.includes('async function')) {
+    if (trimmed.startsWith("//") && trimmed.includes("async function")) {
       return true;
     }
 
     // Check for async function declaration
-    if (trimmed.startsWith('async function')) {
+    if (trimmed.startsWith("async function")) {
       return true;
     }
 
     // Check for function declaration
-    if (trimmed.startsWith('function ')) {
+    if (trimmed.startsWith("function ")) {
       return true;
     }
 
@@ -638,28 +677,28 @@ export class AIBridge {
         success: false,
         code: null,
         message: null,
-        error: response.error || 'Unknown API error'
+        error: response.error || "Unknown API error",
       };
     }
 
     const content = response.content;
 
     // Handle empty response
-    if (!content || content.trim() === '') {
+    if (!content || content.trim() === "") {
       return {
         success: false,
         code: null,
         message: null,
-        error: 'Empty response from AI'
+        error: "Empty response from AI",
       };
     }
 
     // For chat and explain modes, return content as message
-    if (mode === 'chat' || mode === 'explain') {
+    if (mode === "chat" || mode === "explain") {
       return {
         success: true,
         code: null,
-        message: content.trim()
+        message: content.trim(),
       };
     }
 
@@ -667,12 +706,12 @@ export class AIBridge {
     const extractedCode = this.extractCode(content);
 
     // For fix mode, also extract explanation if present
-    if (mode === 'fix') {
+    if (mode === "fix") {
       const explanation = this.parseFixExplanation(content);
       return {
         success: true,
         code: extractedCode,
-        message: explanation
+        message: explanation,
       };
     }
 
@@ -680,7 +719,7 @@ export class AIBridge {
     return {
       success: true,
       code: extractedCode,
-      message: null
+      message: null,
     };
   }
 
@@ -697,7 +736,9 @@ export class AIBridge {
     const trimmed = content.trim();
 
     // Try to extract from markdown code blocks (```javascript, ```js, etc.)
-    const codeBlockMatch = trimmed.match(/```(?:javascript|js|typescript|ts)?\s*\n?([\s\S]*?)```/);
+    const codeBlockMatch = trimmed.match(
+      /```(?:javascript|js|typescript|ts)?\s*\n?([\s\S]*?)```/,
+    );
     if (codeBlockMatch) {
       return codeBlockMatch[1].trim();
     }
