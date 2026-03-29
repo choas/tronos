@@ -119,7 +119,12 @@ export function writeWorkspace(data: string, sessionId?: string): void {
   const ctx = getSessionContext(sessionId);
   try {
     const parsed = JSON.parse(data);
-    ctx.workspace = { ...parsed, updated: new Date().toISOString() };
+    if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      ctx.workspace = { ...parsed, updated: new Date().toISOString() };
+    } else {
+      // Primitive or array JSON — store as description
+      ctx.workspace = { description: data.trim(), updated: new Date().toISOString() };
+    }
   } catch {
     // If not valid JSON, store as description
     ctx.workspace = { description: data.trim(), updated: new Date().toISOString() };
