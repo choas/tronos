@@ -16,6 +16,10 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 
+# Dirigent local overrides (machine-specific CLI paths, recent repos, etc.)
+.Dirigent/settings.local.json
+.Dirigent/Dirigent.db*
+
 # OS files
 .DS_Store
 
