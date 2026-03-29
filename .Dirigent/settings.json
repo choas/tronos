@@ -197,5 +197,5 @@
   "prompt_suggestions_enabled": false,
   "auto_context_file": false,
   "auto_context_git_diff": false,
-  "allow_dangerous_skip_permissions": true
+  "allow_dangerous_skip_permissions": false
 }
