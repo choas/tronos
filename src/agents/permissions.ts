@@ -58,12 +58,27 @@ export function matchesGlob(path: string, patterns: string[]): boolean {
   return false;
 }
 
+/** Maximum number of '**' segments allowed in a single glob pattern. */
+const MAX_DOUBLE_STAR = 5;
+/** Maximum total length of a glob pattern string. */
+const MAX_PATTERN_LENGTH = 1024;
+
 /**
  * Simple glob matching.
  * Supports * (any segment) and ** (any depth).
+ *
+ * To prevent ReDoS from pathological regexes, patterns are rejected
+ * (treated as non-matching) when they contain more than
+ * {@link MAX_DOUBLE_STAR} '**' segments or exceed
+ * {@link MAX_PATTERN_LENGTH} characters.
  */
 function globMatch(path: string, pattern: string): boolean {
   if (path === pattern) return true;
+
+  // Complexity guard: reject patterns that would produce expensive regexes.
+  if (pattern.length > MAX_PATTERN_LENGTH) return false;
+  const doubleStarCount = pattern.split('**').length - 1;
+  if (doubleStarCount > MAX_DOUBLE_STAR) return false;
 
   const escaped = pattern
     .replace(/[.+^${}()|[\]\\]/g, '\\$&')
@@ -93,7 +108,7 @@ export function canWrite(permissions: AgentPermissions, path: string): boolean {
  * Check if an agent can access an MCP server/tool.
  */
 export function canAccessMCP(permissions: AgentPermissions, serverTool: string): boolean {
-  return permissions.mcp.includes(serverTool) || permissions.mcp.includes('*');
+  return matchesGlob(serverTool, permissions.mcp);
 }
 
 /**
