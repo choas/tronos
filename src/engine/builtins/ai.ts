@@ -18,7 +18,7 @@ import {
 } from "../../stores";
 import { TERMS_CONTENT, TERMS_VERSION } from "../terms-content";
 import { saveVersion } from "../../persistence/versions";
-import { appendAIHistory, writeWorkspace } from "../../context/state";
+import { appendAIHistory, readWorkspace, writeWorkspace } from "../../context/state";
 
 /**
  * @ai builtin command
@@ -282,11 +282,17 @@ export const ai: BuiltinCommand = async (
     default: {
       const output = (parsedResponse.message || parsedResponse.code || "");
 
-      // Agentic pipes: if output is JSON, auto-update workspace
+      // Agentic pipes: if output is JSON with workspace intent, merge into workspace
       if (isPipeline && output.trim()) {
         try {
-          JSON.parse(output.trim());
-          writeWorkspace(output.trim());
+          const parsed_output = JSON.parse(output.trim());
+          if (parsed_output && typeof parsed_output === 'object' && !Array.isArray(parsed_output) &&
+              (parsed_output._workspace === true || parsed_output.update === true)) {
+            const current = JSON.parse(readWorkspace());
+            const { _workspace, update, ...fields } = parsed_output;
+            const merged = { ...current, ...fields };
+            writeWorkspace(JSON.stringify(merged));
+          }
         } catch {
           // Not JSON — that's fine, just pass through
         }
