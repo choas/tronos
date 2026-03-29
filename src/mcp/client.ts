@@ -156,6 +156,7 @@ export class MCPClient {
     } catch (err) {
       const errorResult = { error: err instanceof Error ? err.message : String(err) };
       this.lastResults.set(`${serverName}:${toolName}`, JSON.stringify(errorResult));
+      emitFileChanged(`/proc/mcp/${serverName}/${toolName}`, 'write');
       throw err;
     }
   }
