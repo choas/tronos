@@ -98,12 +98,26 @@ export const devHandlers: Record<string, DevHandler> = {
         pending.map(r => `  ${r.id}: ${r.agent_name} wants to ${r.action} ${r.target}`).join('\n');
     },
     write: (data: string) => {
+      const VALID_ACTIONS = ['read', 'write', 'mcp', 'network', 'spawn'];
+      let req: unknown;
       try {
-        const req = JSON.parse(data);
-        getGuardQueue().request(req);
+        req = JSON.parse(data);
       } catch {
-        // Invalid request, ignore
+        console.error('/dev/guard: failed to parse request as JSON');
+        return;
       }
+      if (
+        typeof req !== 'object' || req === null ||
+        typeof (req as Record<string, unknown>).agent_id !== 'string' ||
+        typeof (req as Record<string, unknown>).agent_name !== 'string' ||
+        typeof (req as Record<string, unknown>).action !== 'string' ||
+        !VALID_ACTIONS.includes((req as Record<string, unknown>).action as string) ||
+        typeof (req as Record<string, unknown>).target !== 'string'
+      ) {
+        console.error('/dev/guard: malformed request — requires agent_id, agent_name, action (read|write|mcp|network|spawn), and target as strings');
+        return;
+      }
+      getGuardQueue().request(req as Omit<import('../agents/guard').GuardRequest, 'id' | 'requested_at' | 'status'>);
     },
     readable: true,
     writable: true,
