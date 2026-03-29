@@ -9,10 +9,10 @@
  * Uses comprehensive documentation from tronos-ai-context.ts
  */
 
-import type { AIMode } from './parser';
-import type { InMemoryVFS } from '../../vfs/memory';
-import { getAIContext, getCondensedAIContext } from './tronos-ai-context';
-import { getContextState, getActiveSession } from '../../context/state';
+import type { AIMode } from "./parser";
+import type { InMemoryVFS } from "../../vfs/memory";
+import { getAIContext, getCondensedAIContext } from "./tronos-ai-context";
+import { getContextState } from "../../context/state";
 
 /**
  * Context information for AI prompts
@@ -209,21 +209,18 @@ async function main(t) {
  * Build session context section from the shared context bus.
  * This is prepended to every AI prompt so @ai is context-aware.
  */
-function buildSessionContextSection(): string {
+function buildSessionContextSection(sessionId: string): string {
   try {
-    const state = getContextState(getActiveSession());
+    const state = getContextState(sessionId);
     const parts: string[] = [];
-    parts.push('## Current Session Context');
+    parts.push("## Current Session Context");
     parts.push(`Working directory: ${state.focus.cwd}`);
     if (state.focus.recent_files.length > 0) {
-      parts.push(`Recent files: ${state.focus.recent_files.join(', ')}`);
+      parts.push(`Recent files: ${state.focus.recent_files.join(", ")}`);
     }
-    if (state.workspace.description || state.workspace.notes) {
-      parts.push(`Workspace: ${JSON.stringify(state.workspace)}`);
-    }
-    return parts.join('\n') + '\n';
+    return parts.join("\n") + "\n";
   } catch {
-    return '';
+    return "";
   }
 }
 
@@ -233,14 +230,14 @@ function buildSessionContextSection(): string {
 function buildContextSection(context: PromptContext): string {
   const parts: string[] = [];
 
-  parts.push('## Current Environment\n');
+  parts.push("## Current Environment\n");
   parts.push(`- Working directory: ${context.cwd}`);
 
   // Add relevant environment variables
-  const relevantEnvVars = ['USER', 'HOME', 'PATH'];
+  const relevantEnvVars = ["USER", "HOME", "PATH"];
   const envInfo = relevantEnvVars
-    .filter(key => context.env[key])
-    .map(key => `- ${key}: ${context.env[key]}`);
+    .filter((key) => context.env[key])
+    .map((key) => `- ${key}: ${context.env[key]}`);
 
   if (envInfo.length > 0) {
     parts.push(...envInfo);
@@ -251,16 +248,22 @@ function buildContextSection(context: PromptContext): string {
     try {
       const files = context.vfs.list(context.cwd);
       if (files.length > 0) {
-        const exeFiles = files.filter(f => f.endsWith('.trx'));
-        const otherFiles = files.filter(f => !f.endsWith('.trx'));
+        const exeFiles = files.filter((f) => f.endsWith(".trx"));
+        const otherFiles = files.filter((f) => !f.endsWith(".trx"));
 
         if (exeFiles.length > 0) {
-          parts.push(`\n### Executables in cwd:\n${exeFiles.map(f => `- ${f}`).join('\n')}`);
+          parts.push(
+            `\n### Executables in cwd:\n${exeFiles.map((f) => `- ${f}`).join("\n")}`,
+          );
         }
         if (otherFiles.length > 0 && otherFiles.length <= 20) {
-          parts.push(`\n### Files in cwd:\n${otherFiles.map(f => `- ${f}`).join('\n')}`);
+          parts.push(
+            `\n### Files in cwd:\n${otherFiles.map((f) => `- ${f}`).join("\n")}`,
+          );
         } else if (otherFiles.length > 20) {
-          parts.push(`\n### Files in cwd: ${otherFiles.length} files (listing truncated)`);
+          parts.push(
+            `\n### Files in cwd: ${otherFiles.length} files (listing truncated)`,
+          );
         }
       }
     } catch {
@@ -268,7 +271,7 @@ function buildContextSection(context: PromptContext): string {
     }
   }
 
-  return parts.join('\n');
+  return parts.join("\n");
 }
 
 /**
@@ -305,7 +308,7 @@ Respond with just the executable code.`;
 function buildEditPrompt(context: PromptContext): string {
   const fileSection = context.fileContent
     ? `\n## Current File Content (${context.targetFile})\n\n\`\`\`javascript\n${context.fileContent}\n\`\`\``
-    : '';
+    : "";
 
   return `You are an AI assistant that modifies TronOS executable programs.
 
@@ -336,7 +339,7 @@ Respond with the complete modified executable code.`;
 function buildExplainPrompt(context: PromptContext): string {
   const fileSection = context.fileContent
     ? `\n## File Content (${context.targetFile})\n\n\`\`\`javascript\n${context.fileContent}\n\`\`\``
-    : '';
+    : "";
 
   return `You are an AI assistant that explains TronOS executable programs.
 
@@ -365,11 +368,11 @@ Keep explanations concise but thorough. Use bullet points and code examples wher
 function buildFixPrompt(context: PromptContext): string {
   const fileSection = context.fileContent
     ? `\n## Current File Content (${context.targetFile})\n\n\`\`\`javascript\n${context.fileContent}\n\`\`\``
-    : '';
+    : "";
 
   const errorSection = context.errorContext
     ? `\n## Error Context\n\n\`\`\`\n${context.errorContext}\n\`\`\``
-    : '';
+    : "";
 
   return `You are an AI assistant that diagnoses and fixes issues in TronOS executable programs.
 
@@ -444,28 +447,32 @@ ${getCondensedAIContext()}`;
  * Build the complete system prompt based on mode and context.
  * Always prepends session context from the shared context bus.
  */
-export function buildSystemPrompt(mode: AIMode, context: PromptContext): string {
-  const sessionCtx = buildSessionContextSection();
+export function buildSystemPrompt(
+  mode: AIMode,
+  context: PromptContext,
+  sessionId?: string,
+): string {
+  const sessionCtx = sessionId ? buildSessionContextSection(sessionId) : "";
   let prompt: string;
   switch (mode) {
-    case 'create':
+    case "create":
       prompt = buildCreatePrompt(context);
       break;
-    case 'edit':
+    case "edit":
       prompt = buildEditPrompt(context);
       break;
-    case 'explain':
+    case "explain":
       prompt = buildExplainPrompt(context);
       break;
-    case 'fix':
+    case "fix":
       prompt = buildFixPrompt(context);
       break;
-    case 'chat':
+    case "chat":
     default:
       prompt = buildChatPrompt(context);
       break;
   }
-  return sessionCtx + '\n' + prompt;
+  return sessionCtx + "\n" + prompt;
 }
 
 /**
@@ -474,23 +481,42 @@ export function buildSystemPrompt(mode: AIMode, context: PromptContext): string 
 export function buildUserMessage(
   mode: AIMode,
   prompt: string,
-  programName?: string | null
+  programName?: string | null,
 ): string {
+  let base: string;
   switch (mode) {
-    case 'create':
-      return programName
+    case "create":
+      base = programName
         ? `Create an executable program named "${programName}":\n\n${prompt}`
         : `Create an executable program:\n\n${prompt}`;
-    case 'edit':
-      return `Edit this file with the following changes:\n\n${prompt}`;
-    case 'explain':
-      return prompt || 'Explain this code.';
-    case 'fix':
-      return prompt || 'Find and fix any issues in this code.';
-    case 'chat':
+      break;
+    case "edit":
+      base = `Edit this file with the following changes:\n\n${prompt}`;
+      break;
+    case "explain":
+      base = prompt || "Explain this code.";
+      break;
+    case "fix":
+      base = prompt || "Find and fix any issues in this code.";
+      break;
+    case "chat":
     default:
-      return prompt;
+      base = prompt;
+      break;
   }
+
+  // Append workspace context as a lower-trust user-message payload
+  try {
+    const state = getContextState(getActiveSession());
+    const workspace = state.workspace;
+    if (Object.keys(workspace).length > 0) {
+      base += `\n\n[Workspace context: ${JSON.stringify(workspace)}]`;
+    }
+  } catch {
+    // No active session — skip workspace injection
+  }
+
+  return base;
 }
 
 /**
