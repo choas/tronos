@@ -372,7 +372,29 @@ export class AgentRuntime {
           }
         }
       );
+    } else if (agent.trigger.type === 'cron' && agent.trigger.value) {
+      this.scheduleCronRun(agent);
     }
+  }
+
+  private scheduleCronRun(agent: AgentProcess): void {
+    const nextRun = getNextRunTime(agent.trigger.value!);
+    if (nextRun === null) return;
+
+    const delay = Math.max(0, nextRun - Date.now());
+    agent._timerId = setTimeout(() => {
+      if (agent.status === 'running') {
+        this.executeAgent(agent.id)
+          .catch(err => {
+            console.warn(`Agent ${agent.id} cron execution error:`, err);
+          })
+          .finally(() => {
+            if (agent.status === 'running') {
+              this.scheduleCronRun(agent);
+            }
+          });
+      }
+    }, delay) as unknown as ReturnType<typeof setInterval>;
   }
 
   private clearTrigger(agent: AgentProcess): void {
