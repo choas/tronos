@@ -12,6 +12,7 @@ import type { AgentPermissions, AgentViolation } from './permissions';
 import { canRead, canWrite, emptyPermissions, matchesGlob } from './permissions';
 import { getGuardQueue, type GuardQueue } from './guard';
 import { getEventBus } from '../events/bus';
+import { getNextRunTime } from '../engine/cron';
 
 /**
  * Agent status.
@@ -59,6 +60,8 @@ export interface AgentProcess {
   _eventSubId?: string;
   /** The execution function for this agent */
   _executor?: () => Promise<void>;
+  /** True while an execution is in flight — prevents overlapping runs */
+  _inflight?: boolean;
 }
 
 let agentCounter = 0;
@@ -186,7 +189,10 @@ export class AgentRuntime {
     const agent = this.agents.get(id);
     if (!agent || agent.status !== 'running') return;
 
-    agent.status = 'running';
+    // Prevent overlapping runs — skip if a previous execution is still in flight
+    if (agent._inflight) return;
+
+    agent._inflight = true;
     agent.lastRunAt = new Date();
 
     try {
@@ -198,6 +204,8 @@ export class AgentRuntime {
       const message = err instanceof Error ? err.message : String(err);
       agent.status = 'error';
       this.logAction(id, 'error', undefined, undefined, message);
+    } finally {
+      agent._inflight = false;
     }
   }
 
@@ -279,21 +287,36 @@ export class AgentRuntime {
         return vfs.append(path, data);
       },
       exists(path: string): boolean {
+        if (!runtime.checkPermission(agentId, 'read', path)) {
+          return false;
+        }
         return vfs.exists(path);
       },
       list(path: string): string[] {
-        return vfs.list(path);
+        if (!runtime.checkPermission(agentId, 'read', path)) {
+          throw new Error(`Agent not permitted to read ${path}`);
+        }
+        const entries: string[] = vfs.list(path);
+        return entries.filter((name: string) => {
+          const fullPath = path === '/' ? `/${name}` : `${path}/${name}`;
+          return runtime.checkPermission(agentId, 'read', fullPath);
+        });
       },
       async readdir(path: string): Promise<Array<{ name: string; path: string; mtime: number }>> {
         if (!runtime.checkPermission(agentId, 'read', path)) {
           throw new Error(`Agent not permitted to read ${path}`);
         }
         const entries = vfs.list(path);
-        return entries.map((name: string) => {
-          const fullPath = path === '/' ? `/${name}` : `${path}/${name}`;
-          const stat = vfs.stat(fullPath);
-          return { name, path: fullPath, mtime: stat?.meta?.updatedAt || 0 };
-        });
+        return entries
+          .filter((name: string) => {
+            const fullPath = path === '/' ? `/${name}` : `${path}/${name}`;
+            return runtime.checkPermission(agentId, 'read', fullPath);
+          })
+          .map((name: string) => {
+            const fullPath = path === '/' ? `/${name}` : `${path}/${name}`;
+            const stat = vfs.stat(fullPath);
+            return { name, path: fullPath, mtime: stat?.meta?.updatedAt || 0 };
+          });
       },
     };
   }
