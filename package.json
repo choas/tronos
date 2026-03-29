@@ -34,7 +34,9 @@
     "build:cli": "bun build bin/tronos.ts --target node --minify --outfile dist/tronos.js --define 'import.meta.env={}' --define 'process.env.NODE_ENV=\"production\"'",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "format": "prettier --write .",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@types/path-browserify": "^1.0.3",
@@ -54,7 +56,9 @@
     "vite": "^7.2.4",
     "vite-plugin-solid": "^2.11.10",
     "vitest": "^4.0.18",
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "eslint": "^9.24.0",
+    "prettier": "^3.5.3"
   },
   "module": "src/index.tsx"
 }
