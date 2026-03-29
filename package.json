@@ -35,7 +35,7 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "check": "tsc --noEmit",
-    "format": "oxformat .",
+    "format": "prettier --write .",
     "lint": "oxlint ."
   },
   "dependencies": {
@@ -58,7 +58,7 @@
     "vitest": "^4.0.18",
     "@types/bun": "latest",
     "oxlint": "^1.1.0",
-    "oxformat": "^0.1.0"
+    "prettier": "^3.5.3"
   },
   "module": "src/index.tsx"
 }
