@@ -12,6 +12,8 @@
  * @module events/bus
  */
 
+import { matchGlob } from '../utils/glob';
+
 /**
  * Event types emitted by the system.
  */
@@ -44,7 +46,7 @@ export interface EventPattern {
 /**
  * Callback invoked when a matching event fires.
  */
-export type EventCallback = (event: OSEvent) => void;
+export type EventCallback = (event: OSEvent, command?: string) => void;
 
 /**
  * A registered subscription.
@@ -85,7 +87,7 @@ class EventBus {
     for (const sub of this.subscribers.values()) {
       if (this.matches(fullEvent, sub.pattern)) {
         try {
-          sub.callback(fullEvent);
+          sub.callback(fullEvent, sub.command);
         } catch (err) {
           console.warn(`Event subscriber ${sub.id} error:`, err);
         }
@@ -156,24 +158,6 @@ class EventBus {
   }
 }
 
-/**
- * Simple glob matching for event path patterns.
- * Supports * (any segment) and ** (any depth).
- */
-function matchGlob(path: string, pattern: string): boolean {
-  // Exact match
-  if (path === pattern) return true;
-
-  // Convert glob to regex
-  const escaped = pattern
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*\*/g, '<<<DOUBLESTAR>>>')
-    .replace(/\*/g, '[^/]*')
-    .replace(/<<<DOUBLESTAR>>>/g, '.*');
-
-  const regex = new RegExp(`^${escaped}$`);
-  return regex.test(path);
-}
 
 /** Singleton instance */
 let busInstance: EventBus | null = null;

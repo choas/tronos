@@ -9,6 +9,8 @@
  * @module agents/guard
  */
 
+import { matchGlob } from '../utils/glob';
+
 /**
  * A pending approval request.
  */
@@ -195,7 +197,7 @@ export class GuardQueue {
 
     for (const rule of agentPolicy.auto_approve) {
       if (rule.action === action || rule.action === '*') {
-        if (this.matchGlob(target, rule.path_pattern)) {
+        if (rule.path_pattern === '*' || matchGlob(target, rule.path_pattern)) {
           return true;
         }
       }
@@ -203,21 +205,6 @@ export class GuardQueue {
     return false;
   }
 
-  /**
-   * Simple glob matching.
-   */
-  private matchGlob(path: string, pattern: string): boolean {
-    if (path === pattern) return true;
-    if (pattern === '*') return true;
-
-    const escaped = pattern
-      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-      .replace(/\*\*/g, '<<<DOUBLESTAR>>>')
-      .replace(/\*/g, '[^/]*')
-      .replace(/<<<DOUBLESTAR>>>/g, '.*');
-
-    return new RegExp(`^${escaped}$`).test(path);
-  }
 }
 
 /** Singleton guard queue */
