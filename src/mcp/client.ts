@@ -225,15 +225,17 @@ export class MCPClient {
       }
 
       const data = await response.json();
-      if (data.result && Array.isArray(data.result.tools)) {
-        return data.result.tools.map((t: any) => ({
-          name: t.name,
-          description: t.description || '',
-          inputSchema: t.inputSchema || {},
-        }));
+      if (data.error) {
+        throw new Error(data.error.message || 'Server returned JSON-RPC error');
       }
-
-      return [];
+      if (!data.result || !Array.isArray(data.result.tools)) {
+        throw new Error('Malformed tools/list response: missing result.tools array');
+      }
+      return data.result.tools.map((t: any) => ({
+        name: t.name,
+        description: t.description || '',
+        inputSchema: t.inputSchema || {},
+      }));
     } catch (err) {
       throw new Error(`Failed to discover tools from ${server.name}: ${err instanceof Error ? err.message : err}`);
     }
@@ -263,17 +265,23 @@ export class MCPClient {
           clearTimeout(timeout);
           try {
             const data = JSON.parse(event.data);
-            if (data.result && Array.isArray(data.result.tools)) {
-              resolve(data.result.tools.map((t: any) => ({
-                name: t.name,
-                description: t.description || '',
-                inputSchema: t.inputSchema || {},
-              })));
-            } else {
-              resolve([]);
+            if (data.error) {
+              reject(new Error(data.error.message || 'Server returned JSON-RPC error'));
+              ws.close();
+              return;
             }
+            if (!data.result || !Array.isArray(data.result.tools)) {
+              reject(new Error('Malformed tools/list response: missing result.tools array'));
+              ws.close();
+              return;
+            }
+            resolve(data.result.tools.map((t: any) => ({
+              name: t.name,
+              description: t.description || '',
+              inputSchema: t.inputSchema || {},
+            })));
           } catch {
-            resolve([]);
+            reject(new Error('Invalid JSON response from MCP server'));
           }
           ws.close();
         };
