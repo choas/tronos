@@ -325,8 +325,23 @@ export function extractFilesFromCommand(cmd: string, cwd: string): string[] {
     const arg = parts[i];
     // Skip flags
     if (arg.startsWith('-')) continue;
-    // Skip pipe/redirect operators
-    if (arg === '|' || arg === '>' || arg === '>>' || arg === '<' || arg === '&&' || arg === '||') break;
+    // Stop on pipe — piped commands are separate contexts
+    if (arg === '|') break;
+    // Chain operators — skip and keep scanning
+    if (arg === '&&' || arg === '||') continue;
+    // Redirection operators — grab the next token as a file path
+    if (arg === '>' || arg === '>>' || arg === '<') {
+      if (i + 1 < parts.length) {
+        const target = parts[++i];
+        if (!target.startsWith('-')) {
+          const resolved = target.startsWith('/') ? target :
+            target.startsWith('~') ? target.replace('~', '/home/tronos') :
+            (cwd === '/' ? '/' + target : cwd + '/' + target);
+          files.push(resolved);
+        }
+      }
+      continue;
+    }
     // Looks like a path if it contains / or . or ends with common extensions
     if (arg.includes('/') || arg.includes('.') || arg.startsWith('~')) {
       const resolved = arg.startsWith('/') ? arg :
