@@ -282,7 +282,19 @@ export class AgentRuntime {
       },
       async append(path: string, data: string): Promise<void> {
         if (!runtime.checkPermission(agentId, 'write', path)) {
-          throw new Error(`Agent not permitted to write ${path}`);
+          // Route through guard queue
+          const agent = runtime.getAgent(agentId);
+          const approved = await guardQueue.request({
+            agent_id: agentId,
+            agent_name: agent?.name || agentId,
+            action: 'write',
+            target: path,
+            data_preview: data.substring(0, 200),
+            reason: 'Write outside declared permissions',
+          });
+          if (!approved) {
+            throw new Error(`Write to ${path} rejected by guard`);
+          }
         }
         return vfs.append(path, data);
       },
