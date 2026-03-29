@@ -16,13 +16,13 @@
  */
 export function matchGlob(path: string, pattern: string): boolean {
   if (path === pattern) return true;
-  if (pattern === '*') return true;
+  if (pattern === "*") return !path.includes("/");
 
   // Tokenize pattern: collapse '**' into a single token
   const tokens: string[] = [];
   for (let i = 0; i < pattern.length; i++) {
-    if (pattern[i] === '*' && pattern[i + 1] === '*') {
-      tokens.push('**');
+    if (pattern[i] === "*" && pattern[i + 1] === "*") {
+      tokens.push("**");
       i++; // skip second *
     } else {
       tokens.push(pattern[i]);
@@ -37,7 +37,7 @@ export function matchGlob(path: string, pattern: string): boolean {
   prev[0] = 1;
   // Leading wildcards can match the empty string
   for (let j = 0; j < m; j++) {
-    if (tokens[j] === '*' || tokens[j] === '**') {
+    if (tokens[j] === "*" || tokens[j] === "**") {
       prev[j + 1] = prev[j];
     } else {
       break;
@@ -49,19 +49,19 @@ export function matchGlob(path: string, pattern: string): boolean {
     const ch = path[i];
     for (let j = 0; j < m; j++) {
       const tok = tokens[j];
-      if (tok === '**') {
+      if (tok === "**") {
         // ** matches any character including '/'
-        curr[j + 1] = (prev[j + 1] || curr[j]) ? 1 : 0;
-      } else if (tok === '*') {
+        curr[j + 1] = prev[j + 1] || curr[j] ? 1 : 0;
+      } else if (tok === "*") {
         // * matches any character except '/'
-        if (ch !== '/') {
-          curr[j + 1] = (prev[j + 1] || curr[j]) ? 1 : 0;
+        if (ch !== "/") {
+          curr[j + 1] = prev[j + 1] || curr[j] ? 1 : 0;
         } else {
           curr[j + 1] = curr[j];
         }
       } else {
         // Literal character
-        curr[j + 1] = (prev[j] && tok === ch) ? 1 : 0;
+        curr[j + 1] = prev[j] && tok === ch ? 1 : 0;
       }
     }
     prev = curr;
