@@ -11,7 +11,9 @@
  */
 
 import type { BuiltinCommand, CommandResult, ExecutionContext } from '../types';
-import { getEventBus, type EventPattern, type OSEventType } from '../../events/bus';
+import { getEventBus, type EventPattern, type OSEvent, type OSEventType } from '../../events/bus';
+import { tokenize, buildAST } from '../parser';
+import { executeCommand } from '../executor';
 
 export const event: BuiltinCommand = async (
   args: string[],
@@ -73,10 +75,34 @@ export const event: BuiltinCommand = async (
 
       const id = bus.subscribe(
         pattern,
-        (evt) => {
+        (evt: OSEvent, cmd?: string) => {
           // Log to terminal if available
           if (context.terminal) {
             context.terminal.writeln(`\x1b[33m[event] ${evt.type}: ${JSON.stringify(evt.payload)}\x1b[0m`);
+          }
+
+          // Execute the stored --call command if provided
+          if (cmd) {
+            (async () => {
+              try {
+                const tokens = tokenize(cmd);
+                const commands = buildAST(tokens);
+                for (const parsed of commands) {
+                  const result = await executeCommand(parsed, context);
+                  if (result.stdout && context.terminal) {
+                    context.terminal.writeln(result.stdout.replace(/\n$/, ''));
+                  }
+                  if (result.stderr && context.terminal) {
+                    context.terminal.writeln(`\x1b[31m${result.stderr.replace(/\n$/, '')}\x1b[0m`);
+                  }
+                }
+              } catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                if (context.terminal) {
+                  context.terminal.writeln(`\x1b[31m[event] command error: ${msg}\x1b[0m`);
+                }
+              }
+            })();
           }
         },
         command
