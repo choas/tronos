@@ -10,33 +10,62 @@
 /**
  * Test whether `path` matches a glob `pattern`.
  *
- * Behaviour:
- *  1. Exact string equality → true (fast path).
- *  2. Escape regex-special characters (except `*`).
- *  3. `**` → `.*`  (match across path separators).
- *  4. `*`  → `[^/]*` (match within one segment).
- *  5. Anchor with `^…$` and test.
- *
- * Input length is capped to mitigate ReDoS on untrusted patterns.
+ * Supports `*` (matches any characters except `/`) and `**` (matches
+ * any characters including `/`).  Uses iterative dynamic programming
+ * (O(n × m) time, O(m) space) — no RegExp construction from user input.
  */
-const MAX_INPUT_LENGTH = 1024;
-const MAX_DOUBLE_STAR = 5;
-
 export function matchGlob(path: string, pattern: string): boolean {
-  if (path.length > MAX_INPUT_LENGTH || pattern.length > MAX_INPUT_LENGTH) {
-    return false;
+  if (path === pattern) return true;
+  if (pattern === '*') return true;
+
+  // Tokenize pattern: collapse '**' into a single token
+  const tokens: string[] = [];
+  for (let i = 0; i < pattern.length; i++) {
+    if (pattern[i] === '*' && pattern[i + 1] === '*') {
+      tokens.push('**');
+      i++; // skip second *
+    } else {
+      tokens.push(pattern[i]);
+    }
   }
 
-  if (path === pattern) return true;
+  const n = path.length;
+  const m = tokens.length;
 
-  // Reject patterns with too many '**' segments to avoid expensive regexes.
-  if (pattern.split('**').length - 1 > MAX_DOUBLE_STAR) return false;
+  // Rolling DP: prev[j] = path[0..i-1] matches tokens[0..j-1]
+  let prev = new Uint8Array(m + 1);
+  prev[0] = 1;
+  // Leading wildcards can match the empty string
+  for (let j = 0; j < m; j++) {
+    if (tokens[j] === '*' || tokens[j] === '**') {
+      prev[j + 1] = prev[j];
+    } else {
+      break;
+    }
+  }
 
-  const escaped = pattern
-    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*\*/g, '<<<DOUBLESTAR>>>')
-    .replace(/\*/g, '[^/]*')
-    .replace(/<<<DOUBLESTAR>>>/g, '.*');
+  for (let i = 0; i < n; i++) {
+    const curr = new Uint8Array(m + 1);
+    const ch = path[i];
+    for (let j = 0; j < m; j++) {
+      const tok = tokens[j];
+      if (tok === '**') {
+        // ** matches any character including '/'
+        curr[j + 1] = (prev[j + 1] || curr[j]) ? 1 : 0;
+      } else if (tok === '*') {
+        // * matches any character except '/'
+        if (ch !== '/') {
+          curr[j + 1] = (prev[j + 1] || curr[j]) ? 1 : 0;
+        } else {
+          curr[j + 1] = curr[j];
+        }
+      } else {
+        // Literal character
+        curr[j + 1] = (prev[j] && tok === ch) ? 1 : 0;
+      }
+    }
+    prev = curr;
+  }
 
-  return new RegExp(`^${escaped}$`).test(path);
+  return prev[m] === 1;
 }
