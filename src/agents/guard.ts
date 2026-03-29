@@ -50,7 +50,7 @@ let requestCounter = 0;
 export class GuardQueue {
   private pending: Map<string, GuardRequest> = new Map();
   private log: GuardRequest[] = [];
-  private policy: GuardPolicy = {};
+  private policy: Map<string, { auto_approve: AutoApproveRule[] }> = new Map();
   private resolvers: Map<string, (approved: boolean) => void> = new Map();
 
   /**
@@ -157,31 +157,40 @@ export class GuardQueue {
    * Get the current policy.
    */
   getPolicy(): GuardPolicy {
-    return { ...this.policy };
+    const result: GuardPolicy = {};
+    this.policy.forEach((entry, name) => {
+      result[name] = { auto_approve: [...entry.auto_approve] };
+    });
+    return result;
   }
 
   /**
    * Set the policy.
    */
   setPolicy(policy: GuardPolicy): void {
-    this.policy = policy;
+    this.policy = new Map();
+    for (const name of Object.keys(policy)) {
+      this.policy.set(name, { auto_approve: [...policy[name].auto_approve] });
+    }
   }
 
   /**
    * Add an auto-approve rule for an agent.
    */
   addAutoApprove(agentName: string, action: string, pathPattern: string): void {
-    if (!this.policy[agentName]) {
-      this.policy[agentName] = { auto_approve: [] };
+    let entry = this.policy.get(agentName);
+    if (!entry) {
+      entry = { auto_approve: [] };
+      this.policy.set(agentName, entry);
     }
-    this.policy[agentName].auto_approve.push({ action, path_pattern: pathPattern });
+    entry.auto_approve.push({ action, path_pattern: pathPattern });
   }
 
   /**
    * Check if an action is auto-approved by policy.
    */
   private isAutoApproved(agentName: string, action: string, target: string): boolean {
-    const agentPolicy = this.policy[agentName];
+    const agentPolicy = this.policy.get(agentName);
     if (!agentPolicy) return false;
 
     for (const rule of agentPolicy.auto_approve) {
