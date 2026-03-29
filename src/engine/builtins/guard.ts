@@ -96,12 +96,13 @@ export const guard: BuiltinCommand = async (
         const ruleStr = args[3];
 
         // Parse rule like "auto-approve-read" or "auto-approve-write"
+        const allowedActions = new Set(['read', 'write', 'mcp', 'network', 'spawn']);
         const match = ruleStr.match(/^auto-approve-(\w+)$/);
-        if (!match) {
+        if (!match || !allowedActions.has(match[1])) {
           return {
             stdout: '',
             stderr: 'Usage: guard policy set <agent> auto-approve-<action>\n' +
-              'Actions: read, write, mcp, network\n',
+              'Actions: read, write, mcp, network, spawn\n',
             exitCode: 1,
           };
         }
