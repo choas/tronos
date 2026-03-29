@@ -205,8 +205,9 @@ export async function startFromManifest(
           },
           llm: async (prompt: string) => {
             const bridge = createAIBridge(getAIConfig());
+            const cwd = String(ctx.workspace?.cwd ?? '/');
             const response = await bridge.execute('chat', prompt, {
-              cwd: ctx.workspace?.cwd || '/',
+              cwd,
               env: {},
             });
             if (!response.success) {
