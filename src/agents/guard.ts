@@ -147,6 +147,30 @@ export class GuardQueue {
   }
 
   /**
+   * Reject all pending requests for a specific agent with an error.
+   * The returned promise from request() will reject with the given error.
+   */
+  rejectAllForAgent(agentId: string, error: Error): number {
+    let count = 0;
+    for (const [id, req] of Array.from(this.pending.entries())) {
+      if (req.agent_id === agentId) {
+        req.status = "rejected";
+        req.resolved_at = new Date().toISOString();
+        this.log.push(req);
+        this.pending.delete(id);
+
+        const resolver = this.resolvers.get(id);
+        if (resolver) {
+          resolver.reject(error);
+          this.resolvers.delete(id);
+        }
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
    * Get all pending requests.
    */
   getPending(): GuardRequest[] {
