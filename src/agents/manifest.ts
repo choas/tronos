@@ -12,6 +12,11 @@ import type { AgentPermissions } from './permissions';
 import { emptyPermissions, parseGlobs } from './permissions';
 import { getAgentRuntime, parseTrigger, type AgentTrigger } from './runtime';
 import { getGuardQueue } from './guard';
+import type { InMemoryVFS } from '../vfs/memory';
+import { getMCPClient } from '../mcp/client';
+import { createAIBridge } from '../engine/ai/bridge';
+import { getAIConfig } from '../stores/ai';
+import { getEventBus } from '../events/bus';
 
 /**
  * Parsed agent manifest.
@@ -136,7 +141,7 @@ function extractAgentFunctionBody(body: string): { success: boolean; code?: stri
  */
 export async function startFromManifest(
   manifest: AgentManifest,
-  vfs?: any
+  vfs?: InMemoryVFS
 ): Promise<string> {
   if (!manifest.success || !manifest.name) {
     throw new Error(manifest.error || 'Invalid manifest');
@@ -180,13 +185,48 @@ export async function startFromManifest(
             });
           },
           fs: scopedFs,
-          mcp: undefined, // TODO: scoped MCP access
+          mcp: {
+            listServers() {
+              return getMCPClient().listServers()
+                .filter(s => runtime.checkPermission(agent.id, 'mcp', `${s.name}/*`));
+            },
+            listTools(serverName: string) {
+              if (!runtime.checkPermission(agent.id, 'mcp', `${serverName}/*`)) {
+                throw new Error(`Agent not permitted to access MCP server: ${serverName}`);
+              }
+              return getMCPClient().listTools(serverName);
+            },
+            async invokeTool(serverName: string, toolName: string, input: unknown) {
+              if (!runtime.checkPermission(agent.id, 'mcp', `${serverName}/${toolName}`)) {
+                throw new Error(`Agent not permitted to invoke MCP tool: ${serverName}/${toolName}`);
+              }
+              return getMCPClient().invokeTool(serverName, toolName, input);
+            },
+          },
           llm: async (prompt: string) => {
-            // Placeholder — in a real implementation this would call the AI bridge
-            return `[LLM response to: ${prompt}]`;
+            const bridge = createAIBridge(getAIConfig());
+            const response = await bridge.execute('chat', prompt, {
+              cwd: ctx.workspace?.cwd || '/',
+              env: {},
+            });
+            if (!response.success) {
+              throw new Error(response.error || 'LLM request failed');
+            }
+            return response.content;
           },
           lastRunAt: agent.lastRunAt || agent.createdAt,
-          done: () => { /* signal completion of this run cycle */ },
+          done: () => {
+            agent.lastRunAt = new Date();
+            agent.log.push({
+              ts: new Date().toISOString(),
+              action: 'done',
+              result: 'Run cycle completed',
+            });
+            getEventBus().emit({
+              type: 'agent-action',
+              payload: { agent_id: agent.id, action: 'completed', agent_name: agent.name },
+            });
+          },
         };
 
         const fn = new AsyncFunction('a', code);

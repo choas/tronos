@@ -13,6 +13,7 @@ import { canRead, canWrite, emptyPermissions, matchesGlob } from './permissions'
 import { getGuardQueue, type GuardQueue } from './guard';
 import { getEventBus } from '../events/bus';
 import { getNextRunTime } from '../engine/cron';
+import type { InMemoryVFS } from '../vfs/memory';
 
 /**
  * Agent status.
@@ -276,7 +277,7 @@ export class AgentRuntime {
   /**
    * Create a permission-scoped filesystem API for an agent.
    */
-  createScopedFs(agentId: string, vfs: any, guardQueue: GuardQueue) {
+  createScopedFs(agentId: string, vfs: InMemoryVFS, guardQueue: GuardQueue) {
     const runtime = this;
     return {
       async read(path: string): Promise<string> {
