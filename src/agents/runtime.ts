@@ -225,7 +225,7 @@ export class AgentRuntime {
         allowed = canWrite(agent.permissions, path);
         break;
       case 'mcp':
-        allowed = agent.permissions.mcp.includes(path) || agent.permissions.mcp.includes('*');
+        allowed = matchesGlob(path, agent.permissions.mcp);
         break;
       case 'network':
         allowed = agent.permissions.network;
