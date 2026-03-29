@@ -48,14 +48,6 @@ import {
 } from './docs';
 import { saveVersion, hasVersionHistory } from '../persistence/versions';
 import { emitFileChanged } from '../events/bus';
-import {
-  isMCPPath,
-  isMCPDirectory,
-  isMCPFile,
-  readMCP,
-  writeMCP,
-  listMCPDirectory,
-} from './mcp';
 
 /**
  * In-memory virtual filesystem with IndexedDB persistence.
