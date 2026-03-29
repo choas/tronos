@@ -19,6 +19,81 @@ import { getAIConfig } from "../stores/ai";
 import { getEventBus } from "../events/bus";
 
 /**
+ * Globals that agent code must NOT access directly.
+ * Passed as function parameters set to undefined, shadowing the real
+ * globals so agent code can only interact through the agentAPI surface.
+ */
+const SANDBOXED_GLOBALS = [
+  // Global object references
+  "globalThis",
+  "self",
+  "window",
+  "top",
+  "parent",
+  "frames",
+  // DOM / browser APIs
+  "document",
+  "navigator",
+  "location",
+  // Network
+  "fetch",
+  "XMLHttpRequest",
+  "WebSocket",
+  "EventSource",
+  // Workers
+  "Worker",
+  "SharedWorker",
+  // Storage
+  "indexedDB",
+  "localStorage",
+  "sessionStorage",
+  "caches",
+  // Escape hatches — block eval/Function to prevent trivial sandbox bypass
+  "eval",
+  "Function",
+  // Other host resources
+  "Notification",
+  "BroadcastChannel",
+  "open",
+  "close",
+  "alert",
+  "confirm",
+  "prompt",
+  "importScripts",
+  "postMessage",
+] as const;
+
+/**
+ * Execute agent code in a sandboxed context.
+ *
+ * All globals listed in SANDBOXED_GLOBALS are shadowed by function parameters
+ * set to `undefined`, so agent code cannot reach host resources except through
+ * the provided agentAPI (`a`). Strict mode ensures `this` is `undefined`
+ * rather than `globalThis`.
+ */
+async function executeSandboxedAgentCode(
+  code: string,
+  agentAPI: Record<string, unknown>,
+): Promise<void> {
+  const AsyncFunction = Object.getPrototypeOf(
+    async function () {},
+  ).constructor;
+
+  // Build parameter list: 'a' (the agentAPI) followed by every blocked global
+  const params = ["a", ...SANDBOXED_GLOBALS];
+  const wrappedCode = `"use strict";\n${code}`;
+  const fn = new AsyncFunction(...params, wrappedCode);
+
+  // Pass agentAPI as first arg, undefined for every blocked global.
+  // .call(null) ensures `this` is null (undefined in strict mode).
+  const args: unknown[] = [agentAPI];
+  for (let i = 0; i < SANDBOXED_GLOBALS.length; i++) {
+    args.push(undefined);
+  }
+  await fn.call(null, ...args);
+}
+
+/**
  * Parsed agent manifest.
  */
 export interface AgentManifest {
@@ -173,6 +248,7 @@ export async function startFromManifest(
     goal,
     manifest.permissions || emptyPermissions(),
     manifest.trigger || { type: "manual" },
+    manifest.escalate || "out-of-scope",
   );
 
   // Create executor from body, closing over the captured id
