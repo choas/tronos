@@ -9,7 +9,7 @@
  * @module vfs/mcp
  */
 
-import { getMCPClient, type MCPTool } from '../mcp/client';
+import { getMCPClient } from '../mcp/client';
 
 /**
  * Check if a path is under /proc/mcp.

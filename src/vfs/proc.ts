@@ -90,7 +90,7 @@ export type ProcGenerator = () => string;
 /**
  * Proc write handler function type
  */
-export type ProcWriteHandler = (data: string) => void;
+export type ProcWriteHandler = (data: string) => void | Promise<void>;
 
 /**
  * Map of /proc paths to their generator functions
@@ -283,7 +283,7 @@ export function getProcWriteHandler(path: string): ProcWriteHandler | undefined 
 
   // Dynamic: MCP tool paths /proc/mcp/{server}/{tool}
   if (isMCPPath(path) && isMCPFile(path)) {
-    return (data: string) => { writeMCP(path, data); };
+    return (data: string) => writeMCP(path, data);
   }
 
   return undefined;

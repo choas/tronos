@@ -18,7 +18,7 @@ import { getGuardQueue } from '../../agents/guard';
 
 export const guard: BuiltinCommand = async (
   args: string[],
-  context: ExecutionContext
+  _context: ExecutionContext
 ): Promise<CommandResult> => {
   if (args.length === 0) {
     return {

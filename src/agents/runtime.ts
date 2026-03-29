@@ -12,7 +12,6 @@ import type { AgentPermissions, AgentViolation } from './permissions';
 import { canRead, canWrite, emptyPermissions, matchesGlob } from './permissions';
 import { getGuardQueue, type GuardQueue } from './guard';
 import { getEventBus } from '../events/bus';
-import { getContextState } from '../context/state';
 
 /**
  * Agent status.

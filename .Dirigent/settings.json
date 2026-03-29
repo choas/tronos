@@ -1,0 +1,201 @@
+{
+  "theme": "TokyoNightLight",
+  "cli_provider": "Claude",
+  "claude_model": "claude-opus-4-6",
+  "claude_custom_models": [],
+  "claude_cli_path": "/opt/homebrew/bin/claude",
+  "claude_extra_args": "",
+  "claude_env_vars": "",
+  "claude_pre_run_script": "",
+  "claude_post_run_script": "",
+  "opencode_model": "openai/o1",
+  "opencode_cli_path": "/opt/homebrew/bin/opencode",
+  "opencode_extra_args": "",
+  "opencode_env_vars": "",
+  "opencode_pre_run_script": "",
+  "opencode_post_run_script": "",
+  "recent_repos": [
+    "/Users/lars/test/ralph_test/tron_oss/tronos",
+    "/Users/lars/prj/Dirigent",
+    "/Users/lars/test/ralph_test/agentic-os-implementation-9ByOR",
+    "/Users/lars/prj/ralph-cli-sandboxed",
+    "/Users/lars/test/ralph_test/TronOS",
+    "/Users/lars/prj/mcp-server",
+    "/Users/lars/ralph-worktrees/ralph-cli-sandboxed_claude-add-deno-support-brnCw",
+    "/Users/lars/prj/feat/ask-command-ci-tests",
+    "/Users/lars/test/pdf/MMC",
+    "/Users/lars/prj/feat-0327"
+  ],
+  "notify_sound": true,
+  "notify_popup": true,
+  "lava_lamp_enabled": true,
+  "font_family": "Menlo",
+  "font_size": 13.0,
+  "sources": [],
+  "playbook": [
+    {
+      "name": "Update README",
+      "prompt": "Review the project and update README.md to accurately reflect the current state: features, setup instructions, and usage."
+    },
+    {
+      "name": "Verify architecture",
+      "prompt": "Analyze the project architecture. Check for structural issues, circular dependencies, inconsistent patterns. Report findings without making changes."
+    },
+    {
+      "name": "Verify last 5 commits",
+      "prompt": "Review the last 5 git commits. Check for bugs, incomplete changes, or inconsistencies. Report findings without making changes."
+    },
+    {
+      "name": "Create release",
+      "prompt": "Prepare a release for version {VERSION}: update version numbers to {VERSION}, ensure CHANGELOG is current, verify tests pass, ensure LICENSE file ({LICENSE:MIT,Apache 2.0,BSD 2-Clause,BSD 3-Clause,ISC,MPL 2.0,Unlicense}) is present, create a release commit, create a git tag v{VERSION}, and run `git push && git push --tags`."
+    },
+    {
+      "name": "Security audit",
+      "prompt": "Check for hardcoded secrets, insecure dependencies, injection vulnerabilities, unsafe code patterns. Report findings."
+    },
+    {
+      "name": "Check dead code",
+      "prompt": "Find unused functions, unreachable branches, unused imports, stale modules. Report findings without removing anything."
+    },
+    {
+      "name": "Add tests",
+      "prompt": "Identify untested code paths and write comprehensive tests for the most critical and least covered areas."
+    },
+    {
+      "name": "Fix all warnings",
+      "prompt": "Detect the project type (e.g. Cargo.toml for Rust, package.json for JS/TS, go.mod for Go, etc.), run the appropriate check/lint command, collect all warnings, and fix every one of them."
+    },
+    {
+      "name": "Commit changes",
+      "prompt": "Commit all current changes. Open the SQLite database (find the .db file in the repo) and query the cues table for rows with status 'done' or 'review'. Use their titles to write a meaningful commit message summarizing what was accomplished. Then UPDATE any cues with status='review' to status='done'. Finally, stage all changes with git and create the commit."
+    }
+  ],
+  "allow_home_folder_access": false,
+  "agent_shell_init": "",
+  "agents": [],
+  "commands": [
+    {
+      "name": "plan",
+      "prompt": "Analyze the following task and create a detailed implementation plan. Identify the files that need to change, the approach, edge cases, and risks. Do NOT make any code changes — only output the plan.\n\nTask: {task}",
+      "pre_agent": "",
+      "post_agent": ""
+    },
+    {
+      "name": "test",
+      "prompt": "Write comprehensive tests for the following. Cover happy paths, edge cases, and error conditions.\n\nWhat to test: {task}",
+      "pre_agent": "",
+      "post_agent": ""
+    },
+    {
+      "name": "refactor",
+      "prompt": "Refactor the following for clarity, maintainability, and idiomatic style. Preserve all existing behavior — do not change functionality.\n\nWhat to refactor: {task}",
+      "pre_agent": "",
+      "post_agent": ""
+    },
+    {
+      "name": "review",
+      "prompt": "Review the following code or area for bugs, security issues, performance problems, and style concerns. Report findings with file paths and line numbers. Do NOT make any code changes.\n\nWhat to review: {task}",
+      "pre_agent": "",
+      "post_agent": ""
+    },
+    {
+      "name": "fix",
+      "prompt": "Fix the following bug or issue. Identify the root cause, apply the minimal correct fix, and verify nothing else breaks.\n\nIssue: {task}",
+      "pre_agent": "",
+      "post_agent": ""
+    },
+    {
+      "name": "docs",
+      "prompt": "Write or update documentation for the following. Include clear explanations, examples where helpful, and keep it concise.\n\nWhat to document: {task}",
+      "pre_agent": "",
+      "post_agent": ""
+    },
+    {
+      "name": "explain",
+      "prompt": "Explain how the following works in detail. Walk through the control flow, data structures, and key decisions. Do NOT make any code changes.\n\nWhat to explain: {task}",
+      "pre_agent": "",
+      "post_agent": ""
+    },
+    {
+      "name": "optimize",
+      "prompt": "Optimize the following for performance. Profile or reason about bottlenecks, then apply targeted improvements. Preserve correctness.\n\nWhat to optimize: {task}",
+      "pre_agent": "",
+      "post_agent": ""
+    }
+  ],
+  "lsp_servers": [
+    {
+      "name": "rust-analyzer",
+      "extensions": [
+        "rs"
+      ],
+      "command": "rust-analyzer",
+      "args": [],
+      "env": [],
+      "enabled": false
+    },
+    {
+      "name": "typescript-language-server",
+      "extensions": [
+        "ts",
+        "tsx",
+        "js",
+        "jsx"
+      ],
+      "command": "typescript-language-server",
+      "args": [
+        "--stdio"
+      ],
+      "env": [],
+      "enabled": false
+    },
+    {
+      "name": "pylsp",
+      "extensions": [
+        "py"
+      ],
+      "command": "pylsp",
+      "args": [],
+      "env": [],
+      "enabled": false
+    },
+    {
+      "name": "gopls",
+      "extensions": [
+        "go"
+      ],
+      "command": "gopls",
+      "args": [],
+      "env": [],
+      "enabled": false
+    },
+    {
+      "name": "jdtls",
+      "extensions": [
+        "java"
+      ],
+      "command": "jdtls",
+      "args": [],
+      "env": [],
+      "enabled": false
+    },
+    {
+      "name": "clangd",
+      "extensions": [
+        "c",
+        "cpp",
+        "h",
+        "hpp"
+      ],
+      "command": "clangd",
+      "args": [],
+      "env": [],
+      "enabled": false
+    }
+  ],
+  "lsp_enabled": false,
+  "prompt_suggestions_enabled": false,
+  "auto_context_file": false,
+  "auto_context_git_diff": false,
+  "allow_dangerous_skip_permissions": true
+}

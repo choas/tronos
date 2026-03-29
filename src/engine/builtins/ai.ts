@@ -18,7 +18,7 @@ import {
 } from "../../stores";
 import { TERMS_CONTENT, TERMS_VERSION } from "../terms-content";
 import { saveVersion } from "../../persistence/versions";
-import { appendAIHistory, writeWorkspace, getContextState } from "../../context/state";
+import { appendAIHistory, writeWorkspace } from "../../context/state";
 
 /**
  * @ai builtin command

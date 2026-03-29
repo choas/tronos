@@ -997,8 +997,7 @@ The update mechanism reuses existing TronOS infrastructure:
       }
       const writeHandler = getProcWriteHandler(resolvedPath);
       if (writeHandler) {
-        writeHandler(content);
-        return;
+        return writeHandler(content);
       }
       if (getProcGenerator(resolvedPath)) {
         throw new Error(`write: read-only proc file: ${p}`);
