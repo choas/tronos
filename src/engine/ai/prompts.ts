@@ -12,6 +12,7 @@
 import type { AIMode } from './parser';
 import type { InMemoryVFS } from '../../vfs/memory';
 import { getAIContext, getCondensedAIContext } from './tronos-ai-context';
+import { getContextState } from '../../context/state';
 
 /**
  * Context information for AI prompts
@@ -203,6 +204,28 @@ async function main(t) {
 }
 \`\`\`
 `;
+
+/**
+ * Build session context section from the shared context bus.
+ * This is prepended to every AI prompt so @ai is context-aware.
+ */
+function buildSessionContextSection(): string {
+  try {
+    const state = getContextState();
+    const parts: string[] = [];
+    parts.push('## Current Session Context');
+    parts.push(`Working directory: ${state.focus.cwd}`);
+    if (state.focus.recent_files.length > 0) {
+      parts.push(`Recent files: ${state.focus.recent_files.join(', ')}`);
+    }
+    if (state.workspace.description || state.workspace.notes) {
+      parts.push(`Workspace: ${JSON.stringify(state.workspace)}`);
+    }
+    return parts.join('\n') + '\n';
+  } catch {
+    return '';
+  }
+}
 
 /**
  * Build context section describing current environment
@@ -418,22 +441,31 @@ ${getCondensedAIContext()}`;
 }
 
 /**
- * Build the complete system prompt based on mode and context
+ * Build the complete system prompt based on mode and context.
+ * Always prepends session context from the shared context bus.
  */
 export function buildSystemPrompt(mode: AIMode, context: PromptContext): string {
+  const sessionCtx = buildSessionContextSection();
+  let prompt: string;
   switch (mode) {
     case 'create':
-      return buildCreatePrompt(context);
+      prompt = buildCreatePrompt(context);
+      break;
     case 'edit':
-      return buildEditPrompt(context);
+      prompt = buildEditPrompt(context);
+      break;
     case 'explain':
-      return buildExplainPrompt(context);
+      prompt = buildExplainPrompt(context);
+      break;
     case 'fix':
-      return buildFixPrompt(context);
+      prompt = buildFixPrompt(context);
+      break;
     case 'chat':
     default:
-      return buildChatPrompt(context);
+      prompt = buildChatPrompt(context);
+      break;
   }
+  return sessionCtx + '\n' + prompt;
 }
 
 /**

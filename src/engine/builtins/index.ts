@@ -19,8 +19,13 @@ import { timewarp } from './timewarp';
 import { cron } from './cron';
 import { update } from './update';
 import { exit } from './exit';
+import { event } from './event';
+import { mcp } from './mcp';
+import { agent } from './agent';
+import { guard } from './guard';
+import { ps } from './ps';
 
-export { ls, cd, pwd, cat, echo, mkdir, touch, rm, cp, mv, head, tail, grep, wc, clear, history, version, whoami, env, exportCmd, unset, alias, unalias, which, type, help, man, source, dot, session, config, ai, curl, fetchCmd, theme, reset, factoryReset, boot, tpkg, feedback, timewarp, cron, update, exit };
+export { ls, cd, pwd, cat, echo, mkdir, touch, rm, cp, mv, head, tail, grep, wc, clear, history, version, whoami, env, exportCmd, unset, alias, unalias, which, type, help, man, source, dot, session, config, ai, curl, fetchCmd, theme, reset, factoryReset, boot, tpkg, feedback, timewarp, cron, update, exit, event, mcp, agent, guard, ps };
 
 export const BUILTIN_COMMANDS = {
   ls,
@@ -68,4 +73,9 @@ export const BUILTIN_COMMANDS = {
   update,
   exit,
   quit: exit,
+  event,
+  mcp,
+  agent,
+  guard,
+  ps,
 } as const;

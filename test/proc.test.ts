@@ -260,7 +260,7 @@ describe('VFS /proc Integration', () => {
   describe('listDetailed', () => {
     it('should list /proc contents with details', () => {
       const contents = vfs.listDetailed('/proc');
-      expect(contents.length).toBe(5);
+      expect(contents.length).toBe(9);
 
       const ai = contents.find(n => n.name === 'ai');
       expect(ai).toBeDefined();

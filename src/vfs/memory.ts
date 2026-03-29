@@ -47,6 +47,15 @@ import {
   listDocsDirectory
 } from './docs';
 import { saveVersion, hasVersionHistory } from '../persistence/versions';
+import { emitFileChanged } from '../events/bus';
+import {
+  isMCPPath,
+  isMCPDirectory,
+  isMCPFile,
+  readMCP,
+  writeMCP,
+  listMCPDirectory,
+} from './mcp';
 
 /**
  * In-memory virtual filesystem with IndexedDB persistence.
@@ -1060,6 +1069,9 @@ The update mechanism reuses existing TronOS infrastructure:
     // Persist to IndexedDB
     this.persistNode(resolvedPath);
     this.persistNode(dirname); // Also persist parent (updated children list)
+
+    // Emit file-changed event
+    emitFileChanged(resolvedPath, existingNode ? 'write' : 'create');
   }
 
   /**
@@ -1078,6 +1090,7 @@ The update mechanism reuses existing TronOS infrastructure:
       node.meta.updatedAt = Date.now();
       // Persist to IndexedDB
       this.persistNode(resolvedPath);
+      emitFileChanged(resolvedPath, 'append');
     } else if (!node) {
       this.write(p, content);
     } else if (node && node.type !== 'file') {
@@ -1445,6 +1458,9 @@ The update mechanism reuses existing TronOS infrastructure:
 
     // Delete from IndexedDB
     this.deletePersistedNode(resolvedPath);
+
+    // Emit file-changed event
+    emitFileChanged(resolvedPath, 'delete');
   }
 
   /**

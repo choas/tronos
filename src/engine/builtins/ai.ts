@@ -18,6 +18,7 @@ import {
 } from "../../stores";
 import { TERMS_CONTENT, TERMS_VERSION } from "../terms-content";
 import { saveVersion } from "../../persistence/versions";
+import { appendAIHistory, writeWorkspace, getContextState } from "../../context/state";
 
 /**
  * @ai builtin command
@@ -132,6 +133,14 @@ export const ai: BuiltinCommand = async (
     vfs: context.vfs,
   };
 
+  // Detect pipeline mode: if stdin has content, include it in the prompt
+  const isPipeline = context.stdin && context.stdin.trim().length > 0;
+  if (isPipeline) {
+    // Enhance the prompt with pipeline data
+    const pipelineContext = `\n\n[Pipeline input data]:\n${context.stdin.trim()}\n`;
+    parsed.prompt = parsed.prompt + pipelineContext;
+  }
+
   // Handle modes that require file content
   if (parsed.mode === "edit" || parsed.mode === "explain" || parsed.mode === "fix") {
     if (!context.vfs) {
@@ -185,6 +194,13 @@ export const ai: BuiltinCommand = async (
 
   // Build user message for history (include the prompt context)
   const userMessageForHistory = buildUserMessageForHistory(parsed.mode, parsed.prompt, parsed.targetFile);
+
+  // Track in context history
+  appendAIHistory(
+    parsed.prompt,
+    promptContext.cwd,
+    JSON.stringify({ mode: parsed.mode, programName: parsed.programName })
+  );
 
   // Execute the AI request with conversation history
   const response = await bridge.execute(
@@ -263,12 +279,31 @@ export const ai: BuiltinCommand = async (
 
     case "explain":
     case "chat":
-    default:
+    default: {
+      const output = (parsedResponse.message || parsedResponse.code || "");
+
+      // Agentic pipes: if output is JSON, auto-update workspace
+      if (isPipeline && output.trim()) {
+        try {
+          JSON.parse(output.trim());
+          writeWorkspace(output.trim());
+        } catch {
+          // Not JSON — that's fine, just pass through
+        }
+        // Track pipeline step in context history
+        appendAIHistory(
+          parsed.prompt,
+          promptContext.cwd,
+          JSON.stringify({ type: 'ai-pipeline-step', output_length: output.length })
+        );
+      }
+
       return {
-        stdout: (parsedResponse.message || parsedResponse.code || "") + "\n",
+        stdout: output + "\n",
         stderr: "",
         exitCode: 0,
       };
+    }
   }
 };
 

@@ -5,6 +5,8 @@
  * Each handler can support read and/or write operations with custom behavior.
  */
 
+import { getGuardQueue } from '../agents/guard';
+
 /**
  * Device handler interface for /dev files
  */
@@ -83,6 +85,26 @@ export const devHandlers: Record<string, DevHandler> = {
   '/dev/urandom': {
     read: (size = 32) => generateRandomBytes(Math.min(size, 65536)),
     write: () => { /* discard - writing to /dev/urandom adds entropy on real systems */ },
+    readable: true,
+    writable: true,
+    permissions: 'rw-rw-rw-',
+  },
+
+  // /dev/guard - write approval requests here (JSON), read pending count
+  '/dev/guard': {
+    read: () => {
+      const pending = getGuardQueue().getPending();
+      return `${pending.length} pending approval(s)\n` +
+        pending.map(r => `  ${r.id}: ${r.agent_name} wants to ${r.action} ${r.target}`).join('\n');
+    },
+    write: (data: string) => {
+      try {
+        const req = JSON.parse(data);
+        getGuardQueue().request(req);
+      } catch {
+        // Invalid request, ignore
+      }
+    },
     readable: true,
     writable: true,
     permissions: 'rw-rw-rw-',

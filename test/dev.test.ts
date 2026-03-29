@@ -413,7 +413,7 @@ describe('VFS /dev Integration', () => {
   describe('listDetailed', () => {
     it('should list /dev contents with details', () => {
       const contents = vfs.listDetailed('/dev');
-      expect(contents.length).toBe(5);
+      expect(contents.length).toBe(6);
 
       const nullDev = contents.find(n => n.name === 'null');
       expect(nullDev).toBeDefined();

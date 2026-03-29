@@ -17,6 +17,23 @@ import {
   COLOR_KEYS,
   type ColorKey,
 } from '../stores/theme';
+import {
+  readWorkspace,
+  writeWorkspace,
+  readFocus,
+  readHistory,
+} from '../context/state';
+import { getEventBus } from '../events/bus';
+import { getAgentRuntime } from '../agents/runtime';
+import { getGuardQueue } from '../agents/guard';
+import {
+  isMCPPath,
+  isMCPDirectory,
+  isMCPFile,
+  readMCP,
+  writeMCP,
+  listMCPDirectory,
+} from './mcp';
 
 /** Boot time for uptime calculation */
 let bootTime: number = Date.now();
@@ -119,12 +136,39 @@ export const procGenerators: Record<string, ProcGenerator> = {
 
   // Theme: active theme name
   '/proc/theme/active': () => getTheme(),
+
+  // Context bus
+  '/proc/context/workspace': () => readWorkspace(),
+  '/proc/context/focus': () => readFocus(),
+  '/proc/context/history': () => readHistory(),
+
+  // Event bus
+  '/proc/events/stream': () => {
+    const bus = getEventBus();
+    const recent = bus.getHistory(50);
+    return recent.map(e => JSON.stringify(e)).join('\n');
+  },
+  '/proc/events/subscribers': () => {
+    const bus = getEventBus();
+    const subs = bus.getSubscriptions();
+    return JSON.stringify(subs.map(s => ({
+      id: s.id,
+      pattern: s.pattern,
+      command: s.command,
+    })), null, 2);
+  },
+  '/proc/events/history': () => {
+    const bus = getEventBus();
+    return bus.getHistory().map(e => JSON.stringify(e)).join('\n');
+  },
 };
 
 /**
  * Map of /proc paths to write handlers (for writable proc files)
  */
-export const procWriteHandlers: Record<string, ProcWriteHandler> = {};
+export const procWriteHandlers: Record<string, ProcWriteHandler> = {
+  '/proc/context/workspace': (data: string) => writeWorkspace(data),
+};
 
 // Register write handlers for /proc/theme/colors/*
 for (const key of COLOR_KEYS) {
@@ -170,44 +214,121 @@ export function isProcPath(path: string): boolean {
 }
 
 /**
- * Get the generator for a /proc path, if it exists
+ * Get the generator for a /proc path, if it exists.
+ * Handles dynamic paths (MCP tools, agents) that aren't pre-registered.
  */
 export function getProcGenerator(path: string): ProcGenerator | undefined {
-  return procGenerators[path];
+  // Static generators first
+  const gen = procGenerators[path];
+  if (gen) return gen;
+
+  // Dynamic: MCP tool paths /proc/mcp/{server}/{tool}
+  if (isMCPPath(path) && isMCPFile(path)) {
+    return () => readMCP(path);
+  }
+
+  // Dynamic: Agent paths /proc/agents/{id}/{field}
+  if (path.startsWith('/proc/agents/')) {
+    return getAgentProcGenerator(path);
+  }
+
+  // Dynamic: Guard paths
+  if (path === '/proc/guard/pending') {
+    return () => getGuardQueue().getPending().map(r => JSON.stringify(r)).join('\n');
+  }
+  if (path === '/proc/guard/log') {
+    return () => getGuardQueue().getLog().map(r => JSON.stringify(r)).join('\n');
+  }
+  if (path === '/proc/guard/policy') {
+    return () => JSON.stringify(getGuardQueue().getPolicy(), null, 2);
+  }
+
+  return undefined;
 }
 
 /**
- * Get the write handler for a /proc path, if it exists
+ * Get a proc generator for agent-specific paths.
+ */
+function getAgentProcGenerator(path: string): ProcGenerator | undefined {
+  const parts = path.replace('/proc/agents/', '').split('/');
+  if (parts.length !== 2) return undefined;
+
+  const [id, field] = parts;
+  const runtime = getAgentRuntime();
+
+  return () => {
+    const agent = runtime.getAgent(id);
+    if (!agent) return `Agent ${id} not found`;
+
+    switch (field) {
+      case 'name': return agent.name;
+      case 'goal': return agent.goal;
+      case 'status': return agent.status;
+      case 'permissions': return JSON.stringify(agent.permissions, null, 2);
+      case 'log': return agent.log.map(e => JSON.stringify(e)).join('\n');
+      case 'pid': return String(agent.pid);
+      case 'violations': return agent.violations.map(v => JSON.stringify(v)).join('\n');
+      default: return `Unknown agent field: ${field}`;
+    }
+  };
+}
+
+/**
+ * Get the write handler for a /proc path, if it exists.
+ * Handles dynamic MCP tool writes.
  */
 export function getProcWriteHandler(path: string): ProcWriteHandler | undefined {
-  return procWriteHandlers[path];
+  const handler = procWriteHandlers[path];
+  if (handler) return handler;
+
+  // Dynamic: MCP tool paths /proc/mcp/{server}/{tool}
+  if (isMCPPath(path) && isMCPFile(path)) {
+    return (data: string) => { writeMCP(path, data); };
+  }
+
+  return undefined;
 }
 
 /**
  * Check if a /proc path is writable
  */
 export function isProcWritable(path: string): boolean {
-  return path in procWriteHandlers;
+  if (path in procWriteHandlers) return true;
+  // MCP tool paths are writable (invoke on write)
+  if (isMCPPath(path) && isMCPFile(path)) return true;
+  return false;
 }
 
 /**
  * Structure of /proc filesystem for directory listings
  */
 export const procStructure: Record<string, string[]> = {
-  '/proc': ['ai', 'system', 'env', 'cron', 'theme'],
+  '/proc': ['ai', 'system', 'env', 'cron', 'theme', 'context', 'events', 'agents', 'guard'],
   '/proc/ai': ['model', 'provider', 'status'],
   '/proc/system': ['version', 'uptime', 'memory'],
   '/proc/cron': ['jobs'],
   '/proc/theme': ['active', 'colors', 'presets'],
   '/proc/theme/colors': [...COLOR_KEYS],
   '/proc/theme/presets': [], // dynamically populated
+  '/proc/context': ['workspace', 'focus', 'history'],
+  '/proc/events': ['stream', 'subscribers', 'history'],
+  '/proc/agents': [],  // dynamically populated
+  '/proc/guard': ['pending', 'log', 'policy'],
 };
 
 /**
  * Check if a /proc path is a directory
  */
 export function isProcDirectory(path: string): boolean {
-  return path in procStructure;
+  if (path in procStructure) return true;
+  // Dynamic: MCP server directories
+  if (isMCPPath(path) && isMCPDirectory(path)) return true;
+  // Dynamic: Agent directories /proc/agents/{id}
+  if (path.startsWith('/proc/agents/') && !path.replace('/proc/agents/', '').includes('/')) {
+    const id = path.replace('/proc/agents/', '');
+    return getAgentRuntime().getAgent(id) !== undefined;
+  }
+  return false;
 }
 
 /**
@@ -216,6 +337,22 @@ export function isProcDirectory(path: string): boolean {
 export function listProcDirectory(path: string): string[] | undefined {
   if (path === '/proc/theme/presets') {
     return getAllPresetNames();
+  }
+  // Dynamic: MCP directories
+  if (isMCPPath(path)) {
+    return listMCPDirectory(path);
+  }
+  // Dynamic: Agent list
+  if (path === '/proc/agents') {
+    return getAgentRuntime().listAgents().map(a => a.id);
+  }
+  // Dynamic: Agent details directory
+  if (path.startsWith('/proc/agents/') && !path.replace('/proc/agents/', '').includes('/')) {
+    const id = path.replace('/proc/agents/', '');
+    if (getAgentRuntime().getAgent(id)) {
+      return ['name', 'goal', 'status', 'permissions', 'log', 'pid', 'violations'];
+    }
+    return undefined;
   }
   return procStructure[path];
 }

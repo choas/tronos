@@ -1,0 +1,431 @@
+/**
+ * @fileoverview Agent Runtime — manages persistent background agents.
+ *
+ * Agents are long-running background processes with goals, declared
+ * permissions, and inspectable state. They run in the same JS
+ * environment with permission-wrapped VFS access.
+ *
+ * @module agents/runtime
+ */
+
+import type { AgentPermissions, AgentViolation } from './permissions';
+import { canRead, canWrite, emptyPermissions, matchesGlob } from './permissions';
+import { getGuardQueue, type GuardQueue } from './guard';
+import { getEventBus } from '../events/bus';
+import { getContextState } from '../context/state';
+
+/**
+ * Agent status.
+ */
+export type AgentStatus = 'running' | 'waiting' | 'suspended' | 'done' | 'error';
+
+/**
+ * Agent trigger configuration.
+ */
+export interface AgentTrigger {
+  type: 'interval' | 'cron' | 'file' | 'context-change' | 'manual';
+  value?: string;      // e.g. "5m", "0 9 * * *", "/home/user/inbox"
+  intervalMs?: number;  // resolved interval in ms
+}
+
+/**
+ * A log entry for an agent action.
+ */
+export interface AgentLogEntry {
+  ts: string;
+  action: string;
+  target?: string;
+  result?: string;
+  error?: string;
+}
+
+/**
+ * An agent process.
+ */
+export interface AgentProcess {
+  id: string;
+  name: string;
+  goal: string;
+  permissions: AgentPermissions;
+  status: AgentStatus;
+  trigger: AgentTrigger;
+  log: AgentLogEntry[];
+  violations: AgentViolation[];
+  pid: number;
+  createdAt: Date;
+  lastRunAt?: Date;
+  /** The interval timer ID, if running on interval */
+  _timerId?: ReturnType<typeof setInterval>;
+  /** Event subscription ID, if file/context trigger */
+  _eventSubId?: string;
+  /** The execution function for this agent */
+  _executor?: () => Promise<void>;
+}
+
+let agentCounter = 0;
+let pidCounter = 100; // start at PID 100 for agents
+
+/**
+ * The AgentRuntime manages all agent processes.
+ */
+export class AgentRuntime {
+  private agents: Map<string, AgentProcess> = new Map();
+
+  /**
+   * Start a new agent.
+   */
+  async start(
+    name: string,
+    goal: string,
+    permissions: AgentPermissions,
+    trigger: AgentTrigger,
+    executor?: () => Promise<void>
+  ): Promise<string> {
+    const id = String(++agentCounter).padStart(3, '0');
+    const pid = ++pidCounter;
+
+    const agent: AgentProcess = {
+      id,
+      name,
+      goal,
+      permissions,
+      status: 'running',
+      trigger,
+      log: [],
+      violations: [],
+      pid,
+      createdAt: new Date(),
+      _executor: executor,
+    };
+
+    this.agents.set(id, agent);
+    this.logAction(id, 'started', undefined, `Goal: ${goal}`);
+
+    // Set up trigger
+    this.setupTrigger(agent);
+
+    // Emit event
+    getEventBus().emit({
+      type: 'agent-action',
+      payload: { agent_id: id, action: 'start', agent_name: name },
+    });
+
+    return id;
+  }
+
+  /**
+   * Suspend an agent.
+   */
+  async suspend(id: string): Promise<void> {
+    const agent = this.agents.get(id);
+    if (!agent) throw new Error(`Agent not found: ${id}`);
+    if (agent.status === 'suspended') return;
+
+    this.clearTrigger(agent);
+    agent.status = 'suspended';
+    this.logAction(id, 'suspended');
+  }
+
+  /**
+   * Resume a suspended agent.
+   */
+  async resume(id: string): Promise<void> {
+    const agent = this.agents.get(id);
+    if (!agent) throw new Error(`Agent not found: ${id}`);
+    if (agent.status !== 'suspended') return;
+
+    agent.status = 'running';
+    this.setupTrigger(agent);
+    this.logAction(id, 'resumed');
+  }
+
+  /**
+   * Kill (permanently stop) an agent.
+   */
+  async kill(id: string): Promise<void> {
+    const agent = this.agents.get(id);
+    if (!agent) throw new Error(`Agent not found: ${id}`);
+
+    this.clearTrigger(agent);
+    agent.status = 'done';
+    this.logAction(id, 'killed');
+
+    getEventBus().emit({
+      type: 'agent-action',
+      payload: { agent_id: id, action: 'kill', agent_name: agent.name },
+    });
+  }
+
+  /**
+   * Get an agent by ID.
+   */
+  getAgent(id: string): AgentProcess | undefined {
+    return this.agents.get(id);
+  }
+
+  /**
+   * Get an agent by PID.
+   */
+  getAgentByPid(pid: number): AgentProcess | undefined {
+    for (const agent of this.agents.values()) {
+      if (agent.pid === pid) return agent;
+    }
+    return undefined;
+  }
+
+  /**
+   * List all agents.
+   */
+  listAgents(): AgentProcess[] {
+    return Array.from(this.agents.values());
+  }
+
+  /**
+   * Execute an agent's run cycle.
+   */
+  async executeAgent(id: string): Promise<void> {
+    const agent = this.agents.get(id);
+    if (!agent || agent.status !== 'running') return;
+
+    agent.status = 'running';
+    agent.lastRunAt = new Date();
+
+    try {
+      if (agent._executor) {
+        await agent._executor();
+      }
+      this.logAction(id, 'executed');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      agent.status = 'error';
+      this.logAction(id, 'error', undefined, undefined, message);
+    }
+  }
+
+  /**
+   * Check if an agent has permission for an operation.
+   */
+  checkPermission(agentId: string, operation: 'read' | 'write' | 'mcp' | 'network' | 'spawn', path: string): boolean {
+    const agent = this.agents.get(agentId);
+    if (!agent) return false;
+
+    let allowed = false;
+    switch (operation) {
+      case 'read':
+        allowed = canRead(agent.permissions, path);
+        break;
+      case 'write':
+        allowed = canWrite(agent.permissions, path);
+        break;
+      case 'mcp':
+        allowed = agent.permissions.mcp.includes(path) || agent.permissions.mcp.includes('*');
+        break;
+      case 'network':
+        allowed = agent.permissions.network;
+        break;
+      case 'spawn':
+        allowed = agent.permissions.spawn;
+        break;
+    }
+
+    if (!allowed) {
+      const violation: AgentViolation = {
+        ts: new Date().toISOString(),
+        agentId,
+        action: operation,
+        target: path,
+        message: `Permission denied: ${operation} ${path}`,
+      };
+      agent.violations.push(violation);
+      this.logAction(agentId, 'violation', path, undefined, `${operation} denied`);
+    }
+
+    return allowed;
+  }
+
+  /**
+   * Create a permission-scoped filesystem API for an agent.
+   */
+  createScopedFs(agentId: string, vfs: any, guardQueue: GuardQueue) {
+    const runtime = this;
+    return {
+      async read(path: string): Promise<string> {
+        if (!runtime.checkPermission(agentId, 'read', path)) {
+          throw new Error(`Agent not permitted to read ${path}`);
+        }
+        return vfs.read(path);
+      },
+      async write(path: string, data: string): Promise<void> {
+        if (!runtime.checkPermission(agentId, 'write', path)) {
+          // Route through guard queue
+          const agent = runtime.getAgent(agentId);
+          const approved = await guardQueue.request({
+            agent_id: agentId,
+            agent_name: agent?.name || agentId,
+            action: 'write',
+            target: path,
+            data_preview: data.substring(0, 200),
+            reason: 'Write outside declared permissions',
+          });
+          if (!approved) {
+            throw new Error(`Write to ${path} rejected by guard`);
+          }
+        }
+        return vfs.write(path, data);
+      },
+      async append(path: string, data: string): Promise<void> {
+        if (!runtime.checkPermission(agentId, 'write', path)) {
+          throw new Error(`Agent not permitted to write ${path}`);
+        }
+        return vfs.append(path, data);
+      },
+      exists(path: string): boolean {
+        return vfs.exists(path);
+      },
+      list(path: string): string[] {
+        return vfs.list(path);
+      },
+      async readdir(path: string): Promise<Array<{ name: string; path: string; mtime: number }>> {
+        if (!runtime.checkPermission(agentId, 'read', path)) {
+          throw new Error(`Agent not permitted to read ${path}`);
+        }
+        const entries = vfs.list(path);
+        return entries.map((name: string) => {
+          const fullPath = path === '/' ? `/${name}` : `${path}/${name}`;
+          const stat = vfs.stat(fullPath);
+          return { name, path: fullPath, mtime: stat?.meta?.updatedAt || 0 };
+        });
+      },
+    };
+  }
+
+  // ─── Private Helpers ────────────────────────────────────────────────────
+
+  private logAction(agentId: string, action: string, target?: string, result?: string, error?: string): void {
+    const agent = this.agents.get(agentId);
+    if (!agent) return;
+    agent.log.push({
+      ts: new Date().toISOString(),
+      action,
+      target,
+      result,
+      error,
+    });
+    // Trim log to 1000 entries
+    if (agent.log.length > 1000) {
+      agent.log = agent.log.slice(agent.log.length - 1000);
+    }
+  }
+
+  private setupTrigger(agent: AgentProcess): void {
+    if (agent.trigger.type === 'interval' && agent.trigger.intervalMs) {
+      agent._timerId = setInterval(() => {
+        if (agent.status === 'running') {
+          this.executeAgent(agent.id).catch(err => {
+            console.warn(`Agent ${agent.id} execution error:`, err);
+          });
+        }
+      }, agent.trigger.intervalMs);
+    } else if (agent.trigger.type === 'file' && agent.trigger.value) {
+      const bus = getEventBus();
+      agent._eventSubId = bus.subscribe(
+        { type: 'file-changed', path: agent.trigger.value },
+        () => {
+          if (agent.status === 'running') {
+            this.executeAgent(agent.id).catch(err => {
+              console.warn(`Agent ${agent.id} execution error:`, err);
+            });
+          }
+        }
+      );
+    } else if (agent.trigger.type === 'context-change') {
+      const bus = getEventBus();
+      agent._eventSubId = bus.subscribe(
+        { type: 'context-changed' },
+        () => {
+          if (agent.status === 'running') {
+            this.executeAgent(agent.id).catch(err => {
+              console.warn(`Agent ${agent.id} execution error:`, err);
+            });
+          }
+        }
+      );
+    }
+  }
+
+  private clearTrigger(agent: AgentProcess): void {
+    if (agent._timerId) {
+      clearInterval(agent._timerId);
+      agent._timerId = undefined;
+    }
+    if (agent._eventSubId) {
+      getEventBus().unsubscribe(agent._eventSubId);
+      agent._eventSubId = undefined;
+    }
+  }
+}
+
+/** Singleton */
+let runtimeInstance: AgentRuntime | null = null;
+
+/**
+ * Get the global AgentRuntime singleton.
+ */
+export function getAgentRuntime(): AgentRuntime {
+  if (!runtimeInstance) {
+    runtimeInstance = new AgentRuntime();
+  }
+  return runtimeInstance;
+}
+
+/**
+ * Parse a trigger string from CLI/manifest.
+ */
+export function parseTrigger(value: string): AgentTrigger {
+  value = value.trim();
+
+  if (value === '@manual') {
+    return { type: 'manual' };
+  }
+
+  if (value === '@context-change') {
+    return { type: 'context-change' };
+  }
+
+  if (value.startsWith('@file ')) {
+    return { type: 'file', value: value.substring(6).trim() };
+  }
+
+  if (value.startsWith('@every ')) {
+    const interval = value.substring(7).trim();
+    return { type: 'interval', value: interval, intervalMs: parseInterval(interval) };
+  }
+
+  if (value === '@daily') {
+    return { type: 'interval', value: '24h', intervalMs: 86400000 };
+  }
+
+  if (value === '@hourly') {
+    return { type: 'interval', value: '1h', intervalMs: 3600000 };
+  }
+
+  // Assume cron syntax
+  return { type: 'cron', value };
+}
+
+/**
+ * Parse an interval string like "5m", "2h", "30s" to milliseconds.
+ */
+export function parseInterval(interval: string): number {
+  const match = interval.match(/^(\d+)\s*(s|m|h|d)$/);
+  if (!match) return 300000; // default 5 minutes
+
+  const num = parseInt(match[1]);
+  switch (match[2]) {
+    case 's': return num * 1000;
+    case 'm': return num * 60000;
+    case 'h': return num * 3600000;
+    case 'd': return num * 86400000;
+    default: return 300000;
+  }
+}

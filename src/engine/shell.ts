@@ -23,6 +23,13 @@ import { isCLI } from '../utils/environment';
 import { VERSION } from '../version';
 import { getCronScheduler } from './cron';
 import type { CronCommandExecutor } from './cron';
+import {
+  updateFocus,
+  appendShellHistory,
+  extractFilesFromCommand,
+  setActiveSession,
+  loadPersistedContext,
+} from '../context/state';
 
 // Import stores only in browser mode
 // In CLI mode, this will be undefined and we'll use fallback
@@ -211,6 +218,11 @@ class ShellEngine {
 
     // Initialize VFS (already done in boot sequence messages, but this is the actual init)
     await this.vfs.init();
+
+    // Initialize context bus for this session
+    const sessionId = (this.vfs as any).namespace || 'default';
+    setActiveSession(sessionId);
+    await loadPersistedContext(sessionId).catch(() => {});
 
     // Load custom theme presets from /etc/themes/*.json
     this.loadCustomThemes();
@@ -405,6 +417,12 @@ class ShellEngine {
       const message = error instanceof Error ? error.message : String(error);
       this.term.writeln(`\x1b[31mSyntax error: ${message}\x1b[0m`);
     }
+
+    // Update context bus after every command
+    const cwd = this.vfs.cwd();
+    const touchedFiles = extractFilesFromCommand(line, cwd);
+    updateFocus(line, cwd, touchedFiles);
+    appendShellHistory(line, cwd);
   }
 
   private async executeCommand(command: ParsedCommand) {
