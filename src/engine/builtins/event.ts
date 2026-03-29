@@ -60,7 +60,7 @@ export const event: BuiltinCommand = async (
         i++;
       }
 
-      if (!pathPattern && !command) {
+      if (!pathPattern || !command) {
         return {
           stdout: '',
           stderr: 'Usage: event watch <path> [event-type] --call <command>\n',
