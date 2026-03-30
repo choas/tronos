@@ -61,7 +61,64 @@
   ],
   "allow_home_folder_access": false,
   "agent_shell_init": "",
-  "agents": [],
+  "agents": [
+    {
+      "kind": "Format",
+      "name": "",
+      "enabled": true,
+      "command": "npm run format",
+      "trigger": "AfterRun",
+      "timeout_secs": 30,
+      "working_dir": "",
+      "before_run": ""
+    },
+    {
+      "kind": "Lint",
+      "name": "",
+      "enabled": true,
+      "command": "npm run lint",
+      "trigger": {
+        "AfterAgent": "Format"
+      },
+      "timeout_secs": 120,
+      "working_dir": "",
+      "before_run": ""
+    },
+    {
+      "kind": "Build",
+      "name": "",
+      "enabled": true,
+      "command": "npm run build",
+      "trigger": {
+        "AfterAgent": "Lint"
+      },
+      "timeout_secs": 120,
+      "working_dir": "",
+      "before_run": ""
+    },
+    {
+      "kind": "Test",
+      "name": "",
+      "enabled": true,
+      "command": "npm run test",
+      "trigger": {
+        "AfterAgent": "Build"
+      },
+      "timeout_secs": 300,
+      "working_dir": "",
+      "before_run": ""
+    },
+    {
+      "kind": "Outdated",
+      "name": "",
+      "enabled": true,
+      "command": "npm outdated 2>&1",
+      "trigger": "Manual",
+      "timeout_secs": 60,
+      "working_dir": "",
+      "before_run": ""
+    }
+  ],
   "commands": [
     {
       "name": "plan",
@@ -115,9 +172,7 @@
   "lsp_servers": [
     {
       "name": "rust-analyzer",
-      "extensions": [
-        "rs"
-      ],
+      "extensions": ["rs"],
       "command": "rust-analyzer",
       "args": [],
       "env": [],
@@ -125,24 +180,15 @@
     },
     {
       "name": "typescript-language-server",
-      "extensions": [
-        "ts",
-        "tsx",
-        "js",
-        "jsx"
-      ],
+      "extensions": ["ts", "tsx", "js", "jsx"],
       "command": "typescript-language-server",
-      "args": [
-        "--stdio"
-      ],
+      "args": ["--stdio"],
       "env": [],
       "enabled": false
     },
     {
       "name": "pylsp",
-      "extensions": [
-        "py"
-      ],
+      "extensions": ["py"],
       "command": "pylsp",
       "args": [],
       "env": [],
@@ -150,9 +196,7 @@
     },
     {
       "name": "gopls",
-      "extensions": [
-        "go"
-      ],
+      "extensions": ["go"],
       "command": "gopls",
       "args": [],
       "env": [],
@@ -160,9 +204,7 @@
     },
     {
       "name": "jdtls",
-      "extensions": [
-        "java"
-      ],
+      "extensions": ["java"],
       "command": "jdtls",
       "args": [],
       "env": [],
@@ -170,12 +212,7 @@
     },
     {
       "name": "clangd",
-      "extensions": [
-        "c",
-        "cpp",
-        "h",
-        "hpp"
-      ],
+      "extensions": ["c", "cpp", "h", "hpp"],
       "command": "clangd",
       "args": [],
       "env": [],
