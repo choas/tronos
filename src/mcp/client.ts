@@ -147,14 +147,19 @@ export class MCPClient {
    * List all registered servers.
    */
   listServers(): MCPServer[] {
-    return Array.from(this.servers.values());
+    return Array.from(this.servers.values()).map((s) => ({
+      ...s,
+      tools: s.tools.map((t) => ({ ...t })),
+    }));
   }
 
   /**
    * Get a specific server by name.
    */
   getServer(name: string): MCPServer | undefined {
-    return this.servers.get(name);
+    const server = this.servers.get(name);
+    if (!server) return undefined;
+    return { ...server, tools: server.tools.map((t) => ({ ...t })) };
   }
 
   /**
@@ -163,7 +168,7 @@ export class MCPClient {
   listTools(serverName: string): MCPTool[] {
     const server = this.servers.get(serverName);
     if (!server) return [];
-    return server.tools;
+    return server.tools.map((t) => ({ ...t }));
   }
 
   /**
