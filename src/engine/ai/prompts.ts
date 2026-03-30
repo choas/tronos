@@ -12,7 +12,7 @@
 import type { AIMode } from "./parser";
 import type { InMemoryVFS } from "../../vfs/memory";
 import { getAIContext, getCondensedAIContext } from "./tronos-ai-context";
-import { getContextState } from "../../context/state";
+import { getContextState, getActiveSession } from "../../context/state";
 
 /**
  * Context information for AI prompts
