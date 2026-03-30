@@ -59,8 +59,25 @@ export class GuardQueue {
   > = new Map();
 
   /**
-   * Submit a request for approval.
-   * Returns a promise that resolves when approved/rejected.
+   * Submit a request for approval and return a `Promise<boolean>` representing
+   * its lifecycle:
+   *
+   * - **Auto-approved** – when the request matches an auto-approve policy the
+   *   promise resolves to `true` synchronously (within the same microtask).
+   * - **Queued** – otherwise the promise remains pending until the request is
+   *   settled by one of the following:
+   *   - `approve(id)` resolves the promise to `true`.
+   *   - `reject(id)` resolves the promise to `false`.
+   *   - `rejectAllForAgent(agentId, error)` *rejects* the promise with the
+   *     supplied `Error`, which will cause an unhandled-rejection crash if the
+   *     caller has no rejection handler.
+   *
+   * **Consumer guidance** – callers must either `await` the returned promise
+   * (so rejections propagate naturally), return it to their own caller, or
+   * attach a `.catch()` handler. Fire-and-forget calls (e.g. the `/dev/guard`
+   * VFS write handler) should add a no-op `.catch(() => {})` to suppress
+   * unhandled rejections when `rejectAllForAgent()` is invoked during agent
+   * teardown.
    */
   async request(
     req: Omit<GuardRequest, "id" | "requested_at" | "status">,
