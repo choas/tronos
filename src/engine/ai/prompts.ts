@@ -482,6 +482,7 @@ export function buildUserMessage(
   mode: AIMode,
   prompt: string,
   programName?: string | null,
+  sessionId?: string,
 ): string {
   let base: string;
   switch (mode) {
@@ -507,7 +508,7 @@ export function buildUserMessage(
 
   // Append workspace context as a lower-trust user-message payload
   try {
-    const state = getContextState(getActiveSession());
+    const state = getContextState(sessionId ?? getActiveSession());
     const workspace = state.workspace;
     if (Object.keys(workspace).length > 0) {
       base += `\n\n[Workspace context: ${JSON.stringify(workspace)}]`;

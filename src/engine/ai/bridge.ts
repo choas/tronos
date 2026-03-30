@@ -248,7 +248,7 @@ export class AIBridge {
     sessionId?: string,
   ): { systemPrompt: string; messages: Message[] } {
     const systemPrompt = buildSystemPrompt(mode, context, sessionId);
-    const userMessage = buildUserMessage(mode, prompt, programName);
+    const userMessage = buildUserMessage(mode, prompt, programName, sessionId);
 
     // Build messages array with conversation history
     const messages: Message[] = [];
