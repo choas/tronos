@@ -174,7 +174,7 @@ export class GuardQueue {
    * Get all pending requests.
    */
   getPending(): GuardRequest[] {
-    return Array.from(this.pending.values());
+    return Array.from(this.pending.values()).map((r) => ({ ...r }));
   }
 
   /**
