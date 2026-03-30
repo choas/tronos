@@ -241,21 +241,20 @@ export async function startFromManifest(
   const guardQueue = getGuardQueue();
 
   const goal = manifest.description || manifest.name;
-  const id = await runtime.start(
-    manifest.name,
-    goal,
-    manifest.permissions || emptyPermissions(),
-    manifest.trigger || { type: "manual" },
-    manifest.escalate || "out-of-scope",
-  );
 
-  // Create executor from body, closing over the captured id
+  // Build the executor *before* start() so it is registered atomically with
+  // the trigger setup inside runtime.start().  The closure captures `id` by
+  // reference; `id` is assigned synchronously when start() returns — always
+  // before any asynchronous trigger callback can fire.
+  let id!: string;
+  let executor: (() => Promise<void>) | undefined;
+
   if (manifest.body) {
     const extractResult = extractAgentFunctionBody(manifest.body);
     if (extractResult.success && extractResult.code) {
       const code = extractResult.code;
 
-      const executor = async () => {
+      executor = async () => {
         const agent = runtime.listAgents().find((a) => a.id === id);
         if (!agent) return;
 
@@ -348,10 +347,17 @@ export async function startFromManifest(
 
         await executeSandboxedAgentCode(code, agentAPI);
       };
-
-      runtime.setExecutor(id, executor);
     }
   }
+
+  id = await runtime.start(
+    manifest.name,
+    goal,
+    manifest.permissions || emptyPermissions(),
+    manifest.trigger || { type: "manual" },
+    manifest.escalate || "out-of-scope",
+    executor,
+  );
 
   return id;
 }
