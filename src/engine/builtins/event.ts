@@ -94,8 +94,12 @@ export const event: BuiltinCommand = async (
       const id = bus.subscribe(
         pattern,
         (evt: OSEvent, cmd?: string) => {
-          // Terminal may be closed between subscription and invocation;
-          // read a fresh reference each time and bail if unavailable.
+          // The closure captures `context` by reference. Reading
+          // `context.terminal` each invocation sees updates if the
+          // property is reassigned on the same object, but if the
+          // entire context is replaced (e.g. session switch), this
+          // callback still holds the old context. Bail if terminal
+          // is unavailable to avoid writing to a stale instance.
           const terminal = context.terminal;
           if (!terminal) return;
 

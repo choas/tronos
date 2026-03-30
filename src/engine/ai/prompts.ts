@@ -502,10 +502,13 @@ export function buildUserMessage(
       break;
   }
 
+  // NOTE: Workspace content influences AI behavior. Ensure workspace
+  // data is from a trusted source to prevent prompt injection.
   const state = getContextState(sessionId ?? getActiveSession());
   const workspace = state.workspace;
   if (Object.keys(workspace).length > 0) {
-    base += `\n\n[Workspace context: ${JSON.stringify(workspace)}]`;
+    const safeWorkspace = JSON.stringify(workspace).replace(/</g, "&lt;");
+    base += `\n\n[Workspace context (read-only reference): ${safeWorkspace}]`;
   }
 
   return base;

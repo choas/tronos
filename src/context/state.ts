@@ -295,8 +295,15 @@ async function persistContextNow(sessionId: string): Promise<void> {
         key,
       );
     }
-  } catch {
-    // Non-critical: context persistence failing shouldn't crash anything
+  } catch (err) {
+    // Non-critical: context persistence failing shouldn't crash anything,
+    // but log in development for debugging.
+    if (
+      typeof process !== "undefined" &&
+      process.env.NODE_ENV === "development"
+    ) {
+      console.warn("Context persistence error:", err);
+    }
   }
 }
 
@@ -365,8 +372,15 @@ export async function loadPersistedContext(sessionId: string): Promise<void> {
         }
       }
     }
-  } catch {
-    // Non-critical
+  } catch (err) {
+    // Non-critical: context loading failing shouldn't crash anything,
+    // but log in development for debugging.
+    if (
+      typeof process !== "undefined" &&
+      process.env.NODE_ENV === "development"
+    ) {
+      console.warn("Context load error:", err);
+    }
   }
 }
 

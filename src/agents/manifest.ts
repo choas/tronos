@@ -67,6 +67,12 @@ const SANDBOXED_GLOBALS = [
 /**
  * Execute agent code in a sandboxed context.
  *
+ * NOTE: This sandbox is NOT cryptographically secure. It shadows common
+ * browser globals but cannot prevent all escape routes (e.g. via Object
+ * prototype chain, Proxy, Reflect, or non-listed globals). Agent code
+ * should be treated as semi-trusted. For a true sandbox, use a Web Worker
+ * with a restricted MessageChannel API or an iframe with sandbox="".
+ *
  * All globals listed in SANDBOXED_GLOBALS are shadowed by function parameters
  * set to `undefined`, so agent code cannot reach host resources except through
  * the provided agentAPI (`a`). Strict mode ensures `this` is `undefined`
@@ -76,6 +82,8 @@ async function executeSandboxedAgentCode(
   code: string,
   agentAPI: Record<string, unknown>,
 ): Promise<void> {
+  // Freeze agentAPI to prevent prototype pollution from within agent code
+  const frozenAPI = Object.freeze({ ...agentAPI });
   const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
   // Build parameter list: 'a' (the agentAPI) followed by every blocked global
@@ -85,7 +93,7 @@ async function executeSandboxedAgentCode(
 
   // Pass agentAPI as first arg, undefined for every blocked global.
   // .call(null) ensures `this` is null (undefined in strict mode).
-  const args: unknown[] = [agentAPI];
+  const args: unknown[] = [frozenAPI];
   for (let i = 0; i < SANDBOXED_GLOBALS.length; i++) {
     args.push(undefined);
   }
@@ -247,7 +255,7 @@ export async function startFromManifest(
   // the trigger setup inside runtime.start().  The closure captures `id` by
   // reference; `id` is assigned synchronously when start() returns — always
   // before any asynchronous trigger callback can fire.
-  let id!: string;
+  let id: string | undefined;
   let executor: (() => Promise<void>) | undefined;
 
   if (manifest.body) {
@@ -256,6 +264,7 @@ export async function startFromManifest(
       const code = extractResult.code;
 
       executor = async () => {
+        if (!id) return; // Guard against execution before id is assigned
         const agent = runtime.listAgents().find((a) => a.id === id);
         if (!agent) return;
 
@@ -317,10 +326,17 @@ export async function startFromManifest(
             const bridge = createAIBridge(getAIConfig());
             const cwd = String(ctx.workspace?.cwd ?? "/");
             const sessionId = getActiveSession() || undefined;
-            const response = await bridge.execute("chat", prompt, {
-              cwd,
-              env: {},
-            }, null, undefined, sessionId);
+            const response = await bridge.execute(
+              "chat",
+              prompt,
+              {
+                cwd,
+                env: {},
+              },
+              null,
+              undefined,
+              sessionId,
+            );
             if (!response.success) {
               throw new Error(response.error || "LLM request failed");
             }

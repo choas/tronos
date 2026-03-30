@@ -297,11 +297,25 @@ export class MCPClient {
           "Malformed tools/list response: missing result.tools array",
         );
       }
-      return data.result.tools.map((t: any) => ({
-        name: t.name,
-        description: t.description || "",
-        inputSchema: t.inputSchema || {},
-      }));
+      return data.result.tools.map((t: unknown) => {
+        if (
+          !t ||
+          typeof t !== "object" ||
+          typeof (t as Record<string, unknown>).name !== "string"
+        ) {
+          throw new Error("Malformed tool entry: missing or non-string name");
+        }
+        const tool = t as Record<string, unknown>;
+        return {
+          name: tool.name as string,
+          description:
+            typeof tool.description === "string" ? tool.description : "",
+          inputSchema:
+            tool.inputSchema && typeof tool.inputSchema === "object"
+              ? (tool.inputSchema as Record<string, unknown>)
+              : {},
+        };
+      });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") {
         throw new Error(
@@ -323,9 +337,18 @@ export class MCPClient {
     return new Promise((resolve, reject) => {
       try {
         const ws = new WebSocket(server.url);
+        let settled = false;
+        const settle = (fn: () => void) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          fn();
+        };
         const timeout = setTimeout(() => {
-          ws.close();
-          reject(new Error("WebSocket connection timed out"));
+          settle(() => {
+            ws.close();
+            reject(new Error("WebSocket connection timed out"));
+          });
         }, 10000);
 
         ws.onopen = () => {
@@ -339,43 +362,67 @@ export class MCPClient {
         };
 
         ws.onmessage = (event) => {
-          clearTimeout(timeout);
           try {
             const data = JSON.parse(event.data);
             if (data.error) {
-              reject(
-                new Error(
-                  data.error.message || "Server returned JSON-RPC error",
-                ),
-              );
+              settle(() => {
+                reject(
+                  new Error(
+                    data.error.message || "Server returned JSON-RPC error",
+                  ),
+                );
+              });
               ws.close();
               return;
             }
             if (!data.result || !Array.isArray(data.result.tools)) {
-              reject(
-                new Error(
-                  "Malformed tools/list response: missing result.tools array",
-                ),
-              );
+              settle(() => {
+                reject(
+                  new Error(
+                    "Malformed tools/list response: missing result.tools array",
+                  ),
+                );
+              });
               ws.close();
               return;
             }
-            resolve(
-              data.result.tools.map((t: any) => ({
-                name: t.name,
-                description: t.description || "",
-                inputSchema: t.inputSchema || {},
-              })),
-            );
+            settle(() => {
+              resolve(
+                data.result.tools.map((t: unknown) => {
+                  if (
+                    !t ||
+                    typeof t !== "object" ||
+                    typeof (t as Record<string, unknown>).name !== "string"
+                  ) {
+                    throw new Error(
+                      "Malformed tool entry: missing or non-string name",
+                    );
+                  }
+                  const tool = t as Record<string, unknown>;
+                  return {
+                    name: tool.name as string,
+                    description:
+                      typeof tool.description === "string"
+                        ? tool.description
+                        : "",
+                    inputSchema:
+                      tool.inputSchema && typeof tool.inputSchema === "object"
+                        ? (tool.inputSchema as Record<string, unknown>)
+                        : {},
+                  };
+                }),
+              );
+            });
           } catch {
-            reject(new Error("Invalid JSON response from MCP server"));
+            settle(() =>
+              reject(new Error("Invalid JSON response from MCP server")),
+            );
           }
           ws.close();
         };
 
         ws.onerror = (err) => {
-          clearTimeout(timeout);
-          reject(new Error(`WebSocket error: ${err}`));
+          settle(() => reject(new Error(`WebSocket error: ${err}`)));
         };
       } catch (err) {
         reject(err);
