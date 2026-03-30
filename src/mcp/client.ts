@@ -106,6 +106,15 @@ export class MCPClient {
     transport?: "sse" | "websocket" | "stdio",
   ): Promise<void> {
     validateMCPName(name, "server");
+
+    // Basic SSRF protection: only allow http/https/ws/wss schemes
+    const parsedUrl = new URL(url); // throws if invalid
+    if (!["http:", "https:", "ws:", "wss:"].includes(parsedUrl.protocol)) {
+      throw new Error(
+        `MCP server URL uses unsupported protocol: ${parsedUrl.protocol}`,
+      );
+    }
+
     const resolvedTransport = transport || this.detectTransport(url);
 
     const server: MCPServer = {
@@ -503,9 +512,18 @@ export class MCPClient {
   ): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(server.url);
+      let settled = false;
+      const settle = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        fn();
+      };
       const timeout = setTimeout(() => {
-        ws.close();
-        reject(new Error("WebSocket call timed out"));
+        settle(() => {
+          ws.close();
+          reject(new Error("WebSocket call timed out"));
+        });
       }, 30000);
 
       ws.onopen = () => {
@@ -520,29 +538,31 @@ export class MCPClient {
       };
 
       ws.onmessage = (event) => {
-        clearTimeout(timeout);
         try {
           const data = JSON.parse(event.data);
           if (data.error) {
-            reject(new Error(data.error.message || "Tool call failed"));
+            settle(() =>
+              reject(new Error(data.error.message || "Tool call failed")),
+            );
           } else if (!Object.prototype.hasOwnProperty.call(data, "result")) {
-            reject(
-              new Error(
-                "Malformed tools/call response: missing 'result' property",
+            settle(() =>
+              reject(
+                new Error(
+                  "Malformed tools/call response: missing 'result' property",
+                ),
               ),
             );
           } else {
-            resolve(data.result);
+            settle(() => resolve(data.result));
           }
         } catch {
-          reject(new Error("Invalid response from MCP server"));
+          settle(() => reject(new Error("Invalid response from MCP server")));
         }
         ws.close();
       };
 
       ws.onerror = (err) => {
-        clearTimeout(timeout);
-        reject(new Error(`WebSocket error: ${err}`));
+        settle(() => reject(new Error(`WebSocket error: ${err}`)));
       };
     });
   }
