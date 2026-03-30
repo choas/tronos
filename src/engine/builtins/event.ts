@@ -81,7 +81,15 @@ export const event: BuiltinCommand = async (
       }
 
       const pattern: EventPattern = { type: eventType };
-      pattern.path = pathPattern;
+      if (eventType === "file-changed") {
+        pattern.path = pathPattern;
+      } else if (pathPattern) {
+        return {
+          stdout: "",
+          stderr: `event watch: path filtering is only supported for 'file-changed' events, not '${eventType}'\n`,
+          exitCode: 1,
+        };
+      }
 
       const id = bus.subscribe(
         pattern,
