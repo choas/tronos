@@ -17,6 +17,7 @@ import { getMCPClient } from "../mcp/client";
 import { createAIBridge } from "../engine/ai/bridge";
 import { getAIConfig } from "../stores/ai";
 import { getEventBus } from "../events/bus";
+import { getContextState, getActiveSession } from "../context/state";
 
 /**
  * Globals that agent code must NOT access directly.
@@ -262,8 +263,6 @@ export async function startFromManifest(
         const scopedFs = vfs
           ? runtime.createScopedFs(agent.id, vfs, guardQueue)
           : undefined;
-        const { getContextState } = await import("../context/state");
-        const { getActiveSession } = await import("../context/state");
         const ctx = getContextState(getActiveSession());
 
         const agentAPI = {
@@ -317,10 +316,11 @@ export async function startFromManifest(
           llm: async (prompt: string) => {
             const bridge = createAIBridge(getAIConfig());
             const cwd = String(ctx.workspace?.cwd ?? "/");
+            const sessionId = getActiveSession() || undefined;
             const response = await bridge.execute("chat", prompt, {
               cwd,
               env: {},
-            });
+            }, null, undefined, sessionId);
             if (!response.success) {
               throw new Error(response.error || "LLM request failed");
             }
