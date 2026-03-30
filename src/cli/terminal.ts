@@ -8,7 +8,7 @@
  * @module cli/terminal
  */
 
-import type { TerminalAPI, KeyEvent } from '../terminal/api';
+import type { TerminalAPI, KeyEvent } from "../terminal/api";
 
 /**
  * Disposable interface for cleanup callbacks.
@@ -37,7 +37,7 @@ export const createNodeTerminalAPI = (): TerminalAPI => {
     process.stdin.setRawMode(true);
   }
   process.stdin.resume();
-  process.stdin.setEncoding('utf8');
+  process.stdin.setEncoding("utf8");
 
   // Track cursor position (approximate - reset on clear)
   let cursorX = 0;
@@ -49,8 +49,8 @@ export const createNodeTerminalAPI = (): TerminalAPI => {
 
   // Set up input handling
   // Matches xterm.js behavior: onData for pasted text, onKey for individual keypresses
-  process.stdin.on('data', (chunk: string) => {
-    if (chunk.length > 1 && !chunk.startsWith('\x1b')) {
+  process.stdin.on("data", (chunk: string) => {
+    if (chunk.length > 1 && !chunk.startsWith("\x1b")) {
       // Multi-char non-escape input = pasted text → only call data handlers
       for (const handler of dataHandlers) {
         handler(chunk);
@@ -70,7 +70,12 @@ export const createNodeTerminalAPI = (): TerminalAPI => {
    */
   function parseInputToKeyEvent(input: string): KeyEvent {
     // Create a mock KeyboardEvent for compatibility
-    const createMockDomEvent = (key: string, ctrl = false, alt = false, meta = false): KeyboardEvent => {
+    const createMockDomEvent = (
+      key: string,
+      ctrl = false,
+      alt = false,
+      meta = false,
+    ): KeyboardEvent => {
       return {
         key,
         ctrlKey: ctrl,
@@ -87,22 +92,22 @@ export const createNodeTerminalAPI = (): TerminalAPI => {
 
       // Tab (code 9 / Ctrl+I)
       if (code === 9) {
-        return { key: '\t', domEvent: createMockDomEvent('Tab') };
+        return { key: "\t", domEvent: createMockDomEvent("Tab") };
       }
 
       // Escape (code 27)
       if (code === 27) {
-        return { key: '\x1b', domEvent: createMockDomEvent('Escape') };
+        return { key: "\x1b", domEvent: createMockDomEvent("Escape") };
       }
 
       // Enter / Return (code 13)
       if (code === 13) {
-        return { key: '\r', domEvent: createMockDomEvent('Enter') };
+        return { key: "\r", domEvent: createMockDomEvent("Enter") };
       }
 
       // Backspace (code 127)
       if (code === 127) {
-        return { key: '\x7f', domEvent: createMockDomEvent('Backspace') };
+        return { key: "\x7f", domEvent: createMockDomEvent("Backspace") };
       }
 
       // Ctrl+A to Ctrl+Z (codes 1-26)
@@ -122,32 +127,32 @@ export const createNodeTerminalAPI = (): TerminalAPI => {
     }
 
     // Handle escape sequences
-    if (input.startsWith('\x1b[')) {
+    if (input.startsWith("\x1b[")) {
       // Arrow keys and other special sequences
       switch (input) {
-        case '\x1b[A':
-          return { key: '\x1b[A', domEvent: createMockDomEvent('ArrowUp') };
-        case '\x1b[B':
-          return { key: '\x1b[B', domEvent: createMockDomEvent('ArrowDown') };
-        case '\x1b[C':
-          return { key: '\x1b[C', domEvent: createMockDomEvent('ArrowRight') };
-        case '\x1b[D':
-          return { key: '\x1b[D', domEvent: createMockDomEvent('ArrowLeft') };
-        case '\x1b[H':
-          return { key: '\x1b[H', domEvent: createMockDomEvent('Home') };
-        case '\x1b[F':
-          return { key: '\x1b[F', domEvent: createMockDomEvent('End') };
-        case '\x1b[3~':
-          return { key: '\x1b[3~', domEvent: createMockDomEvent('Delete') };
-        case '\x1b[5~':
-          return { key: '\x1b[5~', domEvent: createMockDomEvent('PageUp') };
-        case '\x1b[6~':
-          return { key: '\x1b[6~', domEvent: createMockDomEvent('PageDown') };
+        case "\x1b[A":
+          return { key: "\x1b[A", domEvent: createMockDomEvent("ArrowUp") };
+        case "\x1b[B":
+          return { key: "\x1b[B", domEvent: createMockDomEvent("ArrowDown") };
+        case "\x1b[C":
+          return { key: "\x1b[C", domEvent: createMockDomEvent("ArrowRight") };
+        case "\x1b[D":
+          return { key: "\x1b[D", domEvent: createMockDomEvent("ArrowLeft") };
+        case "\x1b[H":
+          return { key: "\x1b[H", domEvent: createMockDomEvent("Home") };
+        case "\x1b[F":
+          return { key: "\x1b[F", domEvent: createMockDomEvent("End") };
+        case "\x1b[3~":
+          return { key: "\x1b[3~", domEvent: createMockDomEvent("Delete") };
+        case "\x1b[5~":
+          return { key: "\x1b[5~", domEvent: createMockDomEvent("PageUp") };
+        case "\x1b[6~":
+          return { key: "\x1b[6~", domEvent: createMockDomEvent("PageDown") };
       }
     }
 
     // Alt key combinations
-    if (input.startsWith('\x1b') && input.length === 2) {
+    if (input.startsWith("\x1b") && input.length === 2) {
       return {
         key: input[1],
         domEvent: createMockDomEvent(input[1], false, true),
@@ -165,7 +170,7 @@ export const createNodeTerminalAPI = (): TerminalAPI => {
     write: (data: string) => {
       process.stdout.write(data);
       // Update cursor position estimate (simplified)
-      const lines = data.split('\n');
+      const lines = data.split("\n");
       if (lines.length > 1) {
         cursorY += lines.length - 1;
         cursorX = lines[lines.length - 1].length;
@@ -175,21 +180,21 @@ export const createNodeTerminalAPI = (): TerminalAPI => {
     },
 
     writeln: (data: string) => {
-      process.stdout.write(data + '\n');
+      process.stdout.write(data + "\n");
       cursorY++;
       cursorX = 0;
     },
 
     clear: () => {
       // ANSI escape sequence to clear screen and move cursor to home
-      process.stdout.write('\x1b[2J\x1b[H');
+      process.stdout.write("\x1b[2J\x1b[H");
       cursorX = 0;
       cursorY = 0;
     },
 
     clearLine: () => {
       // Clear current line and move to beginning
-      process.stdout.write('\x1b[2K\r');
+      process.stdout.write("\x1b[2K\r");
       cursorX = 0;
     },
 
@@ -201,7 +206,7 @@ export const createNodeTerminalAPI = (): TerminalAPI => {
     },
 
     moveBy: (dx: number, dy: number) => {
-      let cmd = '';
+      let cmd = "";
       if (dx > 0) {
         cmd += `\x1b[${dx}C`;
         cursorX += dx;
@@ -261,7 +266,7 @@ export const createNodeTerminalAPI = (): TerminalAPI => {
 
     getSelection: () => {
       // No selection support in CLI mode
-      return '';
+      return "";
     },
 
     clearSelection: () => {
@@ -291,9 +296,11 @@ export const createNodeTerminalAPI = (): TerminalAPI => {
  * @returns True if running in Node.js environment
  */
 export const isNodeEnvironment = (): boolean => {
-  return typeof process !== 'undefined' &&
-    typeof process.versions !== 'undefined' &&
-    typeof process.versions.node !== 'undefined';
+  return (
+    typeof process !== "undefined" &&
+    typeof process.versions !== "undefined" &&
+    typeof process.versions.node !== "undefined"
+  );
 };
 
 /**
@@ -302,5 +309,5 @@ export const isNodeEnvironment = (): boolean => {
  * @returns True if running in browser environment
  */
 export const isBrowserEnvironment = (): boolean => {
-  return typeof window !== 'undefined' && typeof document !== 'undefined';
+  return typeof window !== "undefined" && typeof document !== "undefined";
 };

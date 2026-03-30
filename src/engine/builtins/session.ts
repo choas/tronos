@@ -1,9 +1,25 @@
 import type { BuiltinCommand, CommandResult, ExecutionContext } from "../types";
-import type { DiskImage, DiskFile, ImportHistoryEntry, SessionSnapshot } from "../../types";
+import type {
+  DiskImage,
+  DiskFile,
+  ImportHistoryEntry,
+  SessionSnapshot,
+} from "../../types";
 import { InMemoryVFS } from "../../vfs/memory";
-import { sessionState, createSession, switchSession, deleteSession, updateSession, getActiveSession } from "../../stores";
+import {
+  sessionState,
+  createSession,
+  switchSession,
+  deleteSession,
+  updateSession,
+  getActiveSession,
+} from "../../stores";
 import { saveVersion, revertToVersion } from "../../persistence/versions";
-import { saveImportEntry, getSessionImportHistory, getLatestImportEntry } from "../../persistence/import-history";
+import {
+  saveImportEntry,
+  getSessionImportHistory,
+  getLatestImportEntry,
+} from "../../persistence/import-history";
 import {
   createSnapshot,
   getSessionSnapshots,
@@ -16,22 +32,22 @@ import yaml from "js-yaml";
 /**
  * Conflict resolution strategy for merge operations
  */
-export type ConflictStrategy = 'overwrite' | 'skip' | 'interactive';
+export type ConflictStrategy = "overwrite" | "skip" | "interactive";
 
 /**
  * Result of a merge operation
  */
 export interface MergeResult {
   success: boolean;
-  merged: string[];       // Files that were successfully merged (new or overwritten)
-  skipped: string[];      // Files that were skipped due to conflicts
-  overwritten: string[];  // Files that were overwritten (subset of merged when overwrite strategy)
-  errors: string[];       // Any errors that occurred
-  envMerged: string[];    // Environment variables that were merged
-  envSkipped: string[];   // Environment variables that were skipped
-  aliasesMerged: string[];  // Aliases that were merged
+  merged: string[]; // Files that were successfully merged (new or overwritten)
+  skipped: string[]; // Files that were skipped due to conflicts
+  overwritten: string[]; // Files that were overwritten (subset of merged when overwrite strategy)
+  errors: string[]; // Any errors that occurred
+  envMerged: string[]; // Environment variables that were merged
+  envSkipped: string[]; // Environment variables that were skipped
+  aliasesMerged: string[]; // Aliases that were merged
   aliasesSkipped: string[]; // Aliases that were skipped
-  versionIds: Record<string, string>;  // filePath -> versionId of pre-merge snapshot
+  versionIds: Record<string, string>; // filePath -> versionId of pre-merge snapshot
 }
 
 /**
@@ -39,7 +55,7 @@ export interface MergeResult {
  */
 export interface MergeConflict {
   path: string;
-  type: 'file' | 'env' | 'alias';
+  type: "file" | "env" | "alias";
   currentValue?: string;
   incomingValue?: string;
 }
@@ -61,7 +77,8 @@ export function isValidDiskImage(obj: unknown): obj is DiskImage {
   if (typeof img.session !== "object" || img.session === null) return false;
   const session = img.session as Record<string, unknown>;
   if (typeof session.env !== "object" || session.env === null) return false;
-  if (typeof session.aliases !== "object" || session.aliases === null) return false;
+  if (typeof session.aliases !== "object" || session.aliases === null)
+    return false;
   if (!Array.isArray(session.history)) return false;
 
   // Check files object
@@ -80,7 +97,9 @@ export async function importSession(diskImage: DiskImage): Promise<string> {
   let counter = 1;
 
   // Check if name already exists and generate a unique one
-  while (Object.values(sessionState.sessions).some(s => s.name === importName)) {
+  while (
+    Object.values(sessionState.sessions).some((s) => s.name === importName)
+  ) {
     importName = `${diskImage.name}-${counter}`;
     counter++;
   }
@@ -92,7 +111,7 @@ export async function importSession(diskImage: DiskImage): Promise<string> {
   updateSession(newSession.id, {
     env: { ...diskImage.session.env },
     aliases: { ...diskImage.session.aliases },
-    history: [...diskImage.session.history]
+    history: [...diskImage.session.history],
   });
 
   // Create a new VFS for this session's namespace
@@ -120,7 +139,8 @@ export async function importSession(diskImage: DiskImage): Promise<string> {
         }
       } else if (diskFile.type === "file" && diskFile.content !== undefined) {
         // Create parent directories if they don't exist
-        const parentDir = filePath.substring(0, filePath.lastIndexOf("/")) || "/";
+        const parentDir =
+          filePath.substring(0, filePath.lastIndexOf("/")) || "/";
         if (parentDir !== "/" && !vfs.exists(parentDir)) {
           vfs.mkdir(parentDir, true);
         }
@@ -147,23 +167,27 @@ export function detectMergeConflicts(
   diskImage: DiskImage,
   vfs: InMemoryVFS,
   currentEnv: Record<string, string>,
-  currentAliases: Record<string, string>
+  currentAliases: Record<string, string>,
 ): MergeConflict[] {
   const conflicts: MergeConflict[] = [];
 
   // Check file conflicts
   for (const [filePath, diskFile] of Object.entries(diskImage.files)) {
-    if (diskFile.type === 'file' && vfs.exists(filePath)) {
+    if (diskFile.type === "file" && vfs.exists(filePath)) {
       try {
         const currentContent = vfs.readSync(filePath);
         if (currentContent !== diskFile.content) {
           conflicts.push({
             path: filePath,
-            type: 'file',
-            currentValue: currentContent.length > 100 ? currentContent.substring(0, 100) + '...' : currentContent,
-            incomingValue: diskFile.content && diskFile.content.length > 100
-              ? diskFile.content.substring(0, 100) + '...'
-              : diskFile.content
+            type: "file",
+            currentValue:
+              currentContent.length > 100
+                ? currentContent.substring(0, 100) + "..."
+                : currentContent,
+            incomingValue:
+              diskFile.content && diskFile.content.length > 100
+                ? diskFile.content.substring(0, 100) + "..."
+                : diskFile.content,
           });
         }
       } catch {
@@ -177,9 +201,9 @@ export function detectMergeConflicts(
     if (key in currentEnv && currentEnv[key] !== value) {
       conflicts.push({
         path: key,
-        type: 'env',
+        type: "env",
         currentValue: currentEnv[key],
-        incomingValue: value
+        incomingValue: value,
       });
     }
   }
@@ -189,9 +213,9 @@ export function detectMergeConflicts(
     if (name in currentAliases && currentAliases[name] !== command) {
       conflicts.push({
         path: name,
-        type: 'alias',
+        type: "alias",
         currentValue: currentAliases[name],
-        incomingValue: command
+        incomingValue: command,
       });
     }
   }
@@ -207,7 +231,9 @@ export async function mergeSession(
   diskImage: DiskImage,
   vfs: InMemoryVFS,
   strategy: ConflictStrategy,
-  interactiveResolver?: (conflict: MergeConflict) => Promise<'overwrite' | 'skip'>
+  interactiveResolver?: (
+    conflict: MergeConflict,
+  ) => Promise<"overwrite" | "skip">,
 ): Promise<MergeResult> {
   // Create auto-snapshot before merge (destructive operation)
   try {
@@ -227,7 +253,7 @@ export async function mergeSession(
     envSkipped: [],
     aliasesMerged: [],
     aliasesSkipped: [],
-    versionIds: {}
+    versionIds: {},
   };
 
   const activeSession = getActiveSession();
@@ -263,19 +289,19 @@ export async function mergeSession(
             const currentContent = vfs.readSync(filePath);
             if (currentContent !== diskFile.content) {
               // Conflict detected
-              if (strategy === 'skip') {
+              if (strategy === "skip") {
                 shouldWrite = false;
                 result.skipped.push(filePath);
-              } else if (strategy === 'overwrite') {
+              } else if (strategy === "overwrite") {
                 isOverwrite = true;
-              } else if (strategy === 'interactive' && interactiveResolver) {
+              } else if (strategy === "interactive" && interactiveResolver) {
                 const decision = await interactiveResolver({
                   path: filePath,
-                  type: 'file',
+                  type: "file",
                   currentValue: currentContent,
-                  incomingValue: diskFile.content
+                  incomingValue: diskFile.content,
                 });
-                if (decision === 'skip') {
+                if (decision === "skip") {
                   shouldWrite = false;
                   result.skipped.push(filePath);
                 } else {
@@ -297,7 +323,8 @@ export async function mergeSession(
 
         if (shouldWrite) {
           // Create parent directories if they don't exist
-          const parentDir = filePath.substring(0, filePath.lastIndexOf("/")) || "/";
+          const parentDir =
+            filePath.substring(0, filePath.lastIndexOf("/")) || "/";
           if (parentDir !== "/" && !vfs.exists(parentDir)) {
             vfs.mkdir(parentDir, true);
           }
@@ -306,10 +333,15 @@ export async function mergeSession(
           if (isOverwrite) {
             try {
               const currentContent = vfs.readSync(filePath);
-              const version = await saveVersion(namespace, filePath, currentContent, {
-                message: `Pre-import snapshot from ${diskImage.name}`,
-                author: "disk-import"
-              });
+              const version = await saveVersion(
+                namespace,
+                filePath,
+                currentContent,
+                {
+                  message: `Pre-import snapshot from ${diskImage.name}`,
+                  author: "disk-import",
+                },
+              );
               result.versionIds[filePath] = version.id;
             } catch {
               // Could not save version, continue with merge anyway
@@ -339,19 +371,19 @@ export async function mergeSession(
       envUpdates[key] = value;
       result.envMerged.push(key);
     } else if (hasConflict) {
-      if (strategy === 'skip') {
+      if (strategy === "skip") {
         result.envSkipped.push(key);
-      } else if (strategy === 'overwrite') {
+      } else if (strategy === "overwrite") {
         envUpdates[key] = value;
         result.envMerged.push(key);
-      } else if (strategy === 'interactive' && interactiveResolver) {
+      } else if (strategy === "interactive" && interactiveResolver) {
         const decision = await interactiveResolver({
           path: key,
-          type: 'env',
+          type: "env",
           currentValue: activeSession.env[key],
-          incomingValue: value
+          incomingValue: value,
         });
-        if (decision === 'overwrite') {
+        if (decision === "overwrite") {
           envUpdates[key] = value;
           result.envMerged.push(key);
         } else {
@@ -375,19 +407,19 @@ export async function mergeSession(
       aliasUpdates[name] = command;
       result.aliasesMerged.push(name);
     } else if (hasConflict) {
-      if (strategy === 'skip') {
+      if (strategy === "skip") {
         result.aliasesSkipped.push(name);
-      } else if (strategy === 'overwrite') {
+      } else if (strategy === "overwrite") {
         aliasUpdates[name] = command;
         result.aliasesMerged.push(name);
-      } else if (strategy === 'interactive' && interactiveResolver) {
+      } else if (strategy === "interactive" && interactiveResolver) {
         const decision = await interactiveResolver({
           path: name,
-          type: 'alias',
+          type: "alias",
           currentValue: activeSession.aliases[name],
-          incomingValue: command
+          incomingValue: command,
         });
-        if (decision === 'overwrite') {
+        if (decision === "overwrite") {
           aliasUpdates[name] = command;
           result.aliasesMerged.push(name);
         } else {
@@ -401,8 +433,14 @@ export async function mergeSession(
   }
 
   // Apply env and alias updates to session
-  if (Object.keys(envUpdates).length > 0 || Object.keys(aliasUpdates).length > 0) {
-    const updates: { env?: Record<string, string>; aliases?: Record<string, string> } = {};
+  if (
+    Object.keys(envUpdates).length > 0 ||
+    Object.keys(aliasUpdates).length > 0
+  ) {
+    const updates: {
+      env?: Record<string, string>;
+      aliases?: Record<string, string>;
+    } = {};
     if (Object.keys(envUpdates).length > 0) {
       updates.env = { ...activeSession.env, ...envUpdates };
     }
@@ -425,7 +463,7 @@ export function formatMergeResult(result: MergeResult): string {
   const lines: string[] = [];
 
   // Files summary
-  const newFiles = result.merged.filter(f => !result.overwritten.includes(f));
+  const newFiles = result.merged.filter((f) => !result.overwritten.includes(f));
   if (newFiles.length > 0) {
     lines.push(`Files added: ${newFiles.length}`);
   }
@@ -477,13 +515,15 @@ export function isYamlContent(content: string): boolean {
   const trimmed = content.trimStart();
   // YAML typically starts with a key: value, --- document marker, or # comment
   // JSON always starts with { or [
-  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
     return false;
   }
   // Check for YAML indicators
-  if (trimmed.startsWith('---') ||
-      trimmed.startsWith('#') ||
-      /^[a-zA-Z_][a-zA-Z0-9_]*:\s/.test(trimmed)) {
+  if (
+    trimmed.startsWith("---") ||
+    trimmed.startsWith("#") ||
+    /^[a-zA-Z_][a-zA-Z0-9_]*:\s/.test(trimmed)
+  ) {
     return true;
   }
   // Default to JSON for backward compatibility
@@ -524,13 +564,13 @@ export function parseDiskImage(content: string): DiskImage {
  */
 export function serializeDiskImageToYaml(diskImage: DiskImage): string {
   return yaml.dump(diskImage, {
-    lineWidth: -1,  // Disable line wrapping
-    noRefs: true,   // Don't use YAML anchors/aliases
+    lineWidth: -1, // Disable line wrapping
+    noRefs: true, // Don't use YAML anchors/aliases
     quotingType: '"',
     forceQuotes: false,
     styles: {
-      '!!str': 'literal'  // Use literal block scalars for strings
-    }
+      "!!str": "literal", // Use literal block scalars for strings
+    },
   });
 }
 
@@ -544,7 +584,7 @@ export async function captureSessionState(
   sessionCreated: number,
   env: Record<string, string>,
   aliases: Record<string, string>,
-  history: string[]
+  history: string[],
 ): Promise<DiskImage> {
   // Collect all files recursively, excluding /proc and /dev
   const files: Record<string, DiskFile> = {};
@@ -557,7 +597,8 @@ export async function captureSessionState(
 
     const entries = vfs.listDetailed(dirPath);
     for (const entry of entries) {
-      const fullPath = dirPath === "/" ? `/${entry.name}` : `${dirPath}/${entry.name}`;
+      const fullPath =
+        dirPath === "/" ? `/${entry.name}` : `${dirPath}/${entry.name}`;
 
       // Skip /proc and /dev at top level
       if (fullPath === "/proc" || fullPath === "/dev") {
@@ -569,8 +610,8 @@ export async function captureSessionState(
         meta: {
           created: new Date(entry.meta.createdAt).toISOString(),
           modified: new Date(entry.meta.updatedAt).toISOString(),
-          permissions: "rw-r--r--"
-        }
+          permissions: "rw-r--r--",
+        },
       };
 
       if (entry.type === "file") {
@@ -600,9 +641,9 @@ export async function captureSessionState(
     session: {
       env: { ...env },
       aliases: { ...aliases },
-      history: [...history]
+      history: [...history],
     },
-    files
+    files,
   };
 }
 
@@ -612,7 +653,7 @@ export async function captureSessionState(
  */
 export async function createAutoSnapshot(
   vfs: InMemoryVFS,
-  reason: string
+  reason: string,
 ): Promise<SessionSnapshot | null> {
   try {
     const activeSession = getActiveSession();
@@ -624,11 +665,14 @@ export async function createAutoSnapshot(
       activeSession.created,
       activeSession.env,
       activeSession.aliases,
-      activeSession.history
+      activeSession.history,
     );
 
     // Create auto snapshot with timestamp-based name
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")
+      .slice(0, 19);
     const snapshotName = `auto-${timestamp}`;
 
     const snapshot = await createSnapshot(
@@ -638,7 +682,7 @@ export async function createAutoSnapshot(
       {
         description: `Auto-snapshot before ${reason}`,
         isAuto: true,
-      }
+      },
     );
 
     // Enforce snapshot limit
@@ -651,7 +695,10 @@ export async function createAutoSnapshot(
   }
 }
 
-export const session: BuiltinCommand = async (args: string[], _context: ExecutionContext): Promise<CommandResult> => {
+export const session: BuiltinCommand = async (
+  args: string[],
+  _context: ExecutionContext,
+): Promise<CommandResult> => {
   const subcommand = args[0];
 
   if (!subcommand || subcommand === "list") {
@@ -678,17 +725,19 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: "",
         stderr: "Usage: session new <name>\n",
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
     // Check if name already exists
-    const existing = Object.values(sessionState.sessions).find(s => s.name === name);
+    const existing = Object.values(sessionState.sessions).find(
+      (s) => s.name === name,
+    );
     if (existing) {
       return {
         stdout: "",
         stderr: `Session '${name}' already exists\n`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
@@ -696,7 +745,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
     return {
       stdout: `Created session '${name}' (${sess.id})\n`,
       stderr: "",
-      exitCode: 0
+      exitCode: 0,
     };
   }
 
@@ -707,7 +756,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: "",
         stderr: "Usage: session switch <name|id>\n",
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
@@ -715,7 +764,9 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
     let sess = sessionState.sessions[nameOrId];
     if (!sess) {
       // Try to find by name
-      const found = Object.values(sessionState.sessions).find(s => s.name === nameOrId);
+      const found = Object.values(sessionState.sessions).find(
+        (s) => s.name === nameOrId,
+      );
       if (found) sess = found;
     }
 
@@ -723,7 +774,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: "",
         stderr: `Session '${nameOrId}' not found\n`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
@@ -738,13 +789,13 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: `Switched to session '${sess.name}'\n`,
         stderr: "",
-        exitCode: 0
+        exitCode: 0,
       };
     } catch (error) {
       return {
         stdout: "",
         stderr: `${(error as Error).message}\n`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
   }
@@ -756,7 +807,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: "",
         stderr: "Usage: session delete <name|id>\n",
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
@@ -764,7 +815,9 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
     let sess = sessionState.sessions[nameOrId];
     if (!sess) {
       // Try to find by name
-      const found = Object.values(sessionState.sessions).find(s => s.name === nameOrId);
+      const found = Object.values(sessionState.sessions).find(
+        (s) => s.name === nameOrId,
+      );
       if (found) sess = found;
     }
 
@@ -772,7 +825,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: "",
         stderr: `Session '${nameOrId}' not found\n`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
@@ -781,13 +834,13 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: `Deleted session '${sess.name}'\n`,
         stderr: "",
-        exitCode: 0
+        exitCode: 0,
       };
     } catch (error) {
       return {
         stdout: "",
         stderr: `${(error as Error).message}\n`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
   }
@@ -801,7 +854,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: "",
         stderr: "Usage: session rename <name|id> <new-name>\n",
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
@@ -809,7 +862,9 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
     let sess = sessionState.sessions[nameOrId];
     if (!sess) {
       // Try to find by name
-      const found = Object.values(sessionState.sessions).find(s => s.name === nameOrId);
+      const found = Object.values(sessionState.sessions).find(
+        (s) => s.name === nameOrId,
+      );
       if (found) sess = found;
     }
 
@@ -817,17 +872,19 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: "",
         stderr: `Session '${nameOrId}' not found\n`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
     // Check if new name already exists
-    const existing = Object.values(sessionState.sessions).find(s => s.name === newName && s.id !== sess!.id);
+    const existing = Object.values(sessionState.sessions).find(
+      (s) => s.name === newName && s.id !== sess!.id,
+    );
     if (existing) {
       return {
         stdout: "",
         stderr: `Session '${newName}' already exists\n`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
@@ -837,13 +894,13 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: `Renamed session '${oldName}' to '${newName}'\n`,
         stderr: "",
-        exitCode: 0
+        exitCode: 0,
       };
     } catch (error) {
       return {
         stdout: "",
         stderr: `${(error as Error).message}\n`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
   }
@@ -857,7 +914,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: "",
         stderr: "Export failed: VFS not available\n",
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
@@ -873,7 +930,8 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
 
         const entries = vfs!.listDetailed(dirPath);
         for (const entry of entries) {
-          const fullPath = dirPath === "/" ? `/${entry.name}` : `${dirPath}/${entry.name}`;
+          const fullPath =
+            dirPath === "/" ? `/${entry.name}` : `${dirPath}/${entry.name}`;
 
           // Skip /proc and /dev at top level
           if (fullPath === "/proc" || fullPath === "/dev") {
@@ -885,8 +943,8 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
             meta: {
               created: new Date(entry.meta.createdAt).toISOString(),
               modified: new Date(entry.meta.updatedAt).toISOString(),
-              permissions: "rw-r--r--"
-            }
+              permissions: "rw-r--r--",
+            },
           };
 
           if (entry.type === "file") {
@@ -916,9 +974,9 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
         session: {
           env: { ...activeSession.env },
           aliases: { ...activeSession.aliases },
-          history: [...activeSession.history]
+          history: [...activeSession.history],
         },
-        files
+        files,
       };
 
       // Trigger browser download in YAML format
@@ -936,13 +994,13 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: `Exported session '${activeSession.name}' to ${activeSession.name}.disk.yaml\n`,
         stderr: "",
-        exitCode: 0
+        exitCode: 0,
       };
     } catch (error) {
       return {
         stdout: "",
         stderr: `Export failed: ${(error as Error).message}\n`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
   }
@@ -956,12 +1014,15 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
     const hasInteractive = flags.includes("--interactive");
 
     // Validate flag combinations
-    const conflictFlags = [hasOverwrite, hasSkip, hasInteractive].filter(Boolean).length;
+    const conflictFlags = [hasOverwrite, hasSkip, hasInteractive].filter(
+      Boolean,
+    ).length;
     if (conflictFlags > 1) {
       return {
         stdout: "",
-        stderr: "Error: Only one of --overwrite, --skip, or --interactive can be specified\n",
-        exitCode: 1
+        stderr:
+          "Error: Only one of --overwrite, --skip, or --interactive can be specified\n",
+        exitCode: 1,
       };
     }
 
@@ -969,23 +1030,24 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
     if (!hasMerge && (hasOverwrite || hasSkip || hasInteractive)) {
       return {
         stdout: "",
-        stderr: "Error: --overwrite, --skip, and --interactive require --merge flag\n",
-        exitCode: 1
+        stderr:
+          "Error: --overwrite, --skip, and --interactive require --merge flag\n",
+        exitCode: 1,
       };
     }
 
     // Determine the UI request based on flags
     if (hasMerge) {
-      let strategy: ConflictStrategy = 'interactive'; // default for merge
-      if (hasOverwrite) strategy = 'overwrite';
-      if (hasSkip) strategy = 'skip';
+      let strategy: ConflictStrategy = "interactive"; // default for merge
+      if (hasOverwrite) strategy = "overwrite";
+      if (hasSkip) strategy = "skip";
 
       // Trigger merge dialog with the specified strategy
       return {
         stdout: "",
         stderr: "",
         exitCode: 0,
-        uiRequest: `showMergeDialog:${strategy}`
+        uiRequest: `showMergeDialog:${strategy}`,
       };
     }
 
@@ -1004,7 +1066,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       stdout: "",
       stderr: "",
       exitCode: 0,
-      uiRequest: "showImportDialog"
+      uiRequest: "showImportDialog",
     };
   }
 
@@ -1014,8 +1076,9 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
     if (!filePath) {
       return {
         stdout: "",
-        stderr: "Usage: session diff <file.disk.yaml>\nShows differences between current session and a disk image before import.\n",
-        exitCode: 1
+        stderr:
+          "Usage: session diff <file.disk.yaml>\nShows differences between current session and a disk image before import.\n",
+        exitCode: 1,
       };
     }
 
@@ -1024,7 +1087,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       stdout: "",
       stderr: "",
       exitCode: 0,
-      uiRequest: `showDiffDialog:${filePath}`
+      uiRequest: `showDiffDialog:${filePath}`,
     };
   }
 
@@ -1034,8 +1097,9 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
     if (!snapshotName) {
       return {
         stdout: "",
-        stderr: "Usage: session snapshot <name>\nCreates a named snapshot of the current session state.\n",
-        exitCode: 1
+        stderr:
+          "Usage: session snapshot <name>\nCreates a named snapshot of the current session state.\n",
+        exitCode: 1,
       };
     }
 
@@ -1044,7 +1108,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: "",
         stderr: "Snapshot failed: VFS not available\n",
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
@@ -1057,7 +1121,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
         return {
           stdout: "",
           stderr: `Snapshot '${snapshotName}' already exists. Use a different name or delete the existing snapshot.\n`,
-          exitCode: 1
+          exitCode: 1,
         };
       }
 
@@ -1068,7 +1132,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
         activeSession.created,
         activeSession.env,
         activeSession.aliases,
-        activeSession.history
+        activeSession.history,
       );
 
       // Create the snapshot
@@ -1076,7 +1140,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
         activeSession.id,
         snapshotName,
         diskImage,
-        { isAuto: false }
+        { isAuto: false },
       );
 
       // Enforce snapshot limit
@@ -1093,13 +1157,13 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: output,
         stderr: "",
-        exitCode: 0
+        exitCode: 0,
       };
     } catch (error) {
       return {
         stdout: "",
         stderr: `Snapshot failed: ${(error as Error).message}\n`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
   }
@@ -1114,7 +1178,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
         return {
           stdout: "No snapshots for current session.\n",
           stderr: "",
-          exitCode: 0
+          exitCode: 0,
         };
       }
 
@@ -1139,13 +1203,13 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: output,
         stderr: "",
-        exitCode: 0
+        exitCode: 0,
       };
     } catch (error) {
       return {
         stdout: "",
         stderr: `Failed to list snapshots: ${(error as Error).message}\n`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
   }
@@ -1156,8 +1220,9 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
     if (!snapshotName) {
       return {
         stdout: "",
-        stderr: "Usage: session restore <name>\nRestores the session to a previous snapshot state.\n",
-        exitCode: 1
+        stderr:
+          "Usage: session restore <name>\nRestores the session to a previous snapshot state.\n",
+        exitCode: 1,
       };
     }
 
@@ -1166,7 +1231,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: "",
         stderr: "Restore failed: VFS not available\n",
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
@@ -1179,12 +1244,15 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
         return {
           stdout: "",
           stderr: `Snapshot '${snapshotName}' not found.\nUse 'session snapshots' to list available snapshots.\n`,
-          exitCode: 1
+          exitCode: 1,
         };
       }
 
       // Create auto-snapshot before restore (destructive operation)
-      const autoSnapshot = await createAutoSnapshot(vfs, `restore to '${snapshotName}'`);
+      const autoSnapshot = await createAutoSnapshot(
+        vfs,
+        `restore to '${snapshotName}'`,
+      );
       let autoSnapshotMsg = "";
       if (autoSnapshot) {
         autoSnapshotMsg = `Auto-snapshot '${autoSnapshot.name}' created before restore.\n`;
@@ -1212,9 +1280,13 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
               vfs.mkdir(filePath, true);
               filesCreated++;
             }
-          } else if (diskFile.type === "file" && diskFile.content !== undefined) {
+          } else if (
+            diskFile.type === "file" &&
+            diskFile.content !== undefined
+          ) {
             // Create parent directories if they don't exist
-            const parentDir = filePath.substring(0, filePath.lastIndexOf("/")) || "/";
+            const parentDir =
+              filePath.substring(0, filePath.lastIndexOf("/")) || "/";
             if (parentDir !== "/" && !vfs.exists(parentDir)) {
               vfs.mkdir(parentDir, true);
             }
@@ -1237,7 +1309,7 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       updateSession(activeSession.id, {
         env: { ...diskImage.session.env },
         aliases: { ...diskImage.session.aliases },
-        history: [...diskImage.session.history]
+        history: [...diskImage.session.history],
       });
 
       // Sync VFS
@@ -1263,26 +1335,27 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
       return {
         stdout: output,
         stderr: "",
-        exitCode: errors.length > 0 ? 1 : 0
+        exitCode: errors.length > 0 ? 1 : 0,
       };
     } catch (error) {
       return {
         stdout: "",
         stderr: `Restore failed: ${(error as Error).message}\n`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
   }
 
   return {
     stdout: "",
-    stderr: `Unknown subcommand: ${subcommand}\nUsage: session [list|new|switch|delete|rename|export|import|diff|snapshot|snapshots|restore]\n` +
-            "  snapshot <name> - create a named snapshot\n" +
-            "  snapshots - list all snapshots\n" +
-            "  restore <name> - restore to a snapshot\n" +
-            "  import [--merge] [--overwrite|--skip|--interactive] [--undo] [--history]\n" +
-            "  diff <file.disk.yaml>\n",
-    exitCode: 1
+    stderr:
+      `Unknown subcommand: ${subcommand}\nUsage: session [list|new|switch|delete|rename|export|import|diff|snapshot|snapshots|restore]\n` +
+      "  snapshot <name> - create a named snapshot\n" +
+      "  snapshots - list all snapshots\n" +
+      "  restore <name> - restore to a snapshot\n" +
+      "  import [--merge] [--overwrite|--skip|--interactive] [--undo] [--history]\n" +
+      "  diff <file.disk.yaml>\n",
+    exitCode: 1,
   };
 };
 
@@ -1290,7 +1363,9 @@ export const session: BuiltinCommand = async (args: string[], _context: Executio
  * Handle the import --undo command
  * Reverts the most recent import operation for the current session
  */
-async function handleImportUndo(context: ExecutionContext): Promise<CommandResult> {
+async function handleImportUndo(
+  context: ExecutionContext,
+): Promise<CommandResult> {
   const activeSession = getActiveSession();
   const vfs = context.vfs;
 
@@ -1298,7 +1373,7 @@ async function handleImportUndo(context: ExecutionContext): Promise<CommandResul
     return {
       stdout: "",
       stderr: "Error: VFS not available\n",
-      exitCode: 1
+      exitCode: 1,
     };
   }
 
@@ -1311,7 +1386,7 @@ async function handleImportUndo(context: ExecutionContext): Promise<CommandResul
     return {
       stdout: "",
       stderr: "No import history found for current session. Nothing to undo.\n",
-      exitCode: 1
+      exitCode: 1,
     };
   }
 
@@ -1319,7 +1394,7 @@ async function handleImportUndo(context: ExecutionContext): Promise<CommandResul
     return {
       stdout: "",
       stderr: "No import history found for current session. Nothing to undo.\n",
-      exitCode: 1
+      exitCode: 1,
     };
   }
 
@@ -1327,9 +1402,10 @@ async function handleImportUndo(context: ExecutionContext): Promise<CommandResul
   if (latestImport.wasNew) {
     return {
       stdout: "",
-      stderr: `Cannot undo session creation. Use 'session delete' to remove the imported session.\n` +
-              `Last import created session from: ${latestImport.diskImageName}\n`,
-      exitCode: 1
+      stderr:
+        `Cannot undo session creation. Use 'session delete' to remove the imported session.\n` +
+        `Last import created session from: ${latestImport.diskImageName}\n`,
+      exitCode: 1,
     };
   }
 
@@ -1340,7 +1416,12 @@ async function handleImportUndo(context: ExecutionContext): Promise<CommandResul
   // Revert each file that has a version snapshot
   for (const [filePath, versionId] of Object.entries(latestImport.versionIds)) {
     try {
-      const result = await revertToVersion(activeSession.fsNamespace, filePath, versionId, {});
+      const result = await revertToVersion(
+        activeSession.fsNamespace,
+        filePath,
+        versionId,
+        {},
+      );
       if (result) {
         // Write the reverted content back to VFS
         await vfs.write(filePath, result.content);
@@ -1370,7 +1451,7 @@ async function handleImportUndo(context: ExecutionContext): Promise<CommandResul
   return {
     stdout: lines.join("\n") + "\n",
     stderr: "",
-    exitCode: errorCount > 0 ? 1 : 0
+    exitCode: errorCount > 0 ? 1 : 0,
   };
 }
 
@@ -1389,7 +1470,7 @@ async function handleImportHistory(): Promise<CommandResult> {
     return {
       stdout: "No import history for current session.\n",
       stderr: "",
-      exitCode: 0
+      exitCode: 0,
     };
   }
 
@@ -1397,15 +1478,19 @@ async function handleImportHistory(): Promise<CommandResult> {
     return {
       stdout: "No import history for current session.\n",
       stderr: "",
-      exitCode: 0
+      exitCode: 0,
     };
   }
 
-  const lines: string[] = [`Import history for session '${activeSession.name}':\n`];
+  const lines: string[] = [
+    `Import history for session '${activeSession.name}':\n`,
+  ];
 
   for (const entry of history) {
     const date = new Date(entry.timestamp).toLocaleString();
-    const mode = entry.wasNew ? "new session" : `merge (${entry.mergeStrategy || "unknown"})`;
+    const mode = entry.wasNew
+      ? "new session"
+      : `merge (${entry.mergeStrategy || "unknown"})`;
     lines.push(`  ${date} - ${entry.diskImageName}`);
     lines.push(`    Mode: ${mode}`);
     lines.push(`    Files imported: ${entry.filesImported.length}`);
@@ -1413,7 +1498,9 @@ async function handleImportHistory(): Promise<CommandResult> {
       lines.push(`    Files skipped: ${entry.filesSkipped.length}`);
     }
     if (Object.keys(entry.versionIds).length > 0) {
-      lines.push(`    Versions saved: ${Object.keys(entry.versionIds).length} (undoable)`);
+      lines.push(
+        `    Versions saved: ${Object.keys(entry.versionIds).length} (undoable)`,
+      );
     }
     lines.push("");
   }
@@ -1421,7 +1508,7 @@ async function handleImportHistory(): Promise<CommandResult> {
   return {
     stdout: lines.join("\n"),
     stderr: "",
-    exitCode: 0
+    exitCode: 0,
   };
 }
 
@@ -1433,7 +1520,7 @@ export function diffDiskImage(
   diskImage: DiskImage,
   vfs: InMemoryVFS,
   currentEnv: Record<string, string>,
-  currentAliases: Record<string, string>
+  currentAliases: Record<string, string>,
 ): string {
   const lines: string[] = [];
   lines.push(`Comparing current session with disk image: ${diskImage.name}`);
@@ -1445,7 +1532,7 @@ export function diffDiskImage(
   const unchangedFiles: string[] = [];
 
   for (const [filePath, diskFile] of Object.entries(diskImage.files)) {
-    if (diskFile.type !== 'file') continue;
+    if (diskFile.type !== "file") continue;
 
     if (!vfs.exists(filePath)) {
       newFiles.push(filePath);
@@ -1535,9 +1622,15 @@ export function diffDiskImage(
 
   // Summary
   lines.push("\n=== Summary ===");
-  lines.push(`Files: ${newFiles.length} new, ${modifiedFiles.length} modified, ${unchangedFiles.length} unchanged`);
-  lines.push(`Environment: ${newEnvVars.length} new, ${modifiedEnvVars.length} modified`);
-  lines.push(`Aliases: ${newAliases.length} new, ${modifiedAliases.length} modified`);
+  lines.push(
+    `Files: ${newFiles.length} new, ${modifiedFiles.length} modified, ${unchangedFiles.length} unchanged`,
+  );
+  lines.push(
+    `Environment: ${newEnvVars.length} new, ${modifiedEnvVars.length} modified`,
+  );
+  lines.push(
+    `Aliases: ${newAliases.length} new, ${modifiedAliases.length} modified`,
+  );
 
   return lines.join("\n");
 }
@@ -1551,7 +1644,7 @@ export async function recordImportHistory(
   diskImage: DiskImage,
   wasNew: boolean,
   mergeResult?: MergeResult,
-  strategy?: ConflictStrategy
+  strategy?: ConflictStrategy,
 ): Promise<ImportHistoryEntry> {
   const entry: Omit<ImportHistoryEntry, "id"> = {
     timestamp: Date.now(),
@@ -1560,11 +1653,16 @@ export async function recordImportHistory(
     sessionId,
     wasNew,
     mergeStrategy: strategy,
-    filesImported: mergeResult?.merged || Object.keys(diskImage.files).filter(p => diskImage.files[p].type === 'file'),
+    filesImported:
+      mergeResult?.merged ||
+      Object.keys(diskImage.files).filter(
+        (p) => diskImage.files[p].type === "file",
+      ),
     filesSkipped: mergeResult?.skipped || [],
     versionIds: mergeResult?.versionIds || {},
     envMerged: mergeResult?.envMerged || Object.keys(diskImage.session.env),
-    aliasesMerged: mergeResult?.aliasesMerged || Object.keys(diskImage.session.aliases)
+    aliasesMerged:
+      mergeResult?.aliasesMerged || Object.keys(diskImage.session.aliases),
   };
 
   return await saveImportEntry(entry);

@@ -68,7 +68,7 @@ export class BatchManager {
     // Schedule a new flush
     this.flushTimeout = setTimeout(() => {
       this.flushTimeout = null;
-      this.flush().catch(err => {
+      this.flush().catch((err) => {
         console.error("BatchManager flush failed:", err);
       });
     }, this.debounceMs);
@@ -113,7 +113,9 @@ export class BatchManager {
   /**
    * Perform the actual batch write to IndexedDB
    */
-  private async performBatchWrite(operations: Map<string, PendingOperation>): Promise<void> {
+  private async performBatchWrite(
+    operations: Map<string, PendingOperation>,
+  ): Promise<void> {
     // Skip if IndexedDB is not available
     if (typeof indexedDB === "undefined") return;
 
@@ -204,7 +206,10 @@ const managers: Map<string, BatchManager> = new Map();
 /**
  * Get or create a BatchManager for a given namespace
  */
-export function getBatchManager(namespace: string, debounceMs = 50): BatchManager {
+export function getBatchManager(
+  namespace: string,
+  debounceMs = 50,
+): BatchManager {
   let manager = managers.get(namespace);
   if (!manager) {
     manager = new BatchManager(namespace, debounceMs);
@@ -228,6 +233,6 @@ export async function removeBatchManager(namespace: string): Promise<void> {
  * Flush all batch managers (useful before app exit)
  */
 export async function flushAllManagers(): Promise<void> {
-  const flushPromises = Array.from(managers.values()).map(m => m.flush());
+  const flushPromises = Array.from(managers.values()).map((m) => m.flush());
   await Promise.all(flushPromises);
 }

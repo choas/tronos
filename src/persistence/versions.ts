@@ -25,7 +25,7 @@ function generateId(): string {
  */
 export async function getVersionHistory(
   namespace: string,
-  filePath: string
+  filePath: string,
 ): Promise<FileVersionHistory | null> {
   const db = getDB();
   const key = `${namespace}:${filePath}`;
@@ -41,7 +41,7 @@ export async function getVersionHistory(
  */
 export async function getFileVersions(
   namespace: string,
-  filePath: string
+  filePath: string,
 ): Promise<FileVersion[]> {
   const db = getDB();
   const key = `${namespace}:${filePath}`;
@@ -55,7 +55,9 @@ export async function getFileVersions(
  * @param versionId - The version ID
  * @returns The version or null if not found
  */
-export async function getVersion(versionId: string): Promise<FileVersion | null> {
+export async function getVersion(
+  versionId: string,
+): Promise<FileVersion | null> {
   const db = getDB();
   const version = await db.get("fileVersions", versionId);
   return version || null;
@@ -79,7 +81,7 @@ export async function saveVersion(
     message?: string;
     author?: string;
     branchName?: string;
-  } = {}
+  } = {},
 ): Promise<FileVersion> {
   const db = getDB();
   const key = `${namespace}:${filePath}`;
@@ -142,8 +144,8 @@ export async function revertToVersion(
   filePath: string,
   targetVersionId: string,
   options: {
-    createBranch?: string;  // If set, creates a new branch instead of continuing on current
-  } = {}
+    createBranch?: string; // If set, creates a new branch instead of continuing on current
+  } = {},
 ): Promise<{ version: FileVersion; content: string } | null> {
   const db = getDB();
   const key = `${namespace}:${filePath}`;
@@ -174,7 +176,7 @@ export async function revertToVersion(
     filePath: key,
     content: targetVersion.content,
     timestamp: Date.now(),
-    parentId: history.currentVersionId,  // Link to current version as parent
+    parentId: history.currentVersionId, // Link to current version as parent
     branchName,
     message: `Reverted to version from ${new Date(targetVersion.timestamp).toISOString()}`,
     author: "timewarp",
@@ -202,7 +204,7 @@ export async function revertToVersion(
  */
 export async function listBranches(
   namespace: string,
-  filePath: string
+  filePath: string,
 ): Promise<Record<string, string>> {
   const db = getDB();
   const key = `${namespace}:${filePath}`;
@@ -220,7 +222,7 @@ export async function listBranches(
 export async function switchBranch(
   namespace: string,
   filePath: string,
-  branchName: string
+  branchName: string,
 ): Promise<{ version: FileVersion; content: string } | null> {
   const db = getDB();
   const key = `${namespace}:${filePath}`;
@@ -256,7 +258,7 @@ export async function switchBranch(
 export async function createBranch(
   namespace: string,
   filePath: string,
-  branchName: string
+  branchName: string,
 ): Promise<FileVersion | null> {
   const db = getDB();
   const key = `${namespace}:${filePath}`;
@@ -307,7 +309,7 @@ export async function createBranch(
  */
 export async function deleteVersionHistory(
   namespace: string,
-  filePath: string
+  filePath: string,
 ): Promise<void> {
   const db = getDB();
   const key = `${namespace}:${filePath}`;
@@ -316,7 +318,10 @@ export async function deleteVersionHistory(
   const versions = await db.getAllFromIndex("fileVersions", "by-filePath", key);
 
   // Delete all versions
-  const tx = db.transaction(["fileVersions", "fileVersionHistory"], "readwrite");
+  const tx = db.transaction(
+    ["fileVersions", "fileVersionHistory"],
+    "readwrite",
+  );
   for (const version of versions) {
     await tx.objectStore("fileVersions").delete(version.id);
   }
@@ -334,7 +339,7 @@ export async function deleteVersionHistory(
  */
 export async function hasVersionHistory(
   namespace: string,
-  filePath: string
+  filePath: string,
 ): Promise<boolean> {
   const db = getDB();
   const key = `${namespace}:${filePath}`;

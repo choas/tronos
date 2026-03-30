@@ -1,6 +1,16 @@
 export { initDB, getDB } from "./db";
-export { loadFilesystem, saveFile, deleteFile, syncFilesystem } from "./filesystem";
-export { loadSessions, saveSession, deleteSessionFromDB, syncSessions } from "./sessions";
+export {
+  loadFilesystem,
+  saveFile,
+  deleteFile,
+  syncFilesystem,
+} from "./filesystem";
+export {
+  loadSessions,
+  saveSession,
+  deleteSessionFromDB,
+  syncSessions,
+} from "./sessions";
 export { loadAIConfig, saveAIConfig, clearAIConfig } from "./config";
 export { loadTheme, saveTheme, clearTheme } from "./theme";
 export { loadBootConfig, saveBootConfig, clearBootConfig } from "./boot";
@@ -9,7 +19,7 @@ export {
   BatchManager,
   getBatchManager,
   removeBatchManager,
-  flushAllManagers
+  flushAllManagers,
 } from "./batch";
 
 // New storage abstraction layer
@@ -20,7 +30,7 @@ export {
   isStorageInitialized,
   type StorageBackend,
   type BootConfig,
-  type ThemeConfig
+  type ThemeConfig,
 } from "./storage";
 
 export { IndexedDBStorage } from "./indexeddb-storage";
@@ -37,7 +47,7 @@ export {
   switchBranch,
   createBranch,
   deleteVersionHistory,
-  hasVersionHistory
+  hasVersionHistory,
 } from "./versions";
 
 // Import history management
@@ -48,5 +58,5 @@ export {
   getLatestImportEntry,
   deleteImportEntry,
   clearSessionImportHistory,
-  getAllImportHistory
+  getAllImportHistory,
 } from "./import-history";

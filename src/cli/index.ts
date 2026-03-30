@@ -4,4 +4,8 @@
  * @module cli
  */
 
-export { createNodeTerminalAPI, isNodeEnvironment, isBrowserEnvironment } from './terminal';
+export {
+  createNodeTerminalAPI,
+  isNodeEnvironment,
+  isBrowserEnvironment,
+} from "./terminal";

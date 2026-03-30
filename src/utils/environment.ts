@@ -13,7 +13,7 @@
  * @returns True if running in browser environment
  */
 export const isBrowser = (): boolean => {
-  return typeof window !== 'undefined' && typeof document !== 'undefined';
+  return typeof window !== "undefined" && typeof document !== "undefined";
 };
 
 /**
@@ -22,9 +22,11 @@ export const isBrowser = (): boolean => {
  * @returns True if running in Node.js environment
  */
 export const isNode = (): boolean => {
-  return typeof process !== 'undefined' &&
-    typeof process.versions !== 'undefined' &&
-    typeof process.versions.node !== 'undefined';
+  return (
+    typeof process !== "undefined" &&
+    typeof process.versions !== "undefined" &&
+    typeof process.versions.node !== "undefined"
+  );
 };
 
 /**
@@ -33,9 +35,11 @@ export const isNode = (): boolean => {
  * @returns True if running in Bun environment
  */
 export const isBun = (): boolean => {
-  return typeof process !== 'undefined' &&
-    typeof process.versions !== 'undefined' &&
-    typeof process.versions.bun !== 'undefined';
+  return (
+    typeof process !== "undefined" &&
+    typeof process.versions !== "undefined" &&
+    typeof process.versions.bun !== "undefined"
+  );
 };
 
 /**

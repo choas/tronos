@@ -21,7 +21,7 @@
 /**
  * AI command modes
  */
-export type AIMode = 'create' | 'edit' | 'explain' | 'fix' | 'chat';
+export type AIMode = "create" | "edit" | "explain" | "fix" | "chat";
 
 /**
  * Parsed AI command result
@@ -42,7 +42,7 @@ export interface AICommand {
 /**
  * Modes that require a file target
  */
-const FILE_MODES: AIMode[] = ['edit', 'explain', 'fix'];
+const FILE_MODES: AIMode[] = ["edit", "explain", "fix"];
 
 /**
  * Parse an @ai command string into its components
@@ -55,7 +55,7 @@ export function parseAICommand(input: string): AICommand | null {
   const trimmed = input.trim();
 
   // Verify it starts with @ai
-  if (!trimmed.startsWith('@ai')) {
+  if (!trimmed.startsWith("@ai")) {
     return null;
   }
 
@@ -78,29 +78,29 @@ export function parseAICommand(input: string): AICommand | null {
   const firstWord = words[0].toLowerCase();
 
   // Parse based on detected mode
-  if (firstWord === 'create') {
+  if (firstWord === "create") {
     return parseCreateCommand(words, trimmed);
   }
 
-  if (firstWord === 'edit') {
-    return parseFileCommand('edit', words, trimmed);
+  if (firstWord === "edit") {
+    return parseFileCommand("edit", words, trimmed);
   }
 
-  if (firstWord === 'explain') {
-    return parseFileCommand('explain', words, trimmed);
+  if (firstWord === "explain") {
+    return parseFileCommand("explain", words, trimmed);
   }
 
-  if (firstWord === 'fix') {
-    return parseFileCommand('fix', words, trimmed);
+  if (firstWord === "fix") {
+    return parseFileCommand("fix", words, trimmed);
   }
 
   // Default to chat mode - entire input after @ai is the prompt
   return {
-    mode: 'chat',
+    mode: "chat",
     targetFile: null,
     programName: null,
     prompt: afterPrefix,
-    rawCommand: trimmed
+    rawCommand: trimmed,
   };
 }
 
@@ -116,23 +116,23 @@ function parseCreateCommand(words: string[], rawCommand: string): AICommand {
   if (words.length < 2) {
     // No name provided, treat the prompt as description
     return {
-      mode: 'create',
+      mode: "create",
       targetFile: null,
       programName: null,
-      prompt: words.slice(1).join(' '),
-      rawCommand
+      prompt: words.slice(1).join(" "),
+      rawCommand,
     };
   }
 
   const programName = words[1];
-  const description = words.slice(2).join(' ');
+  const description = words.slice(2).join(" ");
 
   return {
-    mode: 'create',
+    mode: "create",
     targetFile: null,
     programName: programName || null,
     prompt: description || `Create a program called ${programName}`,
-    rawCommand
+    rawCommand,
   };
 }
 
@@ -140,7 +140,11 @@ function parseCreateCommand(words: string[], rawCommand: string): AICommand {
  * Parse a file-based command (edit, explain, fix)
  * Format: @ai <mode> <file> [instructions/context]
  */
-function parseFileCommand(mode: AIMode, words: string[], rawCommand: string): AICommand {
+function parseFileCommand(
+  mode: AIMode,
+  words: string[],
+  rawCommand: string,
+): AICommand {
   // words[0] is the mode
   // words[1] should be the file path
   // words[2+] is the instructions/context (optional for explain)
@@ -152,20 +156,20 @@ function parseFileCommand(mode: AIMode, words: string[], rawCommand: string): AI
       mode,
       targetFile: null,
       programName: null,
-      prompt: '',
-      rawCommand
+      prompt: "",
+      rawCommand,
     };
   }
 
   const targetFile = words[1];
-  const prompt = words.slice(2).join(' ');
+  const prompt = words.slice(2).join(" ");
 
   return {
     mode,
     targetFile,
     programName: null,
     prompt: prompt || getDefaultPrompt(mode, targetFile),
-    rawCommand
+    rawCommand,
   };
 }
 
@@ -174,14 +178,14 @@ function parseFileCommand(mode: AIMode, words: string[], rawCommand: string): AI
  */
 function getDefaultPrompt(mode: AIMode, targetFile: string): string {
   switch (mode) {
-    case 'explain':
+    case "explain":
       return `Explain the code in ${targetFile}`;
-    case 'fix':
+    case "fix":
       return `Find and fix issues in ${targetFile}`;
-    case 'edit':
+    case "edit":
       return `Edit ${targetFile}`;
     default:
-      return '';
+      return "";
   }
 }
 
@@ -195,7 +199,7 @@ function getDefaultPrompt(mode: AIMode, targetFile: string): string {
  */
 function tokenizeAIInput(input: string): string[] {
   const tokens: string[] = [];
-  let current = '';
+  let current = "";
   let inSingleQuote = false;
   let inDoubleQuote = false;
 
@@ -206,13 +210,13 @@ function tokenizeAIInput(input: string): string[] {
       if (inSingleQuote) {
         // End of single quote - add token
         tokens.push(current);
-        current = '';
+        current = "";
         inSingleQuote = false;
       } else {
         // Start of single quote
         if (current) {
           tokens.push(current);
-          current = '';
+          current = "";
         }
         inSingleQuote = true;
       }
@@ -220,13 +224,13 @@ function tokenizeAIInput(input: string): string[] {
       if (inDoubleQuote) {
         // End of double quote - add token
         tokens.push(current);
-        current = '';
+        current = "";
         inDoubleQuote = false;
       } else {
         // Start of double quote
         if (current) {
           tokens.push(current);
-          current = '';
+          current = "";
         }
         inDoubleQuote = true;
       }
@@ -234,7 +238,7 @@ function tokenizeAIInput(input: string): string[] {
       // Whitespace outside quotes - token boundary
       if (current) {
         tokens.push(current);
-        current = '';
+        current = "";
       }
     } else {
       current += char;
@@ -254,7 +258,7 @@ function tokenizeAIInput(input: string): string[] {
  */
 export function isAICommand(command: string): boolean {
   const trimmed = command.trim();
-  return trimmed.startsWith('@ai') || trimmed.startsWith('@');
+  return trimmed.startsWith("@ai") || trimmed.startsWith("@");
 }
 
 /**
@@ -263,41 +267,47 @@ export function isAICommand(command: string): boolean {
 export function getAICommandPrefix(command: string): string {
   const trimmed = command.trim();
   const match = trimmed.match(/^@\w*/);
-  return match ? match[0] : '@ai';
+  return match ? match[0] : "@ai";
 }
 
 /**
  * Validate that an AI command has required fields based on mode
  */
-export function validateAICommand(cmd: AICommand): { valid: boolean; error?: string } {
+export function validateAICommand(cmd: AICommand): {
+  valid: boolean;
+  error?: string;
+} {
   // Check if mode requires a file target
   if (FILE_MODES.includes(cmd.mode) && !cmd.targetFile) {
     return {
       valid: false,
-      error: `The '${cmd.mode}' command requires a target file. Usage: @ai ${cmd.mode} <file>${cmd.mode !== 'explain' ? ' <instructions>' : ''}`
+      error: `The '${cmd.mode}' command requires a target file. Usage: @ai ${cmd.mode} <file>${cmd.mode !== "explain" ? " <instructions>" : ""}`,
     };
   }
 
   // Check if create mode has a program name
-  if (cmd.mode === 'create' && !cmd.programName) {
+  if (cmd.mode === "create" && !cmd.programName) {
     return {
       valid: false,
-      error: "The 'create' command requires a program name. Usage: @ai create <name> <description>"
+      error:
+        "The 'create' command requires a program name. Usage: @ai create <name> <description>",
     };
   }
 
   // Check if we have a prompt for modes that need it
-  if (cmd.mode === 'create' && !cmd.prompt) {
+  if (cmd.mode === "create" && !cmd.prompt) {
     return {
       valid: false,
-      error: "The 'create' command requires a description. Usage: @ai create <name> <description>"
+      error:
+        "The 'create' command requires a description. Usage: @ai create <name> <description>",
     };
   }
 
-  if (cmd.mode === 'edit' && !cmd.prompt) {
+  if (cmd.mode === "edit" && !cmd.prompt) {
     return {
       valid: false,
-      error: "The 'edit' command requires instructions. Usage: @ai edit <file> <instructions>"
+      error:
+        "The 'edit' command requires instructions. Usage: @ai edit <file> <instructions>",
     };
   }
 

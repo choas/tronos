@@ -40,19 +40,18 @@
  * @module engine/builtins/update
  */
 
-import type { BuiltinCommand, CommandResult, ExecutionContext } from '../types';
-import type { DiskImage, DiskFile } from '../../types';
-import { VERSION } from '../../version';
-import { saveVersion } from '../../persistence/versions';
-import { getActiveSession } from '../../stores';
+import type { BuiltinCommand, CommandResult, ExecutionContext } from "../types";
+import type { DiskImage, DiskFile } from "../../types";
+import { VERSION } from "../../version";
+import { saveVersion } from "../../persistence/versions";
+import { getActiveSession } from "../../stores";
 import {
   createSnapshot,
   getSessionSnapshots,
   enforceSnapshotLimit,
-} from '../../persistence/snapshots';
-import { captureSessionState } from './session';
-import type { ConflictStrategy } from './session';
-
+} from "../../persistence/snapshots";
+import { captureSessionState } from "./session";
+import type { ConflictStrategy } from "./session";
 
 /**
  * Generate the default filesystem as a DiskImage.
@@ -67,47 +66,55 @@ function generateDefaultDiskImage(): DiskImage {
 
   const addDir = (path: string) => {
     files[path] = {
-      type: 'directory',
-      meta: { created: now, modified: now, permissions: 'rwxr-xr-x' },
+      type: "directory",
+      meta: { created: now, modified: now, permissions: "rwxr-xr-x" },
     };
   };
 
   const addFile = (path: string, content: string) => {
     files[path] = {
-      type: 'file',
+      type: "file",
       content,
-      meta: { created: now, modified: now, permissions: 'rw-r--r--' },
+      meta: { created: now, modified: now, permissions: "rw-r--r--" },
     };
   };
 
   // Core directories
-  addDir('/home');
-  addDir('/home/tronos');
-  addDir('/bin');
-  addDir('/tmp');
-  addDir('/dev');
-  addDir('/etc');
-  addDir('/proc');
-  addDir('/usr');
-  addDir('/usr/share');
-  addDir('/usr/share/man');
-  addDir('/usr/share/man/man1');
-  addDir('/usr/share/tronos');
+  addDir("/home");
+  addDir("/home/tronos");
+  addDir("/bin");
+  addDir("/tmp");
+  addDir("/dev");
+  addDir("/etc");
+  addDir("/proc");
+  addDir("/usr");
+  addDir("/usr/share");
+  addDir("/usr/share/man");
+  addDir("/usr/share/man/man1");
+  addDir("/usr/share/tronos");
 
   // /etc/motd
-  addFile('/etc/motd', `Welcome to TronOS!
+  addFile(
+    "/etc/motd",
+    `Welcome to TronOS!
 This is a simulated operating system running in your browser.
-`);
+`,
+  );
 
   // /home/tronos/.profile
-  addFile('/home/tronos/.profile', `# Default aliases
+  addFile(
+    "/home/tronos/.profile",
+    `# Default aliases
 alias ll='ls -l'
 alias la='ls -la'
 alias ..='cd ..'
-`);
+`,
+  );
 
   // /bin/help.trx
-  addFile('/bin/help.trx', `#!/tronos
+  addFile(
+    "/bin/help.trx",
+    `#!/tronos
 // @name: help
 // @description: Display help information
 // @version: 1.0.0
@@ -145,10 +152,13 @@ alias ..='cd ..'
 
   t.exit(0);
 })
-`);
+`,
+  );
 
   // /bin/countdown.trx
-  addFile('/bin/countdown.trx', `#!/tronos
+  addFile(
+    "/bin/countdown.trx",
+    `#!/tronos
 // @name: countdown
 // @description: Countdown timer with argument support
 // @version: 1.0.0
@@ -178,10 +188,13 @@ alias ..='cd ..'
 
   t.exit(0);
 })
-`);
+`,
+  );
 
   // /bin/tictactoe.trx
-  addFile('/bin/tictactoe.trx', `#!/tronos
+  addFile(
+    "/bin/tictactoe.trx",
+    `#!/tronos
 // @name: tictactoe
 // @description: Two-player tic-tac-toe game
 // @version: 1.0.0
@@ -311,10 +324,13 @@ alias ..='cd ..'
   await playGame();
   t.exit(0);
 })
-`);
+`,
+  );
 
   // /usr/share/tronos/ai-context.md
-  addFile('/usr/share/tronos/ai-context.md', `# TronOS AI Context Documentation
+  addFile(
+    "/usr/share/tronos/ai-context.md",
+    `# TronOS AI Context Documentation
 
 This file documents the Terminal API and executable format for TronOS.
 AI assistants use this information when generating .trx programs.
@@ -392,11 +408,12 @@ async function main(t) {
 \`\`\`
 
 For more examples, run: cat /bin/*.trx
-`);
+`,
+  );
 
   return {
     version: 1,
-    name: 'TronOS System Defaults',
+    name: "TronOS System Defaults",
     created: now,
     exported: now,
     session: {
@@ -413,11 +430,11 @@ For more examples, run: cat /bin/*.trx
  * Classifies files into categories for the update process.
  */
 interface UpdateAnalysis {
-  newFiles: string[];           // Files in defaults that don't exist in current VFS
-  updatedFiles: string[];       // System files where default differs from current AND user hasn't modified
-  conflictFiles: string[];      // System files modified by both the update and the user
-  unchangedFiles: string[];     // Files that are the same in both
-  userOnlyFiles: string[];      // Files created by user (not in defaults)
+  newFiles: string[]; // Files in defaults that don't exist in current VFS
+  updatedFiles: string[]; // System files where default differs from current AND user hasn't modified
+  conflictFiles: string[]; // System files modified by both the update and the user
+  unchangedFiles: string[]; // Files that are the same in both
+  userOnlyFiles: string[]; // Files created by user (not in defaults)
 }
 
 async function analyzeUpdate(
@@ -433,7 +450,7 @@ async function analyzeUpdate(
   };
 
   for (const [path, diskFile] of Object.entries(defaultImage.files)) {
-    if (diskFile.type === 'directory') {
+    if (diskFile.type === "directory") {
       continue; // Directories are always created if missing
     }
 
@@ -470,17 +487,20 @@ async function analyzeUpdate(
  *   update --rollback         - Restore the pre-update snapshot
  *   update --history          - Show update history
  */
-export const update: BuiltinCommand = async (args: string[], context: ExecutionContext): Promise<CommandResult> => {
+export const update: BuiltinCommand = async (
+  args: string[],
+  context: ExecutionContext,
+): Promise<CommandResult> => {
   const flags = new Set(args);
 
   // Parse flags
-  const showHelp = flags.has('--help') || flags.has('-h');
-  const apply = flags.has('--apply');
-  const rollback = flags.has('--rollback');
-  const showHistory = flags.has('--history');
-  const skipConflicts = flags.has('--skip');
-  const overwriteConflicts = flags.has('--overwrite');
-  const dryRun = flags.has('--dry-run');
+  const showHelp = flags.has("--help") || flags.has("-h");
+  const apply = flags.has("--apply");
+  const rollback = flags.has("--rollback");
+  const showHistory = flags.has("--history");
+  const skipConflicts = flags.has("--skip");
+  const overwriteConflicts = flags.has("--overwrite");
+  const dryRun = flags.has("--dry-run");
 
   if (showHelp) {
     return {
@@ -511,7 +531,7 @@ Rollback:
   update --rollback restores the most recent pre-update snapshot.
   You can also use 'timewarp' to manage individual file versions.
 `,
-      stderr: '',
+      stderr: "",
       exitCode: 0,
     };
   }
@@ -519,8 +539,8 @@ Rollback:
   const vfs = context.vfs;
   if (!vfs) {
     return {
-      stdout: '',
-      stderr: 'update: VFS not available\n',
+      stdout: "",
+      stderr: "update: VFS not available\n",
       exitCode: 1,
     };
   }
@@ -542,15 +562,17 @@ Rollback:
   const analysis = await analyzeUpdate(defaultImage, vfs);
 
   // Check if there's anything to update
-  const hasUpdates = analysis.newFiles.length > 0 ||
+  const hasUpdates =
+    analysis.newFiles.length > 0 ||
     analysis.updatedFiles.length > 0 ||
     analysis.conflictFiles.length > 0;
 
   if (!hasUpdates && !apply) {
     return {
-      stdout: `TronOS v${VERSION}\n\nSystem is up to date. All system files match the current version.\n` +
+      stdout:
+        `TronOS v${VERSION}\n\nSystem is up to date. All system files match the current version.\n` +
         `  ${analysis.unchangedFiles.length} system files checked\n`,
-      stderr: '',
+      stderr: "",
       exitCode: 0,
     };
   }
@@ -564,7 +586,7 @@ Rollback:
       for (const f of analysis.newFiles) {
         output += `  + ${f}\n`;
       }
-      output += '\n';
+      output += "\n";
     }
 
     if (analysis.conflictFiles.length > 0) {
@@ -572,7 +594,7 @@ Rollback:
       for (const f of analysis.conflictFiles) {
         output += `  ~ ${f}\n`;
       }
-      output += '\n';
+      output += "\n";
     }
 
     if (analysis.unchangedFiles.length > 0) {
@@ -588,13 +610,20 @@ Rollback:
 
     return {
       stdout: output,
-      stderr: '',
+      stderr: "",
       exitCode: 0,
     };
   }
 
   // Apply the update
-  return await applyUpdate(defaultImage, analysis, vfs, context, skipConflicts, overwriteConflicts);
+  return await applyUpdate(
+    defaultImage,
+    analysis,
+    vfs,
+    context,
+    skipConflicts,
+    overwriteConflicts,
+  );
 };
 
 /**
@@ -608,7 +637,7 @@ async function applyUpdate(
   skipConflicts: boolean,
   overwriteConflicts: boolean,
 ): Promise<CommandResult> {
-  let output = '';
+  let output = "";
 
   // Step 1: Create pre-update snapshot
   try {
@@ -622,18 +651,16 @@ async function applyUpdate(
       activeSession.history,
     );
 
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const timestamp = new Date()
+      .toISOString()
+      .replace(/[:.]/g, "-")
+      .slice(0, 19);
     const snapshotName = `pre-update-${timestamp}`;
 
-    await createSnapshot(
-      activeSession.id,
-      snapshotName,
-      diskImage,
-      {
-        description: `Pre-update snapshot (v${VERSION})`,
-        isAuto: true,
-      },
-    );
+    await createSnapshot(activeSession.id, snapshotName, diskImage, {
+      description: `Pre-update snapshot (v${VERSION})`,
+      isAuto: true,
+    });
 
     await enforceSnapshotLimit(activeSession.id);
 
@@ -652,7 +679,7 @@ async function applyUpdate(
       const currentContent = vfs.readSync(filePath);
       await saveVersion(namespace, filePath, currentContent, {
         message: `Pre-update backup (v${VERSION})`,
-        author: 'update',
+        author: "update",
       });
       versionedCount++;
     } catch {
@@ -668,15 +695,15 @@ async function applyUpdate(
   let addedCount = 0;
   for (const filePath of analysis.newFiles) {
     const diskFile = defaultImage.files[filePath];
-    if (diskFile.type === 'file' && diskFile.content !== undefined) {
+    if (diskFile.type === "file" && diskFile.content !== undefined) {
       // Ensure parent directory exists
-      const parentDir = filePath.substring(0, filePath.lastIndexOf('/')) || '/';
-      if (parentDir !== '/' && !vfs.exists(parentDir)) {
+      const parentDir = filePath.substring(0, filePath.lastIndexOf("/")) || "/";
+      if (parentDir !== "/" && !vfs.exists(parentDir)) {
         vfs.mkdir(parentDir, true);
       }
       await vfs.write(filePath, diskFile.content);
       addedCount++;
-    } else if (diskFile.type === 'directory' && !vfs.exists(filePath)) {
+    } else if (diskFile.type === "directory" && !vfs.exists(filePath)) {
       vfs.mkdir(filePath, true);
     }
   }
@@ -690,20 +717,20 @@ async function applyUpdate(
   let skippedCount = 0;
 
   // Determine strategy
-  let strategy: ConflictStrategy = 'interactive';
-  if (skipConflicts) strategy = 'skip';
-  if (overwriteConflicts) strategy = 'overwrite';
+  let strategy: ConflictStrategy = "interactive";
+  if (skipConflicts) strategy = "skip";
+  if (overwriteConflicts) strategy = "overwrite";
 
   for (const filePath of analysis.conflictFiles) {
     const diskFile = defaultImage.files[filePath];
-    if (diskFile.type !== 'file' || diskFile.content === undefined) continue;
+    if (diskFile.type !== "file" || diskFile.content === undefined) continue;
 
-    if (strategy === 'skip') {
+    if (strategy === "skip") {
       skippedCount++;
       continue;
     }
 
-    if (strategy === 'overwrite') {
+    if (strategy === "overwrite") {
       await vfs.write(filePath, diskFile.content);
       updatedCount++;
       continue;
@@ -734,26 +761,27 @@ async function applyUpdate(
 
   try {
     // Ensure /var/log exists
-    if (!vfs.exists('/var')) {
-      vfs.mkdir('/var', true);
+    if (!vfs.exists("/var")) {
+      vfs.mkdir("/var", true);
     }
-    if (!vfs.exists('/var/log')) {
-      vfs.mkdir('/var/log', true);
+    if (!vfs.exists("/var/log")) {
+      vfs.mkdir("/var/log", true);
     }
 
     // Append to update log
-    let updateLog = '';
+    let updateLog = "";
     try {
-      updateLog = vfs.readSync('/var/log/update.log');
+      updateLog = vfs.readSync("/var/log/update.log");
     } catch {
       // File doesn't exist yet
     }
 
-    updateLog += `[${updateRecord.timestamp}] Updated to v${updateRecord.version}: ` +
+    updateLog +=
+      `[${updateRecord.timestamp}] Updated to v${updateRecord.version}: ` +
       `${updateRecord.added} added, ${updateRecord.updated} updated, ` +
       `${updateRecord.skipped} skipped (strategy: ${updateRecord.conflictsResolved})\n`;
 
-    await vfs.write('/var/log/update.log', updateLog);
+    await vfs.write("/var/log/update.log", updateLog);
   } catch {
     // Non-critical, continue
   }
@@ -770,7 +798,7 @@ async function applyUpdate(
 
   return {
     stdout: output,
-    stderr: '',
+    stderr: "",
     exitCode: 0,
   };
 }
@@ -785,13 +813,13 @@ async function handleRollback(_vfs: any): Promise<CommandResult> {
 
     // Find the most recent pre-update snapshot
     const updateSnapshots = snapshots
-      .filter(s => s.name.startsWith('pre-update-'))
+      .filter((s) => s.name.startsWith("pre-update-"))
       .sort((a, b) => b.timestamp - a.timestamp);
 
     if (updateSnapshots.length === 0) {
       return {
-        stdout: '',
-        stderr: 'No pre-update snapshots found. Nothing to roll back to.\n',
+        stdout: "",
+        stderr: "No pre-update snapshots found. Nothing to roll back to.\n",
         exitCode: 1,
       };
     }
@@ -800,16 +828,17 @@ async function handleRollback(_vfs: any): Promise<CommandResult> {
 
     // Use the session restore mechanism
     return {
-      stdout: `Found pre-update snapshot: ${latestSnapshot.name}\n` +
+      stdout:
+        `Found pre-update snapshot: ${latestSnapshot.name}\n` +
         `Created: ${new Date(latestSnapshot.timestamp).toISOString()}\n` +
-        `${latestSnapshot.description || ''}\n\n` +
+        `${latestSnapshot.description || ""}\n\n` +
         `To restore, run: session restore ${latestSnapshot.name}\n`,
-      stderr: '',
+      stderr: "",
       exitCode: 0,
     };
   } catch (error) {
     return {
-      stdout: '',
+      stdout: "",
       stderr: `update --rollback: ${(error as Error).message}\n`,
       exitCode: 1,
     };
@@ -821,24 +850,24 @@ async function handleRollback(_vfs: any): Promise<CommandResult> {
  */
 async function handleUpdateHistory(vfs: any): Promise<CommandResult> {
   try {
-    const logContent = vfs.readSync('/var/log/update.log');
+    const logContent = vfs.readSync("/var/log/update.log");
     if (!logContent || logContent.trim().length === 0) {
       return {
-        stdout: 'No update history found.\n',
-        stderr: '',
+        stdout: "No update history found.\n",
+        stderr: "",
         exitCode: 0,
       };
     }
 
     return {
-      stdout: `TronOS Update History\n${'='.repeat(40)}\n${logContent}\n`,
-      stderr: '',
+      stdout: `TronOS Update History\n${"=".repeat(40)}\n${logContent}\n`,
+      stderr: "",
       exitCode: 0,
     };
   } catch {
     return {
-      stdout: 'No update history found.\n',
-      stderr: '',
+      stdout: "No update history found.\n",
+      stderr: "",
       exitCode: 0,
     };
   }

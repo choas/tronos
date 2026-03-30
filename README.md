@@ -213,17 +213,17 @@ session import
 
 ### Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+L` | Clear screen |
-| `Ctrl+C` | Cancel current input |
-| `Ctrl+D` | Exit (when input empty) |
-| `Ctrl+A` | Move to beginning of line |
-| `Ctrl+E` | Move to end of line |
-| `Ctrl+U` | Delete to beginning of line |
-| `Ctrl+K` | Delete to end of line |
-| `Tab`    | Autocomplete |
-| `Up/Down`| Navigate history |
+| Shortcut  | Action                      |
+| --------- | --------------------------- |
+| `Ctrl+L`  | Clear screen                |
+| `Ctrl+C`  | Cancel current input        |
+| `Ctrl+D`  | Exit (when input empty)     |
+| `Ctrl+A`  | Move to beginning of line   |
+| `Ctrl+E`  | Move to end of line         |
+| `Ctrl+U`  | Delete to beginning of line |
+| `Ctrl+K`  | Delete to end of line       |
+| `Tab`     | Autocomplete                |
+| `Up/Down` | Navigate history            |
 
 ### Cron Jobs
 
@@ -259,6 +259,7 @@ cron remove 1
 Since TronOS has no text editor, cron supports two editing workflows:
 
 **Interactive editing** - edits each field separately:
+
 ```bash
 cron edit 1
 # Current: */5 * * * * weather Munich
@@ -268,6 +269,7 @@ cron edit 1
 ```
 
 **Clipboard editing** - copy, modify externally, paste back:
+
 ```bash
 cron copy 1                # copies "*/5 * * * * weather Munich" to clipboard
 # ... modify in an external editor ...
@@ -278,6 +280,7 @@ cron paste                 # adds as new job from clipboard
 #### Virtual Files
 
 Cron jobs are also visible in the virtual filesystem:
+
 ```bash
 cat /proc/cron/jobs        # crontab-format listing of all jobs
 ```
@@ -318,33 +321,33 @@ theme light
 
 #### Built-in Presets
 
-| Preset | Background | Foreground | Accent | Vibe |
-|--------|-----------|------------|--------|------|
-| `dark` | `#1e1e1e` | `#d4d4d4` | `#0e639c` | VS Code default |
-| `light` | `#ffffff` | `#333333` | `#0066b8` | Clean light |
-| `tron` | `#0a0a2e` | `#00ffd5` | `#00b8ff` | Cyan Tron grid |
-| `cyberpunk` | `#1a0a2e` | `#ff2a6d` | `#b026ff` | Neon pink/purple |
-| `nord` | `#2e3440` | `#d8dee9` | `#88c0d0` | Nordic blue |
-| `solarized` | `#002b36` | `#839496` | `#268bd2` | Solarized dark |
-| `monokai` | `#272822` | `#f8f8f2` | `#a6e22e` | Sublime green |
-| `gruvbox` | `#282828` | `#ebdbb2` | `#fabd2f` | Warm retro |
-| `dracula` | `#282a36` | `#f8f8f2` | `#bd93f9` | Purple vampire |
+| Preset      | Background | Foreground | Accent    | Vibe             |
+| ----------- | ---------- | ---------- | --------- | ---------------- |
+| `dark`      | `#1e1e1e`  | `#d4d4d4`  | `#0e639c` | VS Code default  |
+| `light`     | `#ffffff`  | `#333333`  | `#0066b8` | Clean light      |
+| `tron`      | `#0a0a2e`  | `#00ffd5`  | `#00b8ff` | Cyan Tron grid   |
+| `cyberpunk` | `#1a0a2e`  | `#ff2a6d`  | `#b026ff` | Neon pink/purple |
+| `nord`      | `#2e3440`  | `#d8dee9`  | `#88c0d0` | Nordic blue      |
+| `solarized` | `#002b36`  | `#839496`  | `#268bd2` | Solarized dark   |
+| `monokai`   | `#272822`  | `#f8f8f2`  | `#a6e22e` | Sublime green    |
+| `gruvbox`   | `#282828`  | `#ebdbb2`  | `#fabd2f` | Warm retro       |
+| `dracula`   | `#282a36`  | `#f8f8f2`  | `#bd93f9` | Purple vampire   |
 
 #### Theme Color Keys
 
 Each theme defines these color variables:
 
-| Key | Description |
-|-----|-------------|
-| `bg-primary` | Main background |
-| `fg-primary` | Main foreground text |
-| `bg-secondary` | Tab bar, status bar background |
-| `fg-secondary` | Dimmed text, labels |
-| `accent` | Active tab border, buttons, links |
-| `accent-hover` | Hover state for accent |
-| `error` | Error messages |
-| `border` | Borders and dividers |
-| `hover-bg` | Hover backgrounds |
+| Key            | Description                       |
+| -------------- | --------------------------------- |
+| `bg-primary`   | Main background                   |
+| `fg-primary`   | Main foreground text              |
+| `bg-secondary` | Tab bar, status bar background    |
+| `fg-secondary` | Dimmed text, labels               |
+| `accent`       | Active tab border, buttons, links |
+| `accent-hover` | Hover state for accent            |
+| `error`        | Error messages                    |
+| `border`       | Borders and dividers              |
+| `hover-bg`     | Hover backgrounds                 |
 
 #### /proc/theme Virtual Files
 
@@ -382,7 +385,7 @@ TronOS executables are JavaScript files with a `.trx` extension that follow a sp
 // @version: 1.0.0
 // @author: Your Name
 
-(async function(t) {
+(async function (t) {
   // t.args - command line arguments
   // t.env - environment variables
   // t.cwd - current working directory
@@ -396,11 +399,11 @@ TronOS executables are JavaScript files with a `.trx` extension that follow a sp
   await t.fs.write("/home/user/output.txt", "content");
 
   // Sleep
-  await t.sleep(1000);  // 1 second
+  await t.sleep(1000); // 1 second
 
   // Exit
   t.exit(0);
-})
+});
 ```
 
 ### Terminal API
@@ -408,25 +411,30 @@ TronOS executables are JavaScript files with a `.trx` extension that follow a sp
 Executables receive a `t` (Terminal) object with:
 
 **Output:**
+
 - `t.write(text)` - Write text
 - `t.writeln(text)` - Write line
 - `t.clear()` - Clear screen
 
 **Styling:**
+
 - `t.style.bold(text)`
 - `t.style.red(text)`, `t.style.green(text)`, `t.style.blue(text)`, etc.
 
 **Filesystem:**
+
 - `t.fs.read(path)` - Read file
 - `t.fs.write(path, content)` - Write file
 - `t.fs.mkdir(path)` - Create directory
 - `t.fs.exists(path)` - Check existence
 
 **Network:**
+
 - `t.net.fetch(url, options?)` - Browser fetch (same-origin or CORS-enabled APIs)
 - `t.net.proxyFetch(url, options?)` - Proxy fetch for external APIs without CORS
 
 **Control:**
+
 - `t.exit(code)` - Exit with code
 - `t.sleep(ms)` - Sleep for milliseconds
 
@@ -444,6 +452,7 @@ Executables receive a `t` (Terminal) object with:
 ### Special Files
 
 **`/proc` (virtual filesystem):**
+
 - `/proc/ai/model` - Current AI model
 - `/proc/ai/provider` - Current AI provider
 - `/proc/ai/status` - AI configuration status
@@ -457,6 +466,7 @@ Executables receive a `t` (Terminal) object with:
 - `/proc/theme/presets/*` - Available theme preset definitions
 
 **`/dev`:**
+
 - `/dev/null` - Discards all writes
 - `/dev/random` - Random bytes
 - `/dev/clipboard` - System clipboard (read/write)
@@ -483,6 +493,7 @@ VITE_TRONOS_AI_MODEL=claude-sonnet-4-6
 **Note:** Environment variables use the `VITE_` prefix as required by Vite for client-side exposure.
 
 When environment variables are set, they take precedence over localStorage configuration. This allows you to:
+
 - Pre-configure TronOS for deployment
 - Set a default API key for all users
 - Override the default model or provider
@@ -491,12 +502,12 @@ When environment variables are set, they take precedence over localStorage confi
 
 TronOS supports multiple AI providers:
 
-| Provider | Default Model | Notes |
-|----------|---------------|-------|
-| `anthropic` | claude-sonnet-4-6 | Recommended |
-| `openai` | gpt-4o | OpenAI API |
-| `ollama` | llama3.2 | Local, no API key (see [CORS setup](#ollama-cors-setup)) |
-| `openrouter` | anthropic/claude-sonnet-4-6 | Multi-provider |
+| Provider     | Default Model               | Notes                                                    |
+| ------------ | --------------------------- | -------------------------------------------------------- |
+| `anthropic`  | claude-sonnet-4-6           | Recommended                                              |
+| `openai`     | gpt-4o                      | OpenAI API                                               |
+| `ollama`     | llama3.2                    | Local, no API key (see [CORS setup](#ollama-cors-setup)) |
+| `openrouter` | anthropic/claude-sonnet-4-6 | Multi-provider                                           |
 
 ```bash
 # View current config

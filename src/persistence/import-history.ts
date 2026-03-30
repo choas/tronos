@@ -23,7 +23,7 @@ function generateId(): string {
  * @returns The saved entry with its ID
  */
 export async function saveImportEntry(
-  entry: Omit<ImportHistoryEntry, "id"> & { id?: string }
+  entry: Omit<ImportHistoryEntry, "id"> & { id?: string },
 ): Promise<ImportHistoryEntry> {
   const db = getDB();
   const fullEntry: ImportHistoryEntry = {
@@ -40,10 +40,14 @@ export async function saveImportEntry(
  * @returns Array of import entries sorted by timestamp (newest first)
  */
 export async function getSessionImportHistory(
-  sessionId: string
+  sessionId: string,
 ): Promise<ImportHistoryEntry[]> {
   const db = getDB();
-  const entries = await db.getAllFromIndex("importHistory", "by-sessionId", sessionId);
+  const entries = await db.getAllFromIndex(
+    "importHistory",
+    "by-sessionId",
+    sessionId,
+  );
   return entries.sort((a, b) => b.timestamp - a.timestamp);
 }
 
@@ -53,7 +57,7 @@ export async function getSessionImportHistory(
  * @returns The import entry or null if not found
  */
 export async function getImportEntry(
-  importId: string
+  importId: string,
 ): Promise<ImportHistoryEntry | null> {
   const db = getDB();
   const entry = await db.get("importHistory", importId);
@@ -66,7 +70,7 @@ export async function getImportEntry(
  * @returns The most recent import entry or null if no imports
  */
 export async function getLatestImportEntry(
-  sessionId: string
+  sessionId: string,
 ): Promise<ImportHistoryEntry | null> {
   const entries = await getSessionImportHistory(sessionId);
   return entries[0] || null;
@@ -85,9 +89,15 @@ export async function deleteImportEntry(importId: string): Promise<void> {
  * Delete all import history entries for a session
  * @param sessionId - The session ID
  */
-export async function clearSessionImportHistory(sessionId: string): Promise<void> {
+export async function clearSessionImportHistory(
+  sessionId: string,
+): Promise<void> {
   const db = getDB();
-  const entries = await db.getAllFromIndex("importHistory", "by-sessionId", sessionId);
+  const entries = await db.getAllFromIndex(
+    "importHistory",
+    "by-sessionId",
+    sessionId,
+  );
   const tx = db.transaction("importHistory", "readwrite");
   for (const entry of entries) {
     await tx.store.delete(entry.id);

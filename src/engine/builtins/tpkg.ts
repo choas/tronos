@@ -17,12 +17,16 @@
  *   repo list           - List configured repositories
  */
 
-import type { BuiltinCommand, CommandResult, ExecutionContext } from '../types';
-import type { TerminalAPI, KeyEvent } from '../../terminal/api';
-import { aiosFetch } from '../../network/fetch';
-import { encryptSecret, decryptSecret } from '../../persistence/crypto';
-import { isBrowser } from '../../utils/environment';
-import { MARKETPLACE_PACKAGES, COLLECTIONS, isTierAuthorized } from '../../marketplace/registry';
+import type { BuiltinCommand, CommandResult, ExecutionContext } from "../types";
+import type { TerminalAPI, KeyEvent } from "../../terminal/api";
+import { aiosFetch } from "../../network/fetch";
+import { encryptSecret, decryptSecret } from "../../persistence/crypto";
+import { isBrowser } from "../../utils/environment";
+import {
+  MARKETPLACE_PACKAGES,
+  COLLECTIONS,
+  isTierAuthorized,
+} from "../../marketplace/registry";
 
 /**
  * Load example .trx files at build time via Vite glob import.
@@ -32,7 +36,11 @@ import { MARKETPLACE_PACKAGES, COLLECTIONS, isTierAuthorized } from '../../marke
  */
 let exampleModules: Record<string, string> = {};
 try {
-  exampleModules = import.meta.glob('../../../examples/*.trx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+  exampleModules = import.meta.glob("../../../examples/*.trx", {
+    query: "?raw",
+    import: "default",
+    eager: true,
+  }) as Record<string, string>;
 } catch {
   // import.meta.glob is Vite-only; fall back to filesystem for CLI/Bun
 }
@@ -40,16 +48,16 @@ try {
 // Fallback: load examples from filesystem when import.meta.glob is unavailable (CLI mode)
 if (Object.keys(exampleModules).length === 0 && !isBrowser()) {
   try {
-    const fs = require('node:fs');
-    const nodePath = require('node:path');
+    const fs = require("node:fs");
+    const nodePath = require("node:path");
     // Resolve examples dir relative to this source file
-    const examplesDir = nodePath.resolve(__dirname, '../../../examples');
+    const examplesDir = nodePath.resolve(__dirname, "../../../examples");
     if (fs.existsSync(examplesDir)) {
       const files: string[] = fs.readdirSync(examplesDir);
       for (const file of files) {
-        if (file.endsWith('.trx')) {
+        if (file.endsWith(".trx")) {
           const fullPath = nodePath.join(examplesDir, file);
-          const content = fs.readFileSync(fullPath, 'utf-8');
+          const content = fs.readFileSync(fullPath, "utf-8");
           exampleModules[fullPath] = content;
         }
       }
@@ -59,7 +67,7 @@ if (Object.keys(exampleModules).length === 0 && !isBrowser()) {
   }
 }
 
-const BUNDLED_NAMES = new Set(['weather', 'pomodoro', 'notes']);
+const BUNDLED_NAMES = new Set(["weather", "pomodoro", "notes"]);
 
 interface ExamplePkgData {
   name: string;
@@ -71,8 +79,8 @@ interface ExamplePkgData {
 
 const EXAMPLE_PACKAGES: ExamplePkgData[] = [];
 for (const [path, content] of Object.entries(exampleModules)) {
-  const fileName = path.split('/').pop() || '';
-  const name = fileName.replace(/\.trx$/, '');
+  const fileName = path.split("/").pop() || "";
+  const name = fileName.replace(/\.trx$/, "");
   if (BUNDLED_NAMES.has(name)) continue;
 
   const descMatch = content.match(/\/\/\s*@description:\s*(.+)/);
@@ -82,16 +90,35 @@ for (const [path, content] of Object.entries(exampleModules)) {
   EXAMPLE_PACKAGES.push({
     name,
     description: descMatch?.[1]?.trim() || name,
-    version: verMatch?.[1]?.trim() || '1.0.0',
-    author: authorMatch?.[1]?.trim() || '@community',
+    version: verMatch?.[1]?.trim() || "1.0.0",
+    author: authorMatch?.[1]?.trim() || "@community",
     content,
   });
 }
 
-const EXAMPLE_PACKAGE_INDEX: { name: string; version: string; description: string; author: string }[] =
-  EXAMPLE_PACKAGES.map(p => ({ name: p.name, version: p.version, description: p.description, author: p.author }));
+const EXAMPLE_PACKAGE_INDEX: {
+  name: string;
+  version: string;
+  description: string;
+  author: string;
+}[] = EXAMPLE_PACKAGES.map((p) => ({
+  name: p.name,
+  version: p.version,
+  description: p.description,
+  author: p.author,
+}));
 
-const EXAMPLE_PACKAGE_MANIFESTS: Record<string, { name: string; version: string; description: string; author: string; license: string; files: string[] }> = {};
+const EXAMPLE_PACKAGE_MANIFESTS: Record<
+  string,
+  {
+    name: string;
+    version: string;
+    description: string;
+    author: string;
+    license: string;
+    files: string[];
+  }
+> = {};
 const EXAMPLE_PACKAGE_FILES: Record<string, Record<string, string>> = {};
 for (const pkg of EXAMPLE_PACKAGES) {
   const trxName = `${pkg.name}.trx`;
@@ -100,7 +127,7 @@ for (const pkg of EXAMPLE_PACKAGES) {
     version: pkg.version,
     description: pkg.description,
     author: pkg.author,
-    license: 'MIT',
+    license: "MIT",
     files: [trxName],
   };
   EXAMPLE_PACKAGE_FILES[pkg.name] = { [trxName]: pkg.content };
@@ -110,15 +137,18 @@ for (const pkg of EXAMPLE_PACKAGES) {
  * Terminal input helper - Read a line of input from the user
  * Returns empty string if terminal is not available (non-interactive mode)
  */
-async function readLine(terminal: TerminalAPI | undefined, prompt: string): Promise<string> {
+async function readLine(
+  terminal: TerminalAPI | undefined,
+  prompt: string,
+): Promise<string> {
   if (!terminal?.onKey) {
-    return '';
+    return "";
   }
 
   terminal.write(prompt);
 
   return new Promise((resolve) => {
-    let line = '';
+    let line = "";
     let cursorPos = 0;
     let lastPasteTime = 0;
 
@@ -133,7 +163,7 @@ async function readLine(terminal: TerminalAPI | undefined, prompt: string): Prom
     if (terminal.onData) {
       dataDisposable = terminal.onData((data: string) => {
         if (data.length > 1) {
-          const sanitized = data.replace(/[\r\n]+/g, ' ').trim();
+          const sanitized = data.replace(/[\r\n]+/g, " ").trim();
           if (sanitized) {
             line = line.slice(0, cursorPos) + sanitized + line.slice(cursorPos);
             cursorPos += sanitized.length;
@@ -145,34 +175,42 @@ async function readLine(terminal: TerminalAPI | undefined, prompt: string): Prom
     }
 
     const disposable = terminal.onKey((key: KeyEvent) => {
-      if (key.key === '\r') {
+      if (key.key === "\r") {
         disposable.dispose();
         if (dataDisposable) dataDisposable.dispose();
-        terminal.write('\r\n');
+        terminal.write("\r\n");
         resolve(line);
-      } else if (key.key === '\u007f') {
+      } else if (key.key === "\u007f") {
         if (cursorPos > 0) {
           line = line.slice(0, cursorPos - 1) + line.slice(cursorPos);
           cursorPos--;
           redrawLine();
         }
-      } else if (key.key === '\x1b[D') {
+      } else if (key.key === "\x1b[D") {
         if (cursorPos > 0) {
           cursorPos--;
-          terminal.write('\x1b[D');
+          terminal.write("\x1b[D");
         }
-      } else if (key.key === '\x1b[C') {
+      } else if (key.key === "\x1b[C") {
         if (cursorPos < line.length) {
           cursorPos++;
-          terminal.write('\x1b[C');
+          terminal.write("\x1b[C");
         }
-      } else if (key.key === '\x03' || (key.domEvent?.ctrlKey && key.domEvent?.key?.toLowerCase() === 'c')) {
+      } else if (
+        key.key === "\x03" ||
+        (key.domEvent?.ctrlKey && key.domEvent?.key?.toLowerCase() === "c")
+      ) {
         // Ctrl+C - cancel input
         disposable.dispose();
         if (dataDisposable) dataDisposable.dispose();
-        terminal.write('^C\r\n');
-        resolve('');
-      } else if (key.key.length === 1 && !key.domEvent?.ctrlKey && !key.domEvent?.altKey && !key.domEvent?.metaKey) {
+        terminal.write("^C\r\n");
+        resolve("");
+      } else if (
+        key.key.length === 1 &&
+        !key.domEvent?.ctrlKey &&
+        !key.domEvent?.altKey &&
+        !key.domEvent?.metaKey
+      ) {
         // Skip characters already handled by onData paste handler
         if (Date.now() - lastPasteTime < 100) {
           return;
@@ -193,15 +231,18 @@ async function readLine(terminal: TerminalAPI | undefined, prompt: string): Prom
  * Terminal input helper - Read a password (masked input) from the user
  * Shows asterisks instead of actual characters
  */
-async function readPassword(terminal: TerminalAPI | undefined, prompt: string): Promise<string> {
+async function readPassword(
+  terminal: TerminalAPI | undefined,
+  prompt: string,
+): Promise<string> {
   if (!terminal?.onKey) {
-    return '';
+    return "";
   }
 
   terminal.write(prompt);
 
   return new Promise((resolve) => {
-    let password = '';
+    let password = "";
     let disposed = false;
 
     const cleanup = () => {
@@ -213,7 +254,7 @@ async function readPassword(terminal: TerminalAPI | undefined, prompt: string): 
     };
 
     const redrawMask = () => {
-      terminal.write(`\x1b[2K\r${prompt}${'*'.repeat(password.length)}`);
+      terminal.write(`\x1b[2K\r${prompt}${"*".repeat(password.length)}`);
     };
 
     // Handle pasted text via onData (paste sends multiple chars at once)
@@ -228,23 +269,31 @@ async function readPassword(terminal: TerminalAPI | undefined, prompt: string): 
 
     const keyDisposable = terminal.onKey((key: KeyEvent) => {
       if (disposed) return;
-      if (key.key === '\r') {
+      if (key.key === "\r") {
         cleanup();
-        terminal.write('\r\n');
+        terminal.write("\r\n");
         resolve(password);
-      } else if (key.key === '\u007f') {
+      } else if (key.key === "\u007f") {
         if (password.length > 0) {
           password = password.slice(0, -1);
           redrawMask();
         }
-      } else if (key.key === '\x03' || (key.domEvent?.ctrlKey && key.domEvent?.key?.toLowerCase() === 'c')) {
+      } else if (
+        key.key === "\x03" ||
+        (key.domEvent?.ctrlKey && key.domEvent?.key?.toLowerCase() === "c")
+      ) {
         // Ctrl+C - cancel input
         cleanup();
-        terminal.write('^C\r\n');
-        resolve('');
-      } else if (key.key.length === 1 && !key.domEvent?.ctrlKey && !key.domEvent?.altKey && !key.domEvent?.metaKey) {
+        terminal.write("^C\r\n");
+        resolve("");
+      } else if (
+        key.key.length === 1 &&
+        !key.domEvent?.ctrlKey &&
+        !key.domEvent?.altKey &&
+        !key.domEvent?.metaKey
+      ) {
         password += key.key;
-        terminal.write('*');
+        terminal.write("*");
       }
     });
   });
@@ -256,52 +305,66 @@ async function readPassword(terminal: TerminalAPI | undefined, prompt: string): 
  */
 function validateConfigInput(
   input: string,
-  param: PackageConfigParam
+  param: PackageConfigParam,
 ): [boolean, string | number | boolean | undefined, string?] {
   const trimmed = input.trim();
 
   // Empty input uses default if available, otherwise fails if required
-  if (trimmed === '') {
+  if (trimmed === "") {
     if (param.default !== undefined) {
       return [true, param.default];
     }
     if (param.required) {
-      return [false, undefined, 'Value is required'];
+      return [false, undefined, "Value is required"];
     }
     return [true, undefined];
   }
 
   switch (param.type) {
-    case 'string':
+    case "string":
       return [true, trimmed];
 
-    case 'number': {
+    case "number": {
       const num = Number(trimmed);
       if (isNaN(num)) {
-        return [false, undefined, 'Value must be a number'];
+        return [false, undefined, "Value must be a number"];
       }
       return [true, num];
     }
 
-    case 'boolean': {
+    case "boolean": {
       const lower = trimmed.toLowerCase();
-      if (lower === 'true' || lower === 'yes' || lower === 'y' || lower === '1') {
+      if (
+        lower === "true" ||
+        lower === "yes" ||
+        lower === "y" ||
+        lower === "1"
+      ) {
         return [true, true];
       }
-      if (lower === 'false' || lower === 'no' || lower === 'n' || lower === '0') {
+      if (
+        lower === "false" ||
+        lower === "no" ||
+        lower === "n" ||
+        lower === "0"
+      ) {
         return [true, false];
       }
-      return [false, undefined, 'Value must be true/false, yes/no, or y/n'];
+      return [false, undefined, "Value must be true/false, yes/no, or y/n"];
     }
 
-    case 'choice': {
+    case "choice": {
       if (!param.choices || param.choices.length === 0) {
         return [true, trimmed];
       }
       const lower = trimmed.toLowerCase();
-      const match = param.choices.find(c => c.toLowerCase() === lower);
+      const match = param.choices.find((c) => c.toLowerCase() === lower);
       if (!match) {
-        return [false, undefined, `Value must be one of: ${param.choices.join(', ')}`];
+        return [
+          false,
+          undefined,
+          `Value must be one of: ${param.choices.join(", ")}`,
+        ];
       }
       return [true, match];
     }
@@ -315,15 +378,17 @@ function validateConfigInput(
  * Check if terminal is available for interactive input
  */
 function isInteractive(context: ExecutionContext): boolean {
-  return !!(context.terminal?.onKey);
+  return !!context.terminal?.onKey;
 }
 
 // Default package repository
-const DEFAULT_REPOSITORY = 'https://raw.githubusercontent.com/choas/tronos-packages/main';
-const ENTERPRISE_REPOSITORY = 'https://raw.githubusercontent.com/choas/tronos-packages-enterprise/main';
+const DEFAULT_REPOSITORY =
+  "https://raw.githubusercontent.com/choas/tronos-packages/main";
+const ENTERPRISE_REPOSITORY =
+  "https://raw.githubusercontent.com/choas/tronos-packages-enterprise/main";
 
 // Package index cache path
-const PACKAGE_INDEX_PATH = '/var/cache/tpkg/index.json';
+const PACKAGE_INDEX_PATH = "/var/cache/tpkg/index.json";
 
 /**
  * Bundled package index for offline/default usage
@@ -331,41 +396,41 @@ const PACKAGE_INDEX_PATH = '/var/cache/tpkg/index.json';
  */
 const BUNDLED_PACKAGE_INDEX: PackageIndexEntry[] = [
   {
-    name: 'weather',
-    version: '1.0.0',
-    description: 'Weather forecast display using wttr.in API',
-    author: '@ai'
+    name: "weather",
+    version: "1.0.0",
+    description: "Weather forecast display using wttr.in API",
+    author: "@ai",
   },
   {
-    name: 'translator',
-    version: '1.0.0',
-    description: 'Text translation using AI providers',
-    author: '@ai'
+    name: "translator",
+    version: "1.0.0",
+    description: "Text translation using AI providers",
+    author: "@ai",
   },
   {
-    name: 'pomodoro',
-    version: '1.0.0',
-    description: 'Pomodoro timer for productivity',
-    author: '@ai'
+    name: "pomodoro",
+    version: "1.0.0",
+    description: "Pomodoro timer for productivity",
+    author: "@ai",
   },
   {
-    name: 'notes',
-    version: '1.0.0',
-    description: 'Simple note-taking application',
-    author: '@ai'
+    name: "notes",
+    version: "1.0.0",
+    description: "Simple note-taking application",
+    author: "@ai",
   },
   {
-    name: 'gist',
-    version: '1.0.0',
-    description: 'GitHub Gist viewer and creator',
-    author: '@ai'
+    name: "gist",
+    version: "1.0.0",
+    description: "GitHub Gist viewer and creator",
+    author: "@ai",
   },
   {
-    name: 'homeassistant',
-    version: '1.0.0',
-    description: 'Home Assistant integration for smart home control',
-    author: '@ai'
-  }
+    name: "homeassistant",
+    version: "1.0.0",
+    description: "Home Assistant integration for smart home control",
+    author: "@ai",
+  },
 ];
 
 /**
@@ -373,148 +438,149 @@ const BUNDLED_PACKAGE_INDEX: PackageIndexEntry[] = [
  */
 const BUNDLED_PACKAGE_MANIFESTS: Record<string, PackageManifest> = {
   weather: {
-    name: 'weather',
-    version: '1.0.0',
-    description: 'Weather forecast display using wttr.in API',
-    author: '@ai',
-    license: 'MIT',
-    files: ['weather.trx'],
+    name: "weather",
+    version: "1.0.0",
+    description: "Weather forecast display using wttr.in API",
+    author: "@ai",
+    license: "MIT",
+    files: ["weather.trx"],
     config: [
       {
-        key: 'location',
-        type: 'string',
-        description: 'Default location for weather queries',
+        key: "location",
+        type: "string",
+        description: "Default location for weather queries",
         required: false,
-        default: ''
+        default: "",
       },
       {
-        key: 'units',
-        type: 'choice',
-        description: 'Temperature units',
-        choices: ['metric', 'imperial'],
-        default: 'metric'
-      }
-    ]
+        key: "units",
+        type: "choice",
+        description: "Temperature units",
+        choices: ["metric", "imperial"],
+        default: "metric",
+      },
+    ],
   },
   translator: {
-    name: 'translator',
-    version: '1.0.0',
-    description: 'Text translation using AI providers',
-    author: '@ai',
-    license: 'MIT',
-    files: ['translator.trx'],
+    name: "translator",
+    version: "1.0.0",
+    description: "Text translation using AI providers",
+    author: "@ai",
+    license: "MIT",
+    files: ["translator.trx"],
     config: [
       {
-        key: 'provider',
-        type: 'choice',
-        description: 'AI provider for translation',
-        choices: ['anthropic', 'openai'],
-        default: 'anthropic'
+        key: "provider",
+        type: "choice",
+        description: "AI provider for translation",
+        choices: ["anthropic", "openai"],
+        default: "anthropic",
       },
       {
-        key: 'apiKey',
-        type: 'string',
-        description: 'API key for translation service',
+        key: "apiKey",
+        type: "string",
+        description: "API key for translation service",
         required: true,
-        secret: true
+        secret: true,
       },
       {
-        key: 'targetLanguage',
-        type: 'string',
-        description: 'Default target language',
-        default: 'en'
-      }
-    ]
+        key: "targetLanguage",
+        type: "string",
+        description: "Default target language",
+        default: "en",
+      },
+    ],
   },
   pomodoro: {
-    name: 'pomodoro',
-    version: '1.0.0',
-    description: 'Pomodoro timer for productivity',
-    author: '@ai',
-    license: 'MIT',
-    files: ['pomodoro.trx'],
+    name: "pomodoro",
+    version: "1.0.0",
+    description: "Pomodoro timer for productivity",
+    author: "@ai",
+    license: "MIT",
+    files: ["pomodoro.trx"],
     config: [
       {
-        key: 'workMinutes',
-        type: 'number',
-        description: 'Duration of work sessions in minutes',
-        default: 25
+        key: "workMinutes",
+        type: "number",
+        description: "Duration of work sessions in minutes",
+        default: 25,
       },
       {
-        key: 'breakMinutes',
-        type: 'number',
-        description: 'Duration of break sessions in minutes',
-        default: 5
+        key: "breakMinutes",
+        type: "number",
+        description: "Duration of break sessions in minutes",
+        default: 5,
       },
       {
-        key: 'longBreakMinutes',
-        type: 'number',
-        description: 'Duration of long break after 4 sessions',
-        default: 15
-      }
-    ]
+        key: "longBreakMinutes",
+        type: "number",
+        description: "Duration of long break after 4 sessions",
+        default: 15,
+      },
+    ],
   },
   notes: {
-    name: 'notes',
-    version: '1.0.0',
-    description: 'Simple note-taking application',
-    author: '@ai',
-    license: 'MIT',
-    files: ['notes.trx']
+    name: "notes",
+    version: "1.0.0",
+    description: "Simple note-taking application",
+    author: "@ai",
+    license: "MIT",
+    files: ["notes.trx"],
   },
   gist: {
-    name: 'gist',
-    version: '1.0.0',
-    description: 'GitHub Gist viewer and creator',
-    author: '@ai',
-    license: 'MIT',
-    files: ['gist.trx'],
+    name: "gist",
+    version: "1.0.0",
+    description: "GitHub Gist viewer and creator",
+    author: "@ai",
+    license: "MIT",
+    files: ["gist.trx"],
     config: [
       {
-        key: 'githubToken',
-        type: 'string',
-        description: 'GitHub personal access token for creating gists',
+        key: "githubToken",
+        type: "string",
+        description: "GitHub personal access token for creating gists",
         required: true,
-        secret: true
+        secret: true,
       },
       {
-        key: 'defaultPublic',
-        type: 'boolean',
-        description: 'Create public gists by default',
-        default: false
-      }
-    ]
+        key: "defaultPublic",
+        type: "boolean",
+        description: "Create public gists by default",
+        default: false,
+      },
+    ],
   },
   homeassistant: {
-    name: 'homeassistant',
-    version: '1.1.0',
-    description: 'Home Assistant integration for smart home control',
-    author: '@ai',
-    license: 'MIT',
-    files: ['homeassistant.trx'],
+    name: "homeassistant",
+    version: "1.1.0",
+    description: "Home Assistant integration for smart home control",
+    author: "@ai",
+    license: "MIT",
+    files: ["homeassistant.trx"],
     config: [
       {
-        key: 'url',
-        type: 'string',
-        description: 'Home Assistant instance URL (e.g., http://192.168.1.100:8123)',
-        required: true
-      },
-      {
-        key: 'token',
-        type: 'string',
-        description: 'Home Assistant long-lived access token',
+        key: "url",
+        type: "string",
+        description:
+          "Home Assistant instance URL (e.g., http://192.168.1.100:8123)",
         required: true,
-        secret: true
       },
       {
-        key: 'defaultEntity',
-        type: 'string',
-        description: 'Default entity ID to control (e.g., light.living_room)',
+        key: "token",
+        type: "string",
+        description: "Home Assistant long-lived access token",
+        required: true,
+        secret: true,
+      },
+      {
+        key: "defaultEntity",
+        type: "string",
+        description: "Default entity ID to control (e.g., light.living_room)",
         required: false,
-        default: ''
-      }
-    ]
-  }
+        default: "",
+      },
+    ],
+  },
 };
 
 /**
@@ -522,7 +588,7 @@ const BUNDLED_PACKAGE_MANIFESTS: Record<string, PackageManifest> = {
  */
 const BUNDLED_PACKAGE_FILES: Record<string, Record<string, string>> = {
   weather: {
-    'weather.trx': `#!/tronos
+    "weather.trx": `#!/tronos
 // @name: weather
 // @description: Weather forecast display using wttr.in API
 // @version: 1.0.0
@@ -552,10 +618,10 @@ async function main(t) {
   }
 
   t.exit(0);
-}`
+}`,
   },
   translator: {
-    'translator.trx': `#!/tronos
+    "translator.trx": `#!/tronos
 // @name: translator
 // @description: Text translation using AI providers
 // @version: 1.0.0
@@ -583,10 +649,10 @@ async function main(t) {
   t.writeln(t.style.dim('(Note: Full translation requires AI API integration)'));
 
   t.exit(0);
-}`
+}`,
   },
   pomodoro: {
-    'pomodoro.trx': `#!/tronos
+    "pomodoro.trx": `#!/tronos
 // @name: pomodoro
 // @description: Pomodoro timer for productivity
 // @version: 1.0.0
@@ -619,10 +685,10 @@ async function main(t) {
   t.writeln(t.style.dim(\`(Full timer would run for \${duration} minutes)\`));
 
   t.exit(0);
-}`
+}`,
   },
   notes: {
-    'notes.trx': `#!/tronos
+    "notes.trx": `#!/tronos
 // @name: notes
 // @description: Simple note-taking application
 // @version: 1.0.0
@@ -694,10 +760,10 @@ async function main(t) {
   }
 
   t.exit(0);
-}`
+}`,
   },
   gist: {
-    'gist.trx': `#!/tronos
+    "gist.trx": `#!/tronos
 // @name: gist
 // @description: GitHub Gist viewer and creator
 // @version: 1.0.0
@@ -753,10 +819,10 @@ async function main(t) {
   }
 
   t.exit(0);
-}`
+}`,
   },
   homeassistant: {
-    'homeassistant.trx': `#!/tronos
+    "homeassistant.trx": `#!/tronos
 // @name: homeassistant
 // @description: Home Assistant integration for smart home control
 // @version: 1.1.0
@@ -1290,29 +1356,29 @@ async function main(t) {
   }
 
   t.exit(0);
-}`
-  }
+}`,
+  },
 };
-const PACKAGE_CONFIG_DIR = '/etc/tpkg';
-const INSTALLED_PACKAGES_PATH = '/etc/tpkg/installed.json';
-const REPOSITORIES_PATH = '/etc/tpkg/repositories.json';
-const AUTH_CONFIG_PATH = '/etc/tpkg/auth.json';
+const PACKAGE_CONFIG_DIR = "/etc/tpkg";
+const INSTALLED_PACKAGES_PATH = "/etc/tpkg/installed.json";
+const REPOSITORIES_PATH = "/etc/tpkg/repositories.json";
+const AUTH_CONFIG_PATH = "/etc/tpkg/auth.json";
 
 // Enterprise API base URL
-const ENTERPRISE_API_BASE = 'https://ai.tronos.dev';
+const ENTERPRISE_API_BASE = "https://ai.tronos.dev";
 
 /**
  * Auth method for enterprise packages
  */
-type AuthMethod = 'github_token' | 'license_key';
+type AuthMethod = "github_token" | "license_key";
 
 /**
  * Stored auth configuration
  */
 interface AuthConfig {
   method: AuthMethod;
-  credential: string;  // encrypted
-  cachedTier: 'free' | 'pro' | 'enterprise';
+  credential: string; // encrypted
+  cachedTier: "free" | "pro" | "enterprise";
   cachedAt: string;
 }
 
@@ -1324,10 +1390,10 @@ function loadAuthConfig(context: ExecutionContext): AuthConfig | null {
   if (!vfs || !vfs.exists(AUTH_CONFIG_PATH)) return null;
   try {
     const content = vfs.read(AUTH_CONFIG_PATH);
-    if (typeof content !== 'string') return null;
+    if (typeof content !== "string") return null;
     const data = JSON.parse(content) as AuthConfig;
     // Decrypt credential
-    const decrypted = decryptSecret(data.credential, 'tpkg-auth');
+    const decrypted = decryptSecret(data.credential, "tpkg-auth");
     if (decrypted === null) return null;
     return { ...data, credential: decrypted };
   } catch {
@@ -1341,7 +1407,7 @@ function loadAuthConfig(context: ExecutionContext): AuthConfig | null {
 function saveAuthConfig(context: ExecutionContext, config: AuthConfig): void {
   const vfs = context.vfs;
   if (!vfs) return;
-  const encrypted = encryptSecret(config.credential, 'tpkg-auth');
+  const encrypted = encryptSecret(config.credential, "tpkg-auth");
   const data: AuthConfig = { ...config, credential: encrypted };
   vfs.write(AUTH_CONFIG_PATH, JSON.stringify(data, null, 2));
 }
@@ -1360,7 +1426,11 @@ function removeAuthConfig(context: ExecutionContext): void {
 /**
  * Get current auth status (for UI and commands)
  */
-export function getAuthStatus(context: ExecutionContext): { loggedIn: boolean; tier: string | null; method: string | null } {
+export function getAuthStatus(context: ExecutionContext): {
+  loggedIn: boolean;
+  tier: string | null;
+  method: string | null;
+} {
   const auth = loadAuthConfig(context);
   if (!auth) return { loggedIn: false, tier: null, method: null };
   return { loggedIn: true, tier: auth.cachedTier, method: auth.method };
@@ -1369,58 +1439,75 @@ export function getAuthStatus(context: ExecutionContext): { loggedIn: boolean; t
 /**
  * Validate a license key against the API
  */
-async function validateLicenseKey(key: string): Promise<{ valid: boolean; tier?: 'free' | 'pro' | 'enterprise'; email?: string; error?: string }> {
+async function validateLicenseKey(key: string): Promise<{
+  valid: boolean;
+  tier?: "free" | "pro" | "enterprise";
+  email?: string;
+  error?: string;
+}> {
   try {
-    const response = await aiosFetch(`${ENTERPRISE_API_BASE}/api/packages/validate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key }),
-    });
+    const response = await aiosFetch(
+      `${ENTERPRISE_API_BASE}/api/packages/validate`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key }),
+      },
+    );
     if (!response.ok) {
       return { valid: false, error: `Server returned ${response.status}` };
     }
     const data = await response.json();
-    return data as { valid: boolean; tier?: 'free' | 'pro' | 'enterprise'; email?: string };
+    return data as {
+      valid: boolean;
+      tier?: "free" | "pro" | "enterprise";
+      email?: string;
+    };
   } catch (err: any) {
-    return { valid: false, error: err?.message || 'Network error' };
+    return { valid: false, error: err?.message || "Network error" };
   }
 }
 
 /**
  * Validate a GitHub token by test-fetching the enterprise repo
  */
-async function validateGitHubToken(token: string): Promise<{ valid: boolean; error?: string }> {
+async function validateGitHubToken(
+  token: string,
+): Promise<{ valid: boolean; error?: string }> {
   try {
     const url = `${ENTERPRISE_REPOSITORY}/packages.json`;
     const response = await aiosFetch(url, {
-      method: 'GET',
-      headers: { 'Authorization': `token ${token}` },
+      method: "GET",
+      headers: { Authorization: `token ${token}` },
     });
     if (response.ok) return { valid: true };
     return { valid: false, error: `GitHub returned ${response.status}` };
   } catch (err: any) {
-    return { valid: false, error: err?.message || 'Network error' };
+    return { valid: false, error: err?.message || "Network error" };
   }
 }
 
 /**
  * tpkg auth - Authentication management subcommand
  */
-async function handleAuth(args: string[], context: ExecutionContext): Promise<CommandResult> {
-  const sub = args[0] || 'status';
+async function handleAuth(
+  args: string[],
+  context: ExecutionContext,
+): Promise<CommandResult> {
+  const sub = args[0] || "status";
 
   switch (sub) {
-    case 'login': {
+    case "login": {
       // Parse flags
       let method: AuthMethod | null = null;
       let credential: string | null = null;
 
       for (let i = 1; i < args.length; i++) {
-        if (args[i] === '--token' && args[i + 1]) {
-          method = 'github_token';
+        if (args[i] === "--token" && args[i + 1]) {
+          method = "github_token";
           credential = args[++i];
-        } else if (args[i] === '--license' && args[i + 1]) {
-          method = 'license_key';
+        } else if (args[i] === "--license" && args[i + 1]) {
+          method = "license_key";
           credential = args[++i];
         }
       }
@@ -1430,48 +1517,57 @@ async function handleAuth(args: string[], context: ExecutionContext): Promise<Co
         const terminal = context.terminal as TerminalAPI | undefined;
         if (!isInteractive(context)) {
           return {
-            stdout: '',
-            stderr: 'tpkg auth login: use --token <PAT> or --license <KEY> in non-interactive mode',
+            stdout: "",
+            stderr:
+              "tpkg auth login: use --token <PAT> or --license <KEY> in non-interactive mode",
             exitCode: 1,
           };
         }
 
-        terminal?.write('\r\nTronOS Enterprise Authentication\r\n\r\n');
-        terminal?.write('  [1] License key\r\n');
-        terminal?.write('  [2] GitHub Personal Access Token\r\n\r\n');
-        const choice = await readLine(terminal, '  Choose method (1/2): ');
+        terminal?.write("\r\nTronOS Enterprise Authentication\r\n\r\n");
+        terminal?.write("  [1] License key\r\n");
+        terminal?.write("  [2] GitHub Personal Access Token\r\n\r\n");
+        const choice = await readLine(terminal, "  Choose method (1/2): ");
 
-        if (choice === '1') {
-          method = 'license_key';
-          credential = await readPassword(terminal, '  License key: ');
-        } else if (choice === '2') {
-          method = 'github_token';
-          credential = await readPassword(terminal, '  GitHub PAT: ');
+        if (choice === "1") {
+          method = "license_key";
+          credential = await readPassword(terminal, "  License key: ");
+        } else if (choice === "2") {
+          method = "github_token";
+          credential = await readPassword(terminal, "  GitHub PAT: ");
         } else {
-          return { stdout: '', stderr: 'tpkg auth login: cancelled', exitCode: 1 };
+          return {
+            stdout: "",
+            stderr: "tpkg auth login: cancelled",
+            exitCode: 1,
+          };
         }
 
         if (!credential) {
-          return { stdout: '', stderr: 'tpkg auth login: no credential provided', exitCode: 1 };
+          return {
+            stdout: "",
+            stderr: "tpkg auth login: no credential provided",
+            exitCode: 1,
+          };
         }
       }
 
       // Validate
       const output: string[] = [];
-      output.push('Authenticating...');
+      output.push("Authenticating...");
 
-      if (method === 'license_key') {
+      if (method === "license_key") {
         const result = await validateLicenseKey(credential!);
         if (!result.valid) {
           return {
-            stdout: '',
-            stderr: `tpkg auth login: invalid license key${result.error ? ` (${result.error})` : ''}`,
+            stdout: "",
+            stderr: `tpkg auth login: invalid license key${result.error ? ` (${result.error})` : ""}`,
             exitCode: 1,
           };
         }
-        const tier = result.tier || 'free';
+        const tier = result.tier || "free";
         saveAuthConfig(context, {
-          method: 'license_key',
+          method: "license_key",
           credential: credential!,
           cachedTier: tier,
           cachedAt: new Date().toISOString(),
@@ -1482,54 +1578,60 @@ async function handleAuth(args: string[], context: ExecutionContext): Promise<Co
         const result = await validateGitHubToken(credential!);
         if (!result.valid) {
           return {
-            stdout: '',
-            stderr: `tpkg auth login: invalid GitHub token${result.error ? ` (${result.error})` : ''}`,
+            stdout: "",
+            stderr: `tpkg auth login: invalid GitHub token${result.error ? ` (${result.error})` : ""}`,
             exitCode: 1,
           };
         }
         // GitHub token grants enterprise-level access
         saveAuthConfig(context, {
-          method: 'github_token',
+          method: "github_token",
           credential: credential!,
-          cachedTier: 'enterprise',
+          cachedTier: "enterprise",
           cachedAt: new Date().toISOString(),
         });
-        output.push('✓ Authenticated via GitHub token (tier: enterprise)');
+        output.push("✓ Authenticated via GitHub token (tier: enterprise)");
       }
 
-      return { stdout: output.join('\n') + '\n', stderr: '', exitCode: 0 };
+      return { stdout: output.join("\n") + "\n", stderr: "", exitCode: 0 };
     }
 
-    case 'logout': {
+    case "logout": {
       const auth = loadAuthConfig(context);
       if (!auth) {
-        return { stdout: 'Not authenticated.\n', stderr: '', exitCode: 0 };
+        return { stdout: "Not authenticated.\n", stderr: "", exitCode: 0 };
       }
       removeAuthConfig(context);
-      return { stdout: '✓ Logged out. Enterprise credentials removed.\n', stderr: '', exitCode: 0 };
+      return {
+        stdout: "✓ Logged out. Enterprise credentials removed.\n",
+        stderr: "",
+        exitCode: 0,
+      };
     }
 
-    case 'status':
+    case "status":
     default: {
       const auth = loadAuthConfig(context);
       if (!auth) {
         return {
-          stdout: 'Not authenticated.\n\nRun \x1b[1mtpkg auth login\x1b[0m to authenticate for enterprise packages.\n',
-          stderr: '',
+          stdout:
+            "Not authenticated.\n\nRun \x1b[1mtpkg auth login\x1b[0m to authenticate for enterprise packages.\n",
+          stderr: "",
           exitCode: 0,
         };
       }
-      const masked = auth.credential.length > 8
-        ? auth.credential.slice(0, 4) + '...' + auth.credential.slice(-4)
-        : '****';
+      const masked =
+        auth.credential.length > 8
+          ? auth.credential.slice(0, 4) + "..." + auth.credential.slice(-4)
+          : "****";
       const output = [
-        'Authentication status:',
-        `  Method:     ${auth.method === 'license_key' ? 'License key' : 'GitHub token'}`,
+        "Authentication status:",
+        `  Method:     ${auth.method === "license_key" ? "License key" : "GitHub token"}`,
         `  Credential: ${masked}`,
         `  Tier:       ${auth.cachedTier}`,
         `  Cached at:  ${auth.cachedAt}`,
       ];
-      return { stdout: output.join('\n') + '\n', stderr: '', exitCode: 0 };
+      return { stdout: output.join("\n") + "\n", stderr: "", exitCode: 0 };
     }
   }
 }
@@ -1538,13 +1640,15 @@ async function handleAuth(args: string[], context: ExecutionContext): Promise<Co
  * Parse a semver version string into components
  * Returns null for invalid versions
  */
-function parseVersion(version: string): { major: number; minor: number; patch: number } | null {
+function parseVersion(
+  version: string,
+): { major: number; minor: number; patch: number } | null {
   const match = version.match(/^(\d+)\.(\d+)\.(\d+)/);
   if (!match) return null;
   return {
     major: parseInt(match[1], 10),
     minor: parseInt(match[2], 10),
-    patch: parseInt(match[3], 10)
+    patch: parseInt(match[3], 10),
   };
 }
 
@@ -1572,13 +1676,13 @@ function compareVersions(a: string, b: string): number {
  * Supports: exact (1.0.0), caret (^1.0.0), tilde (~1.0.0), range (>=1.0.0)
  */
 function satisfiesVersion(version: string, constraint: string): boolean {
-  if (!constraint || constraint === '*') return true;
+  if (!constraint || constraint === "*") return true;
 
   const parsedVersion = parseVersion(version);
   if (!parsedVersion) return false;
 
   // Caret range (^1.0.0) - allows minor and patch updates
-  if (constraint.startsWith('^')) {
+  if (constraint.startsWith("^")) {
     const constraintVersion = parseVersion(constraint.slice(1));
     if (!constraintVersion) return false;
     if (parsedVersion.major !== constraintVersion.major) return false;
@@ -1586,7 +1690,7 @@ function satisfiesVersion(version: string, constraint: string): boolean {
   }
 
   // Tilde range (~1.0.0) - allows patch updates only
-  if (constraint.startsWith('~')) {
+  if (constraint.startsWith("~")) {
     const constraintVersion = parseVersion(constraint.slice(1));
     if (!constraintVersion) return false;
     if (parsedVersion.major !== constraintVersion.major) return false;
@@ -1595,22 +1699,22 @@ function satisfiesVersion(version: string, constraint: string): boolean {
   }
 
   // Greater than or equal (>=1.0.0)
-  if (constraint.startsWith('>=')) {
+  if (constraint.startsWith(">=")) {
     return compareVersions(version, constraint.slice(2)) >= 0;
   }
 
   // Greater than (>1.0.0)
-  if (constraint.startsWith('>')) {
+  if (constraint.startsWith(">")) {
     return compareVersions(version, constraint.slice(1)) > 0;
   }
 
   // Less than or equal (<=1.0.0)
-  if (constraint.startsWith('<=')) {
+  if (constraint.startsWith("<=")) {
     return compareVersions(version, constraint.slice(2)) <= 0;
   }
 
   // Less than (<1.0.0)
-  if (constraint.startsWith('<')) {
+  if (constraint.startsWith("<")) {
     return compareVersions(version, constraint.slice(1)) < 0;
   }
 
@@ -1638,7 +1742,7 @@ interface PackageManifest {
  */
 interface PackageConfigParam {
   key: string;
-  type: 'string' | 'number' | 'boolean' | 'choice';
+  type: "string" | "number" | "boolean" | "choice";
   description: string;
   required?: boolean;
   default?: string | number | boolean;
@@ -1679,7 +1783,7 @@ interface PackageIndexEntry {
 export function getPackageConfigValue(
   packageName: string,
   key: string,
-  context: ExecutionContext
+  context: ExecutionContext,
 ): string | number | boolean | undefined {
   const vfs = context.vfs;
   if (!vfs) return undefined;
@@ -1689,15 +1793,18 @@ export function getPackageConfigValue(
 
   try {
     const content = vfs.read(configPath);
-    if (typeof content !== 'string') return undefined;
+    if (typeof content !== "string") return undefined;
 
-    const config = JSON.parse(content) as Record<string, string | number | boolean>;
+    const config = JSON.parse(content) as Record<
+      string,
+      string | number | boolean
+    >;
     const value = config[key];
 
     if (value === undefined) return undefined;
 
     // Check if this is an encrypted secret
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       const decrypted = decryptSecret(value, packageName);
       if (decrypted !== null) {
         return decrypted;
@@ -1724,7 +1831,7 @@ export function setPackageConfigValue(
   packageName: string,
   key: string,
   value: string | number | boolean,
-  context: ExecutionContext
+  context: ExecutionContext,
 ): boolean {
   const vfs = context.vfs;
   if (!vfs) return false;
@@ -1735,9 +1842,9 @@ export function setPackageConfigValue(
   try {
     // Load installed packages to check config schema
     const installedContent = vfs.read(installedPath);
-    if (typeof installedContent !== 'string') return false;
+    if (typeof installedContent !== "string") return false;
     const installedList = JSON.parse(installedContent) as InstalledPackage[];
-    const pkg = installedList.find(p => p.name === packageName);
+    const pkg = installedList.find((p) => p.name === packageName);
     if (!pkg) return false;
 
     const configDir = `${PACKAGE_CONFIG_DIR}/${packageName}`;
@@ -1752,18 +1859,18 @@ export function setPackageConfigValue(
     let config: Record<string, string | number | boolean> = {};
     if (vfs.exists(configPath)) {
       const content = vfs.read(configPath);
-      if (typeof content === 'string') {
+      if (typeof content === "string") {
         config = JSON.parse(content);
       }
     }
 
     // Check if this key is marked as secret
-    const configParam = pkg.config?.find(p => p.key === key);
+    const configParam = pkg.config?.find((p) => p.key === key);
     const isSecret = configParam?.secret === true;
 
     // Encrypt secret values
     let finalValue = value;
-    if (isSecret && typeof value === 'string') {
+    if (isSecret && typeof value === "string") {
       finalValue = encryptSecret(value, packageName);
     }
 
@@ -1785,7 +1892,7 @@ export function setPackageConfigValue(
  */
 export function getPackageNameForExe(
   exePath: string,
-  context: ExecutionContext
+  context: ExecutionContext,
 ): string | undefined {
   const packages = loadInstalledPackages(context);
 
@@ -1808,7 +1915,7 @@ export function getPackageNameForExe(
  */
 export function getMissingRequiredConfig(
   packageName: string,
-  context: ExecutionContext
+  context: ExecutionContext,
 ): string[] {
   const packages = loadInstalledPackages(context);
   const pkg = packages.get(packageName);
@@ -1838,12 +1945,7 @@ async function ensureDirectories(context: ExecutionContext): Promise<void> {
   const vfs = context.vfs;
   if (!vfs) return;
 
-  const dirs = [
-    '/var',
-    '/var/cache',
-    '/var/cache/tpkg',
-    '/etc/tpkg',
-  ];
+  const dirs = ["/var", "/var/cache", "/var/cache/tpkg", "/etc/tpkg"];
 
   for (const dir of dirs) {
     if (!vfs.exists(dir)) {
@@ -1855,7 +1957,9 @@ async function ensureDirectories(context: ExecutionContext): Promise<void> {
 /**
  * Load installed packages from VFS
  */
-function loadInstalledPackages(context: ExecutionContext): Map<string, InstalledPackage> {
+function loadInstalledPackages(
+  context: ExecutionContext,
+): Map<string, InstalledPackage> {
   const vfs = context.vfs;
   if (!vfs || !vfs.exists(INSTALLED_PACKAGES_PATH)) {
     return new Map();
@@ -1863,9 +1967,9 @@ function loadInstalledPackages(context: ExecutionContext): Map<string, Installed
 
   try {
     const content = vfs.read(INSTALLED_PACKAGES_PATH);
-    if (typeof content === 'string') {
+    if (typeof content === "string") {
       const data = JSON.parse(content) as InstalledPackage[];
-      return new Map(data.map(pkg => [pkg.name, pkg]));
+      return new Map(data.map((pkg) => [pkg.name, pkg]));
     }
   } catch {
     // Ignore parse errors, return empty map
@@ -1876,7 +1980,10 @@ function loadInstalledPackages(context: ExecutionContext): Map<string, Installed
 /**
  * Save installed packages to VFS
  */
-function saveInstalledPackages(context: ExecutionContext, packages: Map<string, InstalledPackage>): void {
+function saveInstalledPackages(
+  context: ExecutionContext,
+  packages: Map<string, InstalledPackage>,
+): void {
   const vfs = context.vfs;
   if (!vfs) return;
 
@@ -1896,7 +2003,7 @@ function loadRepositories(context: ExecutionContext): string[] {
 
   try {
     const content = vfs.read(REPOSITORIES_PATH);
-    if (typeof content === 'string') {
+    if (typeof content === "string") {
       const repos = JSON.parse(content) as string[];
       if (repos.length > 0) {
         // Ensure default repos are always included
@@ -1917,7 +2024,10 @@ function loadRepositories(context: ExecutionContext): string[] {
 /**
  * Save repositories to VFS
  */
-function saveRepositories(context: ExecutionContext, repositories: string[]): void {
+function saveRepositories(
+  context: ExecutionContext,
+  repositories: string[],
+): void {
   const vfs = context.vfs;
   if (!vfs) return;
 
@@ -1935,7 +2045,7 @@ function loadPackageIndex(context: ExecutionContext): PackageIndexEntry[] {
 
   try {
     const content = vfs.read(PACKAGE_INDEX_PATH);
-    if (typeof content === 'string') {
+    if (typeof content === "string") {
       return JSON.parse(content) as PackageIndexEntry[];
     }
   } catch {
@@ -1947,7 +2057,10 @@ function loadPackageIndex(context: ExecutionContext): PackageIndexEntry[] {
 /**
  * Save package index to cache
  */
-function savePackageIndex(context: ExecutionContext, index: PackageIndexEntry[]): void {
+function savePackageIndex(
+  context: ExecutionContext,
+  index: PackageIndexEntry[],
+): void {
   const vfs = context.vfs;
   if (!vfs) return;
 
@@ -1958,10 +2071,12 @@ function savePackageIndex(context: ExecutionContext, index: PackageIndexEntry[])
  * Fetch package index from repository
  * Falls back to bundled index for the default repository
  */
-async function fetchPackageIndex(repoUrl: string): Promise<PackageIndexEntry[]> {
+async function fetchPackageIndex(
+  repoUrl: string,
+): Promise<PackageIndexEntry[]> {
   try {
     const url = `${repoUrl}/packages.json`;
-    const response = await aiosFetch(url, { method: 'GET' });
+    const response = await aiosFetch(url, { method: "GET" });
     if (!response.ok) {
       // Fall back to bundled + example index for default repository
       if (repoUrl === DEFAULT_REPOSITORY) {
@@ -1973,7 +2088,7 @@ async function fetchPackageIndex(repoUrl: string): Promise<PackageIndexEntry[]> 
     const remote = JSON.parse(text) as PackageIndexEntry[];
     // Merge bundled + example packages that aren't already in the remote index
     if (repoUrl === DEFAULT_REPOSITORY) {
-      const remoteNames = new Set(remote.map(p => p.name));
+      const remoteNames = new Set(remote.map((p) => p.name));
       const local = [...BUNDLED_PACKAGE_INDEX, ...EXAMPLE_PACKAGE_INDEX];
       for (const pkg of local) {
         if (!remoteNames.has(pkg.name)) {
@@ -1995,15 +2110,20 @@ async function fetchPackageIndex(repoUrl: string): Promise<PackageIndexEntry[]> 
  * Fetch package manifest from repository
  * Falls back to bundled manifests for the default repository
  */
-async function fetchPackageManifest(repoUrl: string, packageName: string): Promise<PackageManifest | null> {
+async function fetchPackageManifest(
+  repoUrl: string,
+  packageName: string,
+): Promise<PackageManifest | null> {
   try {
     const url = `${repoUrl}/packages/${packageName}/package.tronos.json`;
-    const response = await aiosFetch(url, { method: 'GET' });
+    const response = await aiosFetch(url, { method: "GET" });
     if (!response.ok) {
       // Fall back to bundled manifest, then example manifest for default repository
       if (repoUrl === DEFAULT_REPOSITORY) {
-        if (BUNDLED_PACKAGE_MANIFESTS[packageName]) return { ...BUNDLED_PACKAGE_MANIFESTS[packageName] };
-        if (EXAMPLE_PACKAGE_MANIFESTS[packageName]) return { ...EXAMPLE_PACKAGE_MANIFESTS[packageName] };
+        if (BUNDLED_PACKAGE_MANIFESTS[packageName])
+          return { ...BUNDLED_PACKAGE_MANIFESTS[packageName] };
+        if (EXAMPLE_PACKAGE_MANIFESTS[packageName])
+          return { ...EXAMPLE_PACKAGE_MANIFESTS[packageName] };
       }
       return null;
     }
@@ -2012,8 +2132,10 @@ async function fetchPackageManifest(repoUrl: string, packageName: string): Promi
   } catch {
     // Fall back to bundled manifest, then example manifest for default repository
     if (repoUrl === DEFAULT_REPOSITORY) {
-      if (BUNDLED_PACKAGE_MANIFESTS[packageName]) return { ...BUNDLED_PACKAGE_MANIFESTS[packageName] };
-      if (EXAMPLE_PACKAGE_MANIFESTS[packageName]) return { ...EXAMPLE_PACKAGE_MANIFESTS[packageName] };
+      if (BUNDLED_PACKAGE_MANIFESTS[packageName])
+        return { ...BUNDLED_PACKAGE_MANIFESTS[packageName] };
+      if (EXAMPLE_PACKAGE_MANIFESTS[packageName])
+        return { ...EXAMPLE_PACKAGE_MANIFESTS[packageName] };
     }
     return null;
   }
@@ -2023,15 +2145,21 @@ async function fetchPackageManifest(repoUrl: string, packageName: string): Promi
  * Fetch package file from repository
  * Falls back to bundled files for the default repository
  */
-async function fetchPackageFile(repoUrl: string, packageName: string, fileName: string): Promise<string | null> {
+async function fetchPackageFile(
+  repoUrl: string,
+  packageName: string,
+  fileName: string,
+): Promise<string | null> {
   try {
     const url = `${repoUrl}/packages/${packageName}/${fileName}`;
-    const response = await aiosFetch(url, { method: 'GET' });
+    const response = await aiosFetch(url, { method: "GET" });
     if (!response.ok) {
       // Fall back to bundled files, then example files for default repository
       if (repoUrl === DEFAULT_REPOSITORY) {
-        if (BUNDLED_PACKAGE_FILES[packageName]?.[fileName]) return BUNDLED_PACKAGE_FILES[packageName][fileName];
-        if (EXAMPLE_PACKAGE_FILES[packageName]?.[fileName]) return EXAMPLE_PACKAGE_FILES[packageName][fileName];
+        if (BUNDLED_PACKAGE_FILES[packageName]?.[fileName])
+          return BUNDLED_PACKAGE_FILES[packageName][fileName];
+        if (EXAMPLE_PACKAGE_FILES[packageName]?.[fileName])
+          return EXAMPLE_PACKAGE_FILES[packageName][fileName];
       }
       return null;
     }
@@ -2039,8 +2167,10 @@ async function fetchPackageFile(repoUrl: string, packageName: string, fileName: 
   } catch {
     // Fall back to bundled files, then example files for default repository
     if (repoUrl === DEFAULT_REPOSITORY) {
-      if (BUNDLED_PACKAGE_FILES[packageName]?.[fileName]) return BUNDLED_PACKAGE_FILES[packageName][fileName];
-      if (EXAMPLE_PACKAGE_FILES[packageName]?.[fileName]) return EXAMPLE_PACKAGE_FILES[packageName][fileName];
+      if (BUNDLED_PACKAGE_FILES[packageName]?.[fileName])
+        return BUNDLED_PACKAGE_FILES[packageName][fileName];
+      if (EXAMPLE_PACKAGE_FILES[packageName]?.[fileName])
+        return EXAMPLE_PACKAGE_FILES[packageName][fileName];
     }
     return null;
   }
@@ -2050,22 +2180,25 @@ async function fetchPackageFile(repoUrl: string, packageName: string, fileName: 
  * Fetch enterprise package manifest using auth credentials.
  * Tries license key API first, then GitHub token direct fetch.
  */
-async function fetchEnterpriseManifest(packageName: string, auth: AuthConfig): Promise<PackageManifest | null> {
+async function fetchEnterpriseManifest(
+  packageName: string,
+  auth: AuthConfig,
+): Promise<PackageManifest | null> {
   try {
-    if (auth.method === 'license_key') {
+    if (auth.method === "license_key") {
       const url = `${ENTERPRISE_API_BASE}/api/packages/enterprise/${packageName}/manifest`;
       const response = await aiosFetch(url, {
-        method: 'GET',
-        headers: { 'X-License-Key': auth.credential },
+        method: "GET",
+        headers: { "X-License-Key": auth.credential },
       });
       if (response.ok) {
-        return await response.json() as PackageManifest;
+        return (await response.json()) as PackageManifest;
       }
-    } else if (auth.method === 'github_token') {
+    } else if (auth.method === "github_token") {
       const url = `${ENTERPRISE_REPOSITORY}/packages/${packageName}/package.tronos.json`;
       const response = await aiosFetch(url, {
-        method: 'GET',
-        headers: { 'Authorization': `token ${auth.credential}` },
+        method: "GET",
+        headers: { Authorization: `token ${auth.credential}` },
       });
       if (response.ok) {
         return JSON.parse(await response.text()) as PackageManifest;
@@ -2080,20 +2213,24 @@ async function fetchEnterpriseManifest(packageName: string, auth: AuthConfig): P
 /**
  * Fetch enterprise package file using auth credentials.
  */
-async function fetchEnterpriseFile(packageName: string, fileName: string, auth: AuthConfig): Promise<string | null> {
+async function fetchEnterpriseFile(
+  packageName: string,
+  fileName: string,
+  auth: AuthConfig,
+): Promise<string | null> {
   try {
-    if (auth.method === 'license_key') {
+    if (auth.method === "license_key") {
       const url = `${ENTERPRISE_API_BASE}/api/packages/enterprise/${packageName}/${fileName}`;
       const response = await aiosFetch(url, {
-        method: 'GET',
-        headers: { 'X-License-Key': auth.credential },
+        method: "GET",
+        headers: { "X-License-Key": auth.credential },
       });
       if (response.ok) return await response.text();
-    } else if (auth.method === 'github_token') {
+    } else if (auth.method === "github_token") {
       const url = `${ENTERPRISE_REPOSITORY}/packages/${packageName}/${fileName}`;
       const response = await aiosFetch(url, {
-        method: 'GET',
-        headers: { 'Authorization': `token ${auth.credential}` },
+        method: "GET",
+        headers: { Authorization: `token ${auth.credential}` },
       });
       if (response.ok) return await response.text();
     }
@@ -2107,16 +2244,19 @@ async function fetchEnterpriseFile(packageName: string, fileName: string, auth: 
  * Check if a package requires enterprise auth and validate access.
  * Returns null if OK, or an error message string.
  */
-function checkEnterpriseTier(packageName: string, context: ExecutionContext): string | null {
-  const registryPkg = MARKETPLACE_PACKAGES.find(p => p.name === packageName);
-  if (!registryPkg || registryPkg.source !== 'enterprise') return null;
+function checkEnterpriseTier(
+  packageName: string,
+  context: ExecutionContext,
+): string | null {
+  const registryPkg = MARKETPLACE_PACKAGES.find((p) => p.name === packageName);
+  if (!registryPkg || registryPkg.source !== "enterprise") return null;
 
   const auth = loadAuthConfig(context);
   if (!auth) {
     return `\x1b[33m⚠\x1b[0m This is an enterprise package. Run \x1b[1mtpkg auth login\x1b[0m first.`;
   }
 
-  const requiredTier = registryPkg.tier || 'free';
+  const requiredTier = registryPkg.tier || "free";
   if (!isTierAuthorized(auth.cachedTier, requiredTier)) {
     return `\x1b[33m⚠\x1b[0m Package '${packageName}' requires \x1b[1m${requiredTier}\x1b[0m tier (you have: ${auth.cachedTier}).\n  Upgrade at https://tronos.dev/pricing`;
   }
@@ -2127,17 +2267,24 @@ function checkEnterpriseTier(packageName: string, context: ExecutionContext): st
 /**
  * tpkg install <package> - Install package from repository
  */
-async function installPackage(packageName: string, context: ExecutionContext): Promise<CommandResult> {
+async function installPackage(
+  packageName: string,
+  context: ExecutionContext,
+): Promise<CommandResult> {
   await ensureDirectories(context);
   const vfs = context.vfs;
   if (!vfs) {
-    return { stdout: '', stderr: 'tpkg: filesystem not available', exitCode: 1 };
+    return {
+      stdout: "",
+      stderr: "tpkg: filesystem not available",
+      exitCode: 1,
+    };
   }
 
   // Check enterprise tier access
   const tierError = checkEnterpriseTier(packageName, context);
   if (tierError) {
-    return { stdout: '', stderr: tierError, exitCode: 1 };
+    return { stdout: "", stderr: tierError, exitCode: 1 };
   }
 
   // Check if already installed
@@ -2145,15 +2292,15 @@ async function installPackage(packageName: string, context: ExecutionContext): P
   if (installed.has(packageName)) {
     const pkg = installed.get(packageName)!;
     return {
-      stdout: '',
+      stdout: "",
       stderr: `tpkg: package '${packageName}' is already installed (version ${pkg.version})\nUse 'tpkg upgrade ${packageName}' to upgrade.`,
-      exitCode: 1
+      exitCode: 1,
     };
   }
 
   // Check if this is an enterprise package that needs authenticated fetch
-  const registryPkg = MARKETPLACE_PACKAGES.find(p => p.name === packageName);
-  const isEnterprise = registryPkg?.source === 'enterprise';
+  const registryPkg = MARKETPLACE_PACKAGES.find((p) => p.name === packageName);
+  const isEnterprise = registryPkg?.source === "enterprise";
   const auth = isEnterprise ? loadAuthConfig(context) : null;
 
   const repositories = loadRepositories(context);
@@ -2183,9 +2330,9 @@ async function installPackage(packageName: string, context: ExecutionContext): P
 
   if (!manifest || !sourceRepo) {
     return {
-      stdout: '',
+      stdout: "",
       stderr: `tpkg: package '${packageName}' not found\nTry 'tpkg update' to refresh the package index, or 'tpkg search ${packageName}' to find similar packages.`,
-      exitCode: 1
+      exitCode: 1,
     };
   }
 
@@ -2200,9 +2347,9 @@ async function installPackage(packageName: string, context: ExecutionContext): P
         const depResult = await installPackage(dep, context);
         if (depResult.exitCode !== 0) {
           return {
-            stdout: output.join('\n'),
+            stdout: output.join("\n"),
             stderr: `tpkg: failed to install dependency '${dep}'`,
-            exitCode: 1
+            exitCode: 1,
           };
         }
       }
@@ -2212,14 +2359,15 @@ async function installPackage(packageName: string, context: ExecutionContext): P
   // Download and install files
   const installedFiles: string[] = [];
   for (const file of manifest.files) {
-    const content = (useEnterpriseFetch && auth)
-      ? await fetchEnterpriseFile(packageName, file, auth)
-      : await fetchPackageFile(sourceRepo, packageName, file);
+    const content =
+      useEnterpriseFetch && auth
+        ? await fetchEnterpriseFile(packageName, file, auth)
+        : await fetchPackageFile(sourceRepo, packageName, file);
     if (content === null) {
       return {
-        stdout: output.join('\n'),
+        stdout: output.join("\n"),
         stderr: `tpkg: failed to download file '${file}'`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
@@ -2242,34 +2390,38 @@ async function installPackage(packageName: string, context: ExecutionContext): P
     const interactive = isInteractive(context);
 
     // Separate required params (with no default) from optional ones
-    const requiredParams = manifest.config.filter(p => p.required && p.default === undefined);
-    const optionalParams = manifest.config.filter(p => !p.required || p.default !== undefined);
+    const requiredParams = manifest.config.filter(
+      (p) => p.required && p.default === undefined,
+    );
+    const optionalParams = manifest.config.filter(
+      (p) => !p.required || p.default !== undefined,
+    );
 
     // Prompt for required config if interactive
     if (requiredParams.length > 0 && interactive) {
       // Write current output first
       if (terminal) {
         for (const line of output) {
-          terminal.write(line + '\r\n');
+          terminal.write(line + "\r\n");
         }
         output.length = 0; // Clear output since we wrote it
       }
 
-      terminal?.write('\r\n');
-      terminal?.write('  This package requires configuration:\r\n');
-      terminal?.write('\r\n');
+      terminal?.write("\r\n");
+      terminal?.write("  This package requires configuration:\r\n");
+      terminal?.write("\r\n");
 
       for (const param of requiredParams) {
         // Build prompt string
         let promptText = `  ${param.key}`;
-        if (param.type === 'choice' && param.choices) {
-          promptText += ` (${param.choices.join('/')})`;
-        } else if (param.type === 'boolean') {
-          promptText += ' (yes/no)';
-        } else if (param.type === 'number') {
-          promptText += ' (number)';
+        if (param.type === "choice" && param.choices) {
+          promptText += ` (${param.choices.join("/")})`;
+        } else if (param.type === "boolean") {
+          promptText += " (yes/no)";
+        } else if (param.type === "number") {
+          promptText += " (number)";
         }
-        promptText += ': ';
+        promptText += ": ";
 
         // Show description
         terminal?.write(`  ${param.description}\r\n`);
@@ -2282,7 +2434,10 @@ async function installPackage(packageName: string, context: ExecutionContext): P
             ? await readPassword(terminal, promptText)
             : await readLine(terminal, promptText);
 
-          const [isValid, parsedValue, error] = validateConfigInput(input, param);
+          const [isValid, parsedValue, error] = validateConfigInput(
+            input,
+            param,
+          );
           if (!isValid) {
             terminal?.write(`  Error: ${error}\r\n`);
             continue;
@@ -2290,7 +2445,7 @@ async function installPackage(packageName: string, context: ExecutionContext): P
 
           if (parsedValue !== undefined) {
             // Encrypt secret values
-            if (param.secret && typeof parsedValue === 'string') {
+            if (param.secret && typeof parsedValue === "string") {
               value = encryptSecret(parsedValue, packageName);
             } else {
               value = parsedValue;
@@ -2307,12 +2462,12 @@ async function installPackage(packageName: string, context: ExecutionContext): P
         if (value !== undefined) {
           configValues[param.key] = value;
         }
-        terminal?.write('\r\n');
+        terminal?.write("\r\n");
       }
     } else if (requiredParams.length > 0) {
       // Non-interactive mode - just note that config is required
-      output.push('');
-      output.push('  ⚠ This package requires configuration:');
+      output.push("");
+      output.push("  ⚠ This package requires configuration:");
       for (const param of requiredParams) {
         output.push(`    - ${param.key}: ${param.description}`);
       }
@@ -2326,7 +2481,10 @@ async function installPackage(packageName: string, context: ExecutionContext): P
       }
     }
 
-    vfs.write(`${configDir}/config.json`, JSON.stringify(configValues, null, 2));
+    vfs.write(
+      `${configDir}/config.json`,
+      JSON.stringify(configValues, null, 2),
+    );
     output.push(`  Configuration directory: ${configDir}`);
   }
 
@@ -2336,30 +2494,43 @@ async function installPackage(packageName: string, context: ExecutionContext): P
     version: manifest.version,
     installedAt: new Date().toISOString(),
     files: installedFiles,
-    config: manifest.config
+    config: manifest.config,
   });
   saveInstalledPackages(context, installed);
 
-  output.push('');
-  output.push(`✓ Successfully installed ${manifest.name} (${manifest.version})`);
+  output.push("");
+  output.push(
+    `✓ Successfully installed ${manifest.name} (${manifest.version})`,
+  );
 
-  return { stdout: output.join('\n') + '\n', stderr: '', exitCode: 0 };
+  return { stdout: output.join("\n") + "\n", stderr: "", exitCode: 0 };
 }
 
 /**
  * tpkg uninstall <package> - Remove installed package
  */
-async function uninstallPackage(packageName: string, context: ExecutionContext): Promise<CommandResult> {
+async function uninstallPackage(
+  packageName: string,
+  context: ExecutionContext,
+): Promise<CommandResult> {
   const vfs = context.vfs;
   if (!vfs) {
-    return { stdout: '', stderr: 'tpkg: filesystem not available', exitCode: 1 };
+    return {
+      stdout: "",
+      stderr: "tpkg: filesystem not available",
+      exitCode: 1,
+    };
   }
 
   const installed = loadInstalledPackages(context);
   const pkg = installed.get(packageName);
 
   if (!pkg) {
-    return { stdout: '', stderr: `tpkg: package '${packageName}' is not installed`, exitCode: 1 };
+    return {
+      stdout: "",
+      stderr: `tpkg: package '${packageName}' is not installed`,
+      exitCode: 1,
+    };
   }
 
   const output: string[] = [];
@@ -2384,10 +2555,10 @@ async function uninstallPackage(packageName: string, context: ExecutionContext):
   installed.delete(packageName);
   saveInstalledPackages(context, installed);
 
-  output.push('');
+  output.push("");
   output.push(`✓ Successfully removed ${packageName}`);
 
-  return { stdout: output.join('\n') + '\n', stderr: '', exitCode: 0 };
+  return { stdout: output.join("\n") + "\n", stderr: "", exitCode: 0 };
 }
 
 /**
@@ -2400,7 +2571,7 @@ async function updateIndex(context: ExecutionContext): Promise<CommandResult> {
   const output: string[] = [];
   const allPackages: PackageIndexEntry[] = [];
 
-  output.push('Updating package index...');
+  output.push("Updating package index...");
 
   for (const repo of repositories) {
     output.push(`  Fetching from ${repo}...`);
@@ -2414,21 +2585,30 @@ async function updateIndex(context: ExecutionContext): Promise<CommandResult> {
   }
 
   savePackageIndex(context, allPackages);
-  output.push('');
-  output.push(`✓ Package index updated (${allPackages.length} packages available)`);
+  output.push("");
+  output.push(
+    `✓ Package index updated (${allPackages.length} packages available)`,
+  );
 
-  return { stdout: output.join('\n') + '\n', stderr: '', exitCode: 0 };
+  return { stdout: output.join("\n") + "\n", stderr: "", exitCode: 0 };
 }
 
 /**
  * tpkg upgrade <package> - Upgrade package to latest version
  */
-async function upgradePackage(packageName: string, context: ExecutionContext): Promise<CommandResult> {
+async function upgradePackage(
+  packageName: string,
+  context: ExecutionContext,
+): Promise<CommandResult> {
   const installed = loadInstalledPackages(context);
   const pkg = installed.get(packageName);
 
   if (!pkg) {
-    return { stdout: '', stderr: `tpkg: package '${packageName}' is not installed`, exitCode: 1 };
+    return {
+      stdout: "",
+      stderr: `tpkg: package '${packageName}' is not installed`,
+      exitCode: 1,
+    };
   }
 
   // Check for newer version in repositories
@@ -2438,7 +2618,10 @@ async function upgradePackage(packageName: string, context: ExecutionContext): P
   for (const repo of repositories) {
     const manifest = await fetchPackageManifest(repo, packageName);
     if (manifest) {
-      if (!latestManifest || compareVersions(manifest.version, latestManifest.version) > 0) {
+      if (
+        !latestManifest ||
+        compareVersions(manifest.version, latestManifest.version) > 0
+      ) {
         latestManifest = manifest;
       }
     }
@@ -2446,9 +2629,9 @@ async function upgradePackage(packageName: string, context: ExecutionContext): P
 
   if (!latestManifest) {
     return {
-      stdout: '',
+      stdout: "",
       stderr: `tpkg: could not find package '${packageName}' in any repository`,
-      exitCode: 1
+      exitCode: 1,
     };
   }
 
@@ -2457,19 +2640,21 @@ async function upgradePackage(packageName: string, context: ExecutionContext): P
   if (comparison === 0) {
     return {
       stdout: `${packageName} is already at version ${pkg.version} (latest)\n`,
-      stderr: '',
-      exitCode: 0
+      stderr: "",
+      exitCode: 0,
     };
   } else if (comparison < 0) {
     return {
       stdout: `${packageName} installed version ${pkg.version} is newer than repository version ${latestManifest.version}\n`,
-      stderr: '',
-      exitCode: 0
+      stderr: "",
+      exitCode: 0,
     };
   }
 
   const output: string[] = [];
-  output.push(`Upgrading ${packageName} from ${pkg.version} to ${latestManifest.version}...`);
+  output.push(
+    `Upgrading ${packageName} from ${pkg.version} to ${latestManifest.version}...`,
+  );
 
   // Uninstall old version
   const uninstallResult = await uninstallPackage(packageName, context);
@@ -2483,69 +2668,94 @@ async function upgradePackage(packageName: string, context: ExecutionContext): P
     return installResult;
   }
 
-  output.push(`✓ Successfully upgraded ${packageName} to ${latestManifest.version}`);
-  return { stdout: output.join('\n') + '\n', stderr: '', exitCode: 0 };
+  output.push(
+    `✓ Successfully upgraded ${packageName} to ${latestManifest.version}`,
+  );
+  return { stdout: output.join("\n") + "\n", stderr: "", exitCode: 0 };
 }
 
 /**
  * CLI text-based marketplace listing, used when browser UI is not available.
  * Supports: tpkg marketplace [collection]
  */
-function cliMarketplace(args: string[], context: ExecutionContext): CommandResult {
+function cliMarketplace(
+  args: string[],
+  context: ExecutionContext,
+): CommandResult {
   const installed = loadInstalledPackages(context);
   const filter = args[0]?.toLowerCase();
 
   // If a collection name is given, filter to that collection
-  const collection = COLLECTIONS.find(c => c.id === filter || c.label.toLowerCase() === filter);
+  const collection = COLLECTIONS.find(
+    (c) => c.id === filter || c.label.toLowerCase() === filter,
+  );
   const packages = collection
-    ? MARKETPLACE_PACKAGES.filter(p => p.collection === collection.id)
-    : MARKETPLACE_PACKAGES.filter(p => p.source !== 'enterprise');
+    ? MARKETPLACE_PACKAGES.filter((p) => p.collection === collection.id)
+    : MARKETPLACE_PACKAGES.filter((p) => p.source !== "enterprise");
 
   const output: string[] = [];
-  output.push('\x1b[1mTronOS Marketplace\x1b[0m');
-  output.push('');
+  output.push("\x1b[1mTronOS Marketplace\x1b[0m");
+  output.push("");
 
   if (collection) {
-    output.push(`\x1b[36m${collection.label}\x1b[0m — ${collection.description}`);
-    output.push('');
+    output.push(
+      `\x1b[36m${collection.label}\x1b[0m — ${collection.description}`,
+    );
+    output.push("");
     for (const pkg of packages) {
-      const tag = installed.has(pkg.name) ? ' \x1b[32m[installed]\x1b[0m' : '';
+      const tag = installed.has(pkg.name) ? " \x1b[32m[installed]\x1b[0m" : "";
       output.push(`  \x1b[1m${pkg.name}\x1b[0m (${pkg.version})${tag}`);
       output.push(`    ${pkg.description}`);
     }
   } else {
     // Group by collection
     for (const col of COLLECTIONS) {
-      const colPkgs = MARKETPLACE_PACKAGES.filter(p => p.collection === col.id && p.source !== 'enterprise');
+      const colPkgs = MARKETPLACE_PACKAGES.filter(
+        (p) => p.collection === col.id && p.source !== "enterprise",
+      );
       if (colPkgs.length === 0) continue;
       output.push(`\x1b[36m${col.label}\x1b[0m (${colPkgs.length})`);
       for (const pkg of colPkgs) {
-        const tag = installed.has(pkg.name) ? ' \x1b[32m[installed]\x1b[0m' : '';
+        const tag = installed.has(pkg.name)
+          ? " \x1b[32m[installed]\x1b[0m"
+          : "";
         output.push(`  ${pkg.name}${tag} — ${pkg.description}`);
       }
-      output.push('');
+      output.push("");
     }
   }
 
-  output.push(`\x1b[90mInstall: tpkg install <package>  |  Filter: tpkg marketplace <collection>\x1b[0m`);
-  output.push(`\x1b[90mCollections: ${COLLECTIONS.map(c => c.id).join(', ')}\x1b[0m`);
+  output.push(
+    `\x1b[90mInstall: tpkg install <package>  |  Filter: tpkg marketplace <collection>\x1b[0m`,
+  );
+  output.push(
+    `\x1b[90mCollections: ${COLLECTIONS.map((c) => c.id).join(", ")}\x1b[0m`,
+  );
 
-  return { stdout: output.join('\n') + '\n', stderr: '', exitCode: 0 };
+  return { stdout: output.join("\n") + "\n", stderr: "", exitCode: 0 };
 }
 
 /**
  * tpkg search <term> - Search the marketplace registry
  */
-function searchMarketplace(term: string, context: ExecutionContext): CommandResult {
+function searchMarketplace(
+  term: string,
+  context: ExecutionContext,
+): CommandResult {
   const termLower = term.toLowerCase();
-  const matches = MARKETPLACE_PACKAGES.filter(pkg =>
-    pkg.name.toLowerCase().includes(termLower) ||
-    pkg.description.toLowerCase().includes(termLower) ||
-    pkg.collection.toLowerCase().includes(termLower)
+  const matches = MARKETPLACE_PACKAGES.filter(
+    (pkg) =>
+      pkg.name.toLowerCase().includes(termLower) ||
+      pkg.description.toLowerCase().includes(termLower) ||
+      pkg.collection.toLowerCase().includes(termLower),
   );
 
   if (matches.length === 0) {
-    return { stdout: `No packages found matching '${term}'\n`, stderr: '', exitCode: 0 };
+    return {
+      stdout: `No packages found matching '${term}'\n`,
+      stderr: "",
+      exitCode: 0,
+    };
   }
 
   const installed = loadInstalledPackages(context);
@@ -2553,13 +2763,13 @@ function searchMarketplace(term: string, context: ExecutionContext): CommandResu
   output.push(`Found ${matches.length} package(s) matching '${term}':\n`);
 
   for (const pkg of matches) {
-    const tag = installed.has(pkg.name) ? ' \x1b[32m[installed]\x1b[0m' : '';
+    const tag = installed.has(pkg.name) ? " \x1b[32m[installed]\x1b[0m" : "";
     output.push(`  \x1b[1m${pkg.name}\x1b[0m (${pkg.version})${tag}`);
     output.push(`    ${pkg.description}`);
-    output.push('');
+    output.push("");
   }
 
-  return { stdout: output.join('\n'), stderr: '', exitCode: 0 };
+  return { stdout: output.join("\n"), stderr: "", exitCode: 0 };
 }
 
 /**
@@ -2569,7 +2779,7 @@ async function listPackages(context: ExecutionContext): Promise<CommandResult> {
   const installed = loadInstalledPackages(context);
 
   if (installed.size === 0) {
-    return { stdout: 'No packages installed.\n', stderr: '', exitCode: 0 };
+    return { stdout: "No packages installed.\n", stderr: "", exitCode: 0 };
   }
 
   const output: string[] = [];
@@ -2578,17 +2788,20 @@ async function listPackages(context: ExecutionContext): Promise<CommandResult> {
   for (const [name, pkg] of installed) {
     output.push(`  ${name} (${pkg.version})`);
     output.push(`    Installed: ${pkg.installedAt}`);
-    output.push(`    Files: ${pkg.files.join(', ')}`);
-    output.push('');
+    output.push(`    Files: ${pkg.files.join(", ")}`);
+    output.push("");
   }
 
-  return { stdout: output.join('\n'), stderr: '', exitCode: 0 };
+  return { stdout: output.join("\n"), stderr: "", exitCode: 0 };
 }
 
 /**
  * tpkg info <package> - Show package details
  */
-async function showPackageInfo(packageName: string, context: ExecutionContext): Promise<CommandResult> {
+async function showPackageInfo(
+  packageName: string,
+  context: ExecutionContext,
+): Promise<CommandResult> {
   // First check if installed
   const installed = loadInstalledPackages(context);
   const installedPkg = installed.get(packageName);
@@ -2604,10 +2817,14 @@ async function showPackageInfo(packageName: string, context: ExecutionContext): 
 
   // Also check local index
   const index = loadPackageIndex(context);
-  const indexEntry = index.find(p => p.name === packageName);
+  const indexEntry = index.find((p) => p.name === packageName);
 
   if (!manifest && !installedPkg && !indexEntry) {
-    return { stdout: '', stderr: `tpkg: package '${packageName}' not found`, exitCode: 1 };
+    return {
+      stdout: "",
+      stderr: `tpkg: package '${packageName}' not found`,
+      exitCode: 1,
+    };
   }
 
   const output: string[] = [];
@@ -2618,23 +2835,26 @@ async function showPackageInfo(packageName: string, context: ExecutionContext): 
     output.push(`Description: ${manifest.description}`);
     if (manifest.author) output.push(`Author: ${manifest.author}`);
     if (manifest.license) output.push(`License: ${manifest.license}`);
-    output.push(`Files: ${manifest.files.join(', ')}`);
+    output.push(`Files: ${manifest.files.join(", ")}`);
 
     if (manifest.dependencies && manifest.dependencies.length > 0) {
-      output.push(`Dependencies: ${manifest.dependencies.join(', ')}`);
+      output.push(`Dependencies: ${manifest.dependencies.join(", ")}`);
     }
 
     if (manifest.config && manifest.config.length > 0) {
-      output.push('');
-      output.push('Configuration options:');
+      output.push("");
+      output.push("Configuration options:");
       for (const param of manifest.config) {
-        const required = param.required ? ' (required)' : '';
-        const secret = param.secret ? ' [secret]' : '';
-        const defaultVal = param.default !== undefined ? ` [default: ${param.default}]` : '';
-        output.push(`  ${param.key}: ${param.type}${required}${secret}${defaultVal}`);
+        const required = param.required ? " (required)" : "";
+        const secret = param.secret ? " [secret]" : "";
+        const defaultVal =
+          param.default !== undefined ? ` [default: ${param.default}]` : "";
+        output.push(
+          `  ${param.key}: ${param.type}${required}${secret}${defaultVal}`,
+        );
         output.push(`    ${param.description}`);
         if (param.choices) {
-          output.push(`    Choices: ${param.choices.join(', ')}`);
+          output.push(`    Choices: ${param.choices.join(", ")}`);
         }
       }
     }
@@ -2645,63 +2865,86 @@ async function showPackageInfo(packageName: string, context: ExecutionContext): 
     if (indexEntry.author) output.push(`Author: ${indexEntry.author}`);
   }
 
-  output.push('');
+  output.push("");
   if (installedPkg) {
     output.push(`Status: Installed (${installedPkg.version})`);
     output.push(`Installed: ${installedPkg.installedAt}`);
   } else {
-    output.push('Status: Not installed');
+    output.push("Status: Not installed");
   }
 
-  return { stdout: output.join('\n') + '\n', stderr: '', exitCode: 0 };
+  return { stdout: output.join("\n") + "\n", stderr: "", exitCode: 0 };
 }
 
 /**
  * tpkg repo add/remove/list - Manage repositories
  */
-async function manageRepositories(args: string[], context: ExecutionContext): Promise<CommandResult> {
+async function manageRepositories(
+  args: string[],
+  context: ExecutionContext,
+): Promise<CommandResult> {
   await ensureDirectories(context);
 
   const subcommand = args[0];
   const repos = loadRepositories(context);
 
   switch (subcommand) {
-    case 'add': {
+    case "add": {
       if (args.length < 2) {
-        return { stdout: '', stderr: 'Usage: tpkg repo add <url>', exitCode: 1 };
+        return {
+          stdout: "",
+          stderr: "Usage: tpkg repo add <url>",
+          exitCode: 1,
+        };
       }
       const url = args[1];
       if (repos.includes(url)) {
-        return { stdout: '', stderr: `tpkg: repository '${url}' is already configured`, exitCode: 1 };
+        return {
+          stdout: "",
+          stderr: `tpkg: repository '${url}' is already configured`,
+          exitCode: 1,
+        };
       }
       repos.push(url);
       saveRepositories(context, repos);
-      return { stdout: `Added repository: ${url}\n`, stderr: '', exitCode: 0 };
+      return { stdout: `Added repository: ${url}\n`, stderr: "", exitCode: 0 };
     }
 
-    case 'remove': {
+    case "remove": {
       if (args.length < 2) {
-        return { stdout: '', stderr: 'Usage: tpkg repo remove <url>', exitCode: 1 };
+        return {
+          stdout: "",
+          stderr: "Usage: tpkg repo remove <url>",
+          exitCode: 1,
+        };
       }
       const url = args[1];
       const index = repos.indexOf(url);
       if (index === -1) {
-        return { stdout: '', stderr: `tpkg: repository '${url}' is not configured`, exitCode: 1 };
+        return {
+          stdout: "",
+          stderr: `tpkg: repository '${url}' is not configured`,
+          exitCode: 1,
+        };
       }
       repos.splice(index, 1);
       saveRepositories(context, repos);
-      return { stdout: `Removed repository: ${url}\n`, stderr: '', exitCode: 0 };
+      return {
+        stdout: `Removed repository: ${url}\n`,
+        stderr: "",
+        exitCode: 0,
+      };
     }
 
-    case 'list':
+    case "list":
     default: {
       const output: string[] = [];
-      output.push('Configured repositories:');
+      output.push("Configured repositories:");
       for (const repo of repos) {
-        const isDefault = repo === DEFAULT_REPOSITORY ? ' (default)' : '';
+        const isDefault = repo === DEFAULT_REPOSITORY ? " (default)" : "";
         output.push(`  ${repo}${isDefault}`);
       }
-      return { stdout: output.join('\n') + '\n', stderr: '', exitCode: 0 };
+      return { stdout: output.join("\n") + "\n", stderr: "", exitCode: 0 };
     }
   }
 }
@@ -2709,16 +2952,28 @@ async function manageRepositories(args: string[], context: ExecutionContext): Pr
 /**
  * tpkg config <package> - Configure installed package (interactive if terminal available)
  */
-async function configurePackage(packageName: string, context: ExecutionContext, interactive?: boolean): Promise<CommandResult> {
+async function configurePackage(
+  packageName: string,
+  context: ExecutionContext,
+  interactive?: boolean,
+): Promise<CommandResult> {
   const vfs = context.vfs;
   if (!vfs) {
-    return { stdout: '', stderr: 'tpkg: filesystem not available', exitCode: 1 };
+    return {
+      stdout: "",
+      stderr: "tpkg: filesystem not available",
+      exitCode: 1,
+    };
   }
 
   const installed = loadInstalledPackages(context);
   const pkg = installed.get(packageName);
   if (!pkg) {
-    return { stdout: '', stderr: `tpkg: package '${packageName}' is not installed`, exitCode: 1 };
+    return {
+      stdout: "",
+      stderr: `tpkg: package '${packageName}' is not installed`,
+      exitCode: 1,
+    };
   }
 
   // Get manifest to show config options - first try from installed package record
@@ -2743,7 +2998,7 @@ async function configurePackage(packageName: string, context: ExecutionContext, 
   if (vfs.exists(configPath)) {
     try {
       const content = vfs.read(configPath);
-      if (typeof content === 'string') {
+      if (typeof content === "string") {
         currentConfig = JSON.parse(content);
       }
     } catch {
@@ -2766,10 +3021,10 @@ async function configurePackage(packageName: string, context: ExecutionContext, 
     for (const param of configSchema) {
       // Show current value
       const currentValue = currentConfig[param.key];
-      let displayCurrent = '';
+      let displayCurrent = "";
       if (currentValue !== undefined) {
         if (param.secret) {
-          displayCurrent = ' [current: ********]';
+          displayCurrent = " [current: ********]";
         } else {
           displayCurrent = ` [current: ${currentValue}]`;
         }
@@ -2779,18 +3034,18 @@ async function configurePackage(packageName: string, context: ExecutionContext, 
 
       // Build prompt string
       let promptText = `  ${param.key}`;
-      if (param.type === 'choice' && param.choices) {
-        promptText += ` (${param.choices.join('/')})`;
-      } else if (param.type === 'boolean') {
-        promptText += ' (yes/no)';
-      } else if (param.type === 'number') {
-        promptText += ' (number)';
+      if (param.type === "choice" && param.choices) {
+        promptText += ` (${param.choices.join("/")})`;
+      } else if (param.type === "boolean") {
+        promptText += " (yes/no)";
+      } else if (param.type === "number") {
+        promptText += " (number)";
       }
       promptText += `${displayCurrent}: `;
 
       // Show description
       terminal?.write(`  ${param.description}\r\n`);
-      const required = param.required ? ' (required)' : '';
+      const required = param.required ? " (required)" : "";
       terminal?.write(`  Type: ${param.type}${required}\r\n`);
 
       // Prompt for value
@@ -2799,8 +3054,8 @@ async function configurePackage(packageName: string, context: ExecutionContext, 
         : await readLine(terminal, promptText);
 
       // Skip if empty (keep current value or default)
-      if (input.trim() === '') {
-        terminal?.write('\r\n');
+      if (input.trim() === "") {
+        terminal?.write("\r\n");
         continue;
       }
 
@@ -2813,66 +3068,83 @@ async function configurePackage(packageName: string, context: ExecutionContext, 
 
       if (parsedValue !== undefined) {
         // Encrypt secret values
-        if (param.secret && typeof parsedValue === 'string') {
+        if (param.secret && typeof parsedValue === "string") {
           currentConfig[param.key] = encryptSecret(parsedValue, packageName);
         } else {
           currentConfig[param.key] = parsedValue;
         }
         terminal?.write(`  ✓ Set ${param.key}\r\n`);
       }
-      terminal?.write('\r\n');
+      terminal?.write("\r\n");
     }
 
     // Save config
     vfs.write(configPath, JSON.stringify(currentConfig, null, 2));
 
     terminal?.write(`Configuration saved to ${configPath}\r\n`);
-    return { stdout: '', stderr: '', exitCode: 0 };
+    return { stdout: "", stderr: "", exitCode: 0 };
   }
 
   // Non-interactive mode - just show current config
   const output: string[] = [];
   output.push(`Configuration for ${packageName}:`);
-  output.push('');
+  output.push("");
 
   if (configSchema && configSchema.length > 0) {
     for (const param of configSchema) {
       const value = currentConfig[param.key];
-      const displayValue = param.secret && value ? '********' : (value ?? '(not set)');
-      const required = param.required && value === undefined ? ' ⚠ required' : '';
+      const displayValue =
+        param.secret && value ? "********" : (value ?? "(not set)");
+      const required =
+        param.required && value === undefined ? " ⚠ required" : "";
       output.push(`  ${param.key}: ${displayValue}${required}`);
       output.push(`    ${param.description}`);
     }
-    output.push('');
-    output.push('To set a value: tpkg config set <package> <key> <value>');
-    output.push('To configure interactively, run in a terminal.');
+    output.push("");
+    output.push("To set a value: tpkg config set <package> <key> <value>");
+    output.push("To configure interactively, run in a terminal.");
   } else {
-    output.push('  No configuration options available for this package.');
+    output.push("  No configuration options available for this package.");
   }
 
-  return { stdout: output.join('\n') + '\n', stderr: '', exitCode: 0 };
+  return { stdout: output.join("\n") + "\n", stderr: "", exitCode: 0 };
 }
 
 /**
  * tpkg config set <package> <key> <value> - Set config value
  */
-async function setConfigValue(args: string[], context: ExecutionContext): Promise<CommandResult> {
+async function setConfigValue(
+  args: string[],
+  context: ExecutionContext,
+): Promise<CommandResult> {
   if (args.length < 3) {
-    return { stdout: '', stderr: 'Usage: tpkg config set <package> <key> <value>', exitCode: 1 };
+    return {
+      stdout: "",
+      stderr: "Usage: tpkg config set <package> <key> <value>",
+      exitCode: 1,
+    };
   }
 
   const vfs = context.vfs;
   if (!vfs) {
-    return { stdout: '', stderr: 'tpkg: filesystem not available', exitCode: 1 };
+    return {
+      stdout: "",
+      stderr: "tpkg: filesystem not available",
+      exitCode: 1,
+    };
   }
 
   const [packageName, key, ...valueParts] = args;
-  const value = valueParts.join(' ');
+  const value = valueParts.join(" ");
 
   const installed = loadInstalledPackages(context);
   const pkg = installed.get(packageName);
   if (!pkg) {
-    return { stdout: '', stderr: `tpkg: package '${packageName}' is not installed`, exitCode: 1 };
+    return {
+      stdout: "",
+      stderr: `tpkg: package '${packageName}' is not installed`,
+      exitCode: 1,
+    };
   }
 
   const configDir = `${PACKAGE_CONFIG_DIR}/${packageName}`;
@@ -2887,7 +3159,7 @@ async function setConfigValue(args: string[], context: ExecutionContext): Promis
   if (vfs.exists(configPath)) {
     try {
       const content = vfs.read(configPath);
-      if (typeof content === 'string') {
+      if (typeof content === "string") {
         currentConfig = JSON.parse(content);
       }
     } catch {
@@ -2896,114 +3168,142 @@ async function setConfigValue(args: string[], context: ExecutionContext): Promis
   }
 
   // Check if this key is marked as secret in the package config schema
-  const configParam = pkg.config?.find(p => p.key === key);
+  const configParam = pkg.config?.find((p) => p.key === key);
   const isSecret = configParam?.secret === true;
 
   // Try to parse as number or boolean (only for non-secrets)
   let parsedValue: string | number | boolean = value;
   if (!isSecret) {
-    if (value === 'true') parsedValue = true;
-    else if (value === 'false') parsedValue = false;
+    if (value === "true") parsedValue = true;
+    else if (value === "false") parsedValue = false;
     else if (!isNaN(Number(value))) parsedValue = Number(value);
   }
 
   // Encrypt secret values
-  if (isSecret && typeof parsedValue === 'string') {
+  if (isSecret && typeof parsedValue === "string") {
     parsedValue = encryptSecret(parsedValue, packageName);
   }
 
   currentConfig[key] = parsedValue;
   vfs.write(configPath, JSON.stringify(currentConfig, null, 2));
 
-  return { stdout: `Set ${packageName}.${key} = ${isSecret ? '********' : value}\n`, stderr: '', exitCode: 0 };
+  return {
+    stdout: `Set ${packageName}.${key} = ${isSecret ? "********" : value}\n`,
+    stderr: "",
+    exitCode: 0,
+  };
 }
 
 /**
  * Main tpkg command handler
  */
-export const tpkg: BuiltinCommand = async (args: string[], context: ExecutionContext): Promise<CommandResult> => {
-  const subcommand = args[0] || 'help';
+export const tpkg: BuiltinCommand = async (
+  args: string[],
+  context: ExecutionContext,
+): Promise<CommandResult> => {
+  const subcommand = args[0] || "help";
 
   switch (subcommand) {
-    case 'install':
-    case 'i':
+    case "install":
+    case "i":
       if (args.length < 2) {
-        return { stdout: '', stderr: 'Usage: tpkg install <package>', exitCode: 1 };
+        return {
+          stdout: "",
+          stderr: "Usage: tpkg install <package>",
+          exitCode: 1,
+        };
       }
       return installPackage(args[1], context);
 
-    case 'uninstall':
-    case 'remove':
-    case 'rm':
+    case "uninstall":
+    case "remove":
+    case "rm":
       if (args.length < 2) {
-        return { stdout: '', stderr: 'Usage: tpkg uninstall <package>', exitCode: 1 };
+        return {
+          stdout: "",
+          stderr: "Usage: tpkg uninstall <package>",
+          exitCode: 1,
+        };
       }
       return uninstallPackage(args[1], context);
 
-    case 'update':
+    case "update":
       return updateIndex(context);
 
-    case 'upgrade':
-    case 'up':
+    case "upgrade":
+    case "up":
       if (args.length < 2) {
-        return { stdout: '', stderr: 'Usage: tpkg upgrade <package>', exitCode: 1 };
+        return {
+          stdout: "",
+          stderr: "Usage: tpkg upgrade <package>",
+          exitCode: 1,
+        };
       }
       return upgradePackage(args[1], context);
 
-    case 'search':
-    case 's':
+    case "search":
+    case "s":
       if (args.length < 2) {
-        return { stdout: '', stderr: 'Usage: tpkg search <term>', exitCode: 1 };
+        return { stdout: "", stderr: "Usage: tpkg search <term>", exitCode: 1 };
       }
       return searchMarketplace(args[1], context);
 
-    case 'list':
-    case 'ls':
+    case "list":
+    case "ls":
       return listPackages(context);
 
-    case 'available':
-    case 'avail':
+    case "available":
+    case "avail":
       return cliMarketplace([], context);
 
-    case 'info':
-    case 'show':
+    case "info":
+    case "show":
       if (args.length < 2) {
-        return { stdout: '', stderr: 'Usage: tpkg info <package>', exitCode: 1 };
+        return {
+          stdout: "",
+          stderr: "Usage: tpkg info <package>",
+          exitCode: 1,
+        };
       }
       return showPackageInfo(args[1], context);
 
-    case 'repo':
+    case "repo":
       return manageRepositories(args.slice(1), context);
 
-    case 'config':
+    case "config":
       if (args.length < 2) {
-        return { stdout: '', stderr: 'Usage: tpkg config <package> or tpkg config set <package> <key> <value>', exitCode: 1 };
+        return {
+          stdout: "",
+          stderr:
+            "Usage: tpkg config <package> or tpkg config set <package> <key> <value>",
+          exitCode: 1,
+        };
       }
-      if (args[1] === 'set') {
+      if (args[1] === "set") {
         return setConfigValue(args.slice(2), context);
       }
       return configurePackage(args[1], context);
 
-    case 'auth':
+    case "auth":
       return handleAuth(args.slice(1), context);
 
-    case 'marketplace':
-    case 'market':
-    case 'store':
+    case "marketplace":
+    case "market":
+    case "store":
       if (isBrowser()) {
         return {
-          stdout: 'Opening marketplace...\n',
-          stderr: '',
+          stdout: "Opening marketplace...\n",
+          stderr: "",
           exitCode: 0,
-          uiRequest: 'showMarketplace'
+          uiRequest: "showMarketplace",
         };
       }
       // CLI mode: render text-based marketplace
       return cliMarketplace(args.slice(1), context);
 
-    case 'help':
-    case '-h':
-    case '--help':
+    case "help":
+    case "-h":
+    case "--help":
     default:
       return {
         stdout: `tpkg - TronOS Package Manager
@@ -3048,8 +3348,13 @@ Examples:
   tpkg auth login             Authenticate for enterprise packages
   tpkg list                   List installed packages
 `,
-        stderr: '',
-        exitCode: subcommand === 'help' || subcommand === '-h' || subcommand === '--help' ? 0 : 1
+        stderr: "",
+        exitCode:
+          subcommand === "help" ||
+          subcommand === "-h" ||
+          subcommand === "--help"
+            ? 0
+            : 1,
       };
   }
 };
@@ -3058,7 +3363,11 @@ Examples:
 export { parseVersion, compareVersions, satisfiesVersion };
 
 // Export bundled package data for testing
-export { BUNDLED_PACKAGE_INDEX, BUNDLED_PACKAGE_MANIFESTS, BUNDLED_PACKAGE_FILES };
+export {
+  BUNDLED_PACKAGE_INDEX,
+  BUNDLED_PACKAGE_MANIFESTS,
+  BUNDLED_PACKAGE_FILES,
+};
 
 // Export config validation for testing
 export { validateConfigInput };

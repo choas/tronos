@@ -176,14 +176,17 @@ describe("timewarp builtin command", () => {
         author: "user",
       });
 
-      const result = await timewarp(["save", "test.txt", "My", "commit", "message"], context);
+      const result = await timewarp(
+        ["save", "test.txt", "My", "commit", "message"],
+        context,
+      );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain("Saved version");
       expect(saveVersion).toHaveBeenCalledWith(
         "test_namespace",
         "/home/user/test.txt",
         "Hello, World!",
-        { message: "My commit message", author: "user" }
+        { message: "My commit message", author: "user" },
       );
     });
   });
@@ -197,7 +200,10 @@ describe("timewarp builtin command", () => {
 
     it("should show error for non-existent version", async () => {
       (getFileVersions as Mock).mockResolvedValue([]);
-      const result = await timewarp(["revert", "test.txt", "abc12345"], context);
+      const result = await timewarp(
+        ["revert", "test.txt", "abc12345"],
+        context,
+      );
       expect(result.exitCode).toBe(1);
       expect(result.stderr).toContain("not found");
     });
@@ -226,7 +232,10 @@ describe("timewarp builtin command", () => {
         content: "Old content",
       });
 
-      const result = await timewarp(["revert", "test.txt", "abc12345"], context);
+      const result = await timewarp(
+        ["revert", "test.txt", "abc12345"],
+        context,
+      );
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain("Reverted");
       expect(vfs.readSync("/home/user/test.txt")).toBe("Old content");

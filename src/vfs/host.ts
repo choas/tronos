@@ -13,10 +13,10 @@
  * @module vfs/host
  */
 
-import * as fs from 'node:fs';
-import * as nodePath from 'node:path';
-import type { DirectoryNode, FSNode } from '../types';
-import { InMemoryVFS } from './memory';
+import * as fs from "node:fs";
+import * as nodePath from "node:path";
+import type { DirectoryNode, FSNode } from "../types";
+import { InMemoryVFS } from "./memory";
 
 /**
  * Configuration for the host filesystem mount.
@@ -44,7 +44,7 @@ export interface HostMountConfig {
 /**
  * Default mount point for the host filesystem.
  */
-export const DEFAULT_MOUNT_POINT = '/mnt/host';
+export const DEFAULT_MOUNT_POINT = "/mnt/host";
 
 /**
  * HybridVFS combines the in-memory VFS with real filesystem access.
@@ -80,11 +80,11 @@ export class HybridVFS extends InMemoryVFS {
    * @param namespace - VFS namespace for persistence (passed to InMemoryVFS)
    * @param config - Host mount configuration
    */
-  constructor(namespace = 'default', config?: HostMountConfig) {
+  constructor(namespace = "default", config?: HostMountConfig) {
     super(namespace);
 
     this.mountPoint = config?.mountPoint ?? DEFAULT_MOUNT_POINT;
-    this.hostPath = config?.hostPath ?? process.env.HOME ?? '/';
+    this.hostPath = config?.hostPath ?? process.env.HOME ?? "/";
     this.allowWrite = config?.allowWrite ?? true;
 
     // Normalize paths
@@ -100,7 +100,7 @@ export class HybridVFS extends InMemoryVFS {
 
     // Create mount point directory in virtual FS
     if (!this.existsInVirtual(this.mountPoint)) {
-      this.mkdirInVirtual('/mnt', true);
+      this.mkdirInVirtual("/mnt", true);
       this.mkdirInVirtual(this.mountPoint, false);
     }
 
@@ -139,7 +139,9 @@ export class HybridVFS extends InMemoryVFS {
    */
   private isHostPath(p: string): boolean {
     const resolved = this.resolve(p);
-    return resolved === this.mountPoint || resolved.startsWith(this.mountPoint + '/');
+    return (
+      resolved === this.mountPoint || resolved.startsWith(this.mountPoint + "/")
+    );
   }
 
   /**
@@ -154,9 +156,10 @@ export class HybridVFS extends InMemoryVFS {
     }
 
     // Get the relative path from the mount point
-    const relativePath = resolved === this.mountPoint
-      ? ''
-      : resolved.slice(this.mountPoint.length + 1);
+    const relativePath =
+      resolved === this.mountPoint
+        ? ""
+        : resolved.slice(this.mountPoint.length + 1);
 
     // Join with the host path
     const realPath = nodePath.join(this.hostPath, relativePath);
@@ -164,8 +167,13 @@ export class HybridVFS extends InMemoryVFS {
     // Security check: ensure the resolved path is still within hostPath
     // This prevents path traversal attacks (e.g., /mnt/host/../../../etc/passwd)
     const normalizedRealPath = nodePath.resolve(realPath);
-    if (!normalizedRealPath.startsWith(this.hostPath) && normalizedRealPath !== this.hostPath) {
-      console.warn(`Path traversal detected: ${virtualPath} resolved to ${normalizedRealPath}`);
+    if (
+      !normalizedRealPath.startsWith(this.hostPath) &&
+      normalizedRealPath !== this.hostPath
+    ) {
+      console.warn(
+        `Path traversal detected: ${virtualPath} resolved to ${normalizedRealPath}`,
+      );
       return null;
     }
 
@@ -212,29 +220,29 @@ export class HybridVFS extends InMemoryVFS {
 
       try {
         const stats = fs.statSync(hostPath);
-        const name = nodePath.basename(hostPath) || 'host';
+        const name = nodePath.basename(hostPath) || "host";
         const parent = nodePath.dirname(this.resolve(p));
 
         if (stats.isDirectory()) {
           return {
             name,
-            type: 'directory',
+            type: "directory",
             parent: parent === this.resolve(p) ? null : parent,
             meta: {
               createdAt: stats.birthtime.getTime(),
-              updatedAt: stats.mtime.getTime()
+              updatedAt: stats.mtime.getTime(),
             },
-            children: []  // Not populated for stat
+            children: [], // Not populated for stat
           } as DirectoryNode;
         } else {
           return {
             name,
-            type: 'file',
+            type: "file",
             parent,
             meta: {
               createdAt: stats.birthtime.getTime(),
-              updatedAt: stats.mtime.getTime()
-            }
+              updatedAt: stats.mtime.getTime(),
+            },
           } as FSNode;
         }
       } catch (error) {
@@ -259,12 +267,12 @@ export class HybridVFS extends InMemoryVFS {
         if (stats.isDirectory()) {
           throw new Error(`read: not a file: ${p}`);
         }
-        return fs.readFileSync(hostPath, 'utf-8');
+        return fs.readFileSync(hostPath, "utf-8");
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
           throw new Error(`read: no such file or directory: ${p}`);
         }
-        if ((error as NodeJS.ErrnoException).code === 'EISDIR') {
+        if ((error as NodeJS.ErrnoException).code === "EISDIR") {
           throw new Error(`read: not a file: ${p}`);
         }
         throw error;
@@ -291,7 +299,9 @@ export class HybridVFS extends InMemoryVFS {
         // Ensure parent directory exists
         const parentDir = nodePath.dirname(hostPath);
         if (!fs.existsSync(parentDir)) {
-          throw new Error(`write: no such file or directory: ${nodePath.dirname(p)}`);
+          throw new Error(
+            `write: no such file or directory: ${nodePath.dirname(p)}`,
+          );
         }
 
         // Check if it's a directory
@@ -299,9 +309,9 @@ export class HybridVFS extends InMemoryVFS {
           throw new Error(`write: not a file: ${p}`);
         }
 
-        fs.writeFileSync(hostPath, content, 'utf-8');
+        fs.writeFileSync(hostPath, content, "utf-8");
       } catch (error) {
-        if ((error as Error).message.startsWith('write:')) {
+        if ((error as Error).message.startsWith("write:")) {
           throw error;
         }
         throw new Error(`write: ${(error as Error).message}`);
@@ -331,9 +341,9 @@ export class HybridVFS extends InMemoryVFS {
           throw new Error(`append: not a file: ${p}`);
         }
 
-        fs.appendFileSync(hostPath, content, 'utf-8');
+        fs.appendFileSync(hostPath, content, "utf-8");
       } catch (error) {
-        if ((error as Error).message.startsWith('append:')) {
+        if ((error as Error).message.startsWith("append:")) {
           throw error;
         }
         throw new Error(`append: ${(error as Error).message}`);
@@ -395,10 +405,10 @@ export class HybridVFS extends InMemoryVFS {
         }
         return fs.readdirSync(hostPath);
       } catch (error) {
-        if ((error as Error).message.startsWith('list:')) {
+        if ((error as Error).message.startsWith("list:")) {
           throw error;
         }
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
           throw new Error(`list: no such directory: ${p}`);
         }
         throw error;
@@ -426,7 +436,7 @@ export class HybridVFS extends InMemoryVFS {
         const entries = fs.readdirSync(hostPath, { withFileTypes: true });
         const resolvedPath = this.resolve(p);
 
-        return entries.map(entry => {
+        return entries.map((entry) => {
           const entryPath = nodePath.join(hostPath, entry.name);
           let entryStats: fs.Stats;
 
@@ -436,43 +446,43 @@ export class HybridVFS extends InMemoryVFS {
             // If we can't stat the file (permission error, etc.), use defaults
             return {
               name: entry.name,
-              type: entry.isDirectory() ? 'directory' : 'file',
+              type: entry.isDirectory() ? "directory" : "file",
               parent: resolvedPath,
               meta: {
                 createdAt: Date.now(),
-                updatedAt: Date.now()
-              }
+                updatedAt: Date.now(),
+              },
             } as FSNode;
           }
 
           if (entry.isDirectory()) {
             return {
               name: entry.name,
-              type: 'directory',
+              type: "directory",
               parent: resolvedPath,
               meta: {
                 createdAt: entryStats.birthtime.getTime(),
-                updatedAt: entryStats.mtime.getTime()
+                updatedAt: entryStats.mtime.getTime(),
               },
-              children: []
+              children: [],
             } as DirectoryNode;
           } else {
             return {
               name: entry.name,
-              type: 'file',
+              type: "file",
               parent: resolvedPath,
               meta: {
                 createdAt: entryStats.birthtime.getTime(),
-                updatedAt: entryStats.mtime.getTime()
-              }
+                updatedAt: entryStats.mtime.getTime(),
+              },
             } as FSNode;
           }
         });
       } catch (error) {
-        if ((error as Error).message.startsWith('listDetailed:')) {
+        if ((error as Error).message.startsWith("listDetailed:")) {
           throw error;
         }
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
           throw new Error(`listDetailed: no such directory: ${p}`);
         }
         throw error;
@@ -502,7 +512,7 @@ export class HybridVFS extends InMemoryVFS {
 
         fs.mkdirSync(hostPath, { recursive });
       } catch (error) {
-        if ((error as Error).message.startsWith('mkdir:')) {
+        if ((error as Error).message.startsWith("mkdir:")) {
           throw error;
         }
         throw new Error(`mkdir: ${(error as Error).message}`);
@@ -550,10 +560,10 @@ export class HybridVFS extends InMemoryVFS {
           fs.unlinkSync(hostPath);
         }
       } catch (error) {
-        if ((error as Error).message.startsWith('remove:')) {
+        if ((error as Error).message.startsWith("remove:")) {
           throw error;
         }
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
           throw new Error(`remove: no such file or directory: ${p}`);
         }
         throw error;
@@ -607,7 +617,9 @@ export class HybridVFS extends InMemoryVFS {
 
     if (stats.isDirectory()) {
       if (!recursive) {
-        throw new Error(`copy: source is a directory (and recursive option is not used): ${src}`);
+        throw new Error(
+          `copy: source is a directory (and recursive option is not used): ${src}`,
+        );
       }
       fs.cpSync(srcPath, destPath, { recursive: true });
     } else {
@@ -615,7 +627,11 @@ export class HybridVFS extends InMemoryVFS {
     }
   }
 
-  private copyHostToVirtual(src: string, dest: string, recursive: boolean): void {
+  private copyHostToVirtual(
+    src: string,
+    dest: string,
+    recursive: boolean,
+  ): void {
     const srcPath = this.toHostPath(src);
 
     if (!srcPath || !this.mounted) {
@@ -634,7 +650,9 @@ export class HybridVFS extends InMemoryVFS {
 
     if (stats.isDirectory()) {
       if (!recursive) {
-        throw new Error(`copy: source is a directory (and recursive option is not used): ${src}`);
+        throw new Error(
+          `copy: source is a directory (and recursive option is not used): ${src}`,
+        );
       }
 
       super.mkdir(dest);
@@ -645,12 +663,16 @@ export class HybridVFS extends InMemoryVFS {
         this.copyHostToVirtual(srcChild, destChild, true);
       }
     } else {
-      const content = fs.readFileSync(srcPath, 'utf-8');
+      const content = fs.readFileSync(srcPath, "utf-8");
       super.write(dest, content);
     }
   }
 
-  private copyVirtualToHost(src: string, dest: string, recursive: boolean): void {
+  private copyVirtualToHost(
+    src: string,
+    dest: string,
+    recursive: boolean,
+  ): void {
     if (!this.allowWrite) {
       throw new Error(`copy: filesystem mounted read-only`);
     }
@@ -671,9 +693,11 @@ export class HybridVFS extends InMemoryVFS {
 
     const stats = super.stat(src);
 
-    if (stats.type === 'directory') {
+    if (stats.type === "directory") {
       if (!recursive) {
-        throw new Error(`copy: source is a directory (and recursive option is not used): ${src}`);
+        throw new Error(
+          `copy: source is a directory (and recursive option is not used): ${src}`,
+        );
       }
 
       fs.mkdirSync(destPath, { recursive: true });
@@ -685,11 +709,11 @@ export class HybridVFS extends InMemoryVFS {
       }
     } else {
       const content = super.read(src);
-      if (typeof content === 'string') {
-        fs.writeFileSync(destPath, content, 'utf-8');
+      if (typeof content === "string") {
+        fs.writeFileSync(destPath, content, "utf-8");
       } else {
         // Handle Promise case (shouldn't happen for virtual files)
-        content.then(c => fs.writeFileSync(destPath, c, 'utf-8'));
+        content.then((c) => fs.writeFileSync(destPath, c, "utf-8"));
       }
     }
   }

@@ -95,7 +95,10 @@ function simpleDiff(oldContent: string, newContent: string): string {
         }
       }
 
-      if (foundNew !== -1 && (foundOld === -1 || foundNew - j <= foundOld - i)) {
+      if (
+        foundNew !== -1 &&
+        (foundOld === -1 || foundNew - j <= foundOld - i)
+      ) {
         // New lines were added
         while (j < foundNew) {
           result.push(`\x1b[32m+ ${newLines[j]}\x1b[0m`);
@@ -135,7 +138,7 @@ async function resolveVersion(
   namespace: string,
   filePath: string,
   versionId: string,
-  versions: FileVersion[]
+  versions: FileVersion[],
 ): Promise<FileVersion | null> {
   // Try UUID prefix match first
   const byId = versions.find((v) => v.id.startsWith(versionId));
@@ -160,7 +163,7 @@ async function resolveVersion(
  */
 export const timewarp: BuiltinCommand = async (
   args: string[],
-  context: ExecutionContext
+  context: ExecutionContext,
 ): Promise<CommandResult> => {
   const subcommand = args[0];
 
@@ -262,7 +265,12 @@ Examples:
       const versions = await getFileVersions(namespace, resolvedPath);
 
       // Find version by ID prefix or branch name
-      const version = await resolveVersion(namespace, resolvedPath, versionId, versions);
+      const version = await resolveVersion(
+        namespace,
+        resolvedPath,
+        versionId,
+        versions,
+      );
 
       if (!version) {
         return {
@@ -295,8 +303,7 @@ Examples:
       if (!filePath || !versionId) {
         return {
           stdout: "",
-          stderr:
-            "Usage: timewarp revert <file> <version> [--branch <name>]\n",
+          stderr: "Usage: timewarp revert <file> <version> [--branch <name>]\n",
           exitCode: 1,
         };
       }
@@ -305,7 +312,12 @@ Examples:
       const versions = await getFileVersions(namespace, resolvedPath);
 
       // Find version by ID prefix or branch name
-      const version = await resolveVersion(namespace, resolvedPath, versionId, versions);
+      const version = await resolveVersion(
+        namespace,
+        resolvedPath,
+        versionId,
+        versions,
+      );
 
       if (!version) {
         return {
@@ -320,7 +332,7 @@ Examples:
         namespace,
         resolvedPath,
         version.id,
-        { createBranch: branchFlag }
+        { createBranch: branchFlag },
       );
 
       if (!result) {
@@ -389,7 +401,12 @@ Examples:
         newLabel = "current";
       } else if (!version2) {
         // One version specified - compare to current
-        const v1 = await resolveVersion(namespace, resolvedPath, version1, versions);
+        const v1 = await resolveVersion(
+          namespace,
+          resolvedPath,
+          version1,
+          versions,
+        );
         if (!v1) {
           return {
             stdout: "",
@@ -414,8 +431,18 @@ Examples:
         newLabel = "current";
       } else {
         // Two versions specified - compare them
-        const v1 = await resolveVersion(namespace, resolvedPath, version1, versions);
-        const v2 = await resolveVersion(namespace, resolvedPath, version2, versions);
+        const v1 = await resolveVersion(
+          namespace,
+          resolvedPath,
+          version1,
+          versions,
+        );
+        const v2 = await resolveVersion(
+          namespace,
+          resolvedPath,
+          version2,
+          versions,
+        );
 
         if (!v1) {
           return {

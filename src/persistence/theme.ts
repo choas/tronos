@@ -29,7 +29,7 @@ export function loadTheme(): ThemeConfig | null {
     }
 
     // Validate new format
-    if (config.theme && config.colors && typeof config.colors === 'object') {
+    if (config.theme && config.colors && typeof config.colors === "object") {
       return config as ThemeConfig;
     }
 

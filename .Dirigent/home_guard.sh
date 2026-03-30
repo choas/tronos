@@ -4,7 +4,7 @@
 # recursively search from the home directory root.
 INPUT=$(cat)
 HOME_DIR="${HOME:-/Users/$(whoami)}"
-PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(cd "$(dirname "$0")" && pwd)")"
+PROJECT_ROOT="/Users/lars/test/ralph_test/tron_oss/tronos"
 
 # 1. Block explicit references to personal sub-directories.
 for DIR in Documents Desktop Downloads Photos Pictures Movies Music Library Applications .ssh .gnupg; do

@@ -8,7 +8,7 @@
  * @module agents/permissions
  */
 
-import { matchGlob } from '../utils/glob';
+import { matchGlob } from "../utils/glob";
 
 /**
  * Declared permissions for an agent.
@@ -32,7 +32,7 @@ export interface AgentPermissions {
 export interface AgentViolation {
   ts: string;
   agentId: string;
-  action: 'read' | 'write' | 'mcp' | 'network' | 'spawn';
+  action: "read" | "write" | "mcp" | "network" | "spawn";
   target: string;
   message: string;
 }
@@ -77,7 +77,10 @@ export function canWrite(permissions: AgentPermissions, path: string): boolean {
 /**
  * Check if an agent can access an MCP server/tool.
  */
-export function canAccessMCP(permissions: AgentPermissions, serverTool: string): boolean {
+export function canAccessMCP(
+  permissions: AgentPermissions,
+  serverTool: string,
+): boolean {
   return matchesGlob(serverTool, permissions.mcp);
 }
 
@@ -86,5 +89,8 @@ export function canAccessMCP(permissions: AgentPermissions, serverTool: string):
  * e.g. "/home/user/**,/tmp/*" → ["/home/user/**", "/tmp/*"]
  */
 export function parseGlobs(value: string): string[] {
-  return value.split(',').map(s => s.trim()).filter(Boolean);
+  return value
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
 }

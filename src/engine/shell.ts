@@ -11,25 +11,25 @@
  * @module engine/shell
  */
 
-import type { KeyEvent, TerminalAPI } from '../terminal/api';
-import { tokenize, buildAST, expandAliases } from './parser';
-import type { ParsedCommand, ExecutionContext } from './types';
-import { InMemoryVFS } from '../vfs/memory';
-import { HybridVFS, type HostMountConfig } from '../vfs/host';
-import { executeCommand } from './executor';
-import type { Session } from '../types';
-import { displayBootSequence, displayQuickBoot } from './boot';
-import { isCLI } from '../utils/environment';
-import { VERSION } from '../version';
-import { getCronScheduler } from './cron';
-import type { CronCommandExecutor } from './cron';
+import type { KeyEvent, TerminalAPI } from "../terminal/api";
+import { tokenize, buildAST, expandAliases } from "./parser";
+import type { ParsedCommand, ExecutionContext } from "./types";
+import { InMemoryVFS } from "../vfs/memory";
+import { HybridVFS, type HostMountConfig } from "../vfs/host";
+import { executeCommand } from "./executor";
+import type { Session } from "../types";
+import { displayBootSequence, displayQuickBoot } from "./boot";
+import { isCLI } from "../utils/environment";
+import { VERSION } from "../version";
+import { getCronScheduler } from "./cron";
+import type { CronCommandExecutor } from "./cron";
 import {
   updateFocus,
   appendShellHistory,
   extractFilesFromCommand,
   setActiveSession,
   loadPersistedContext,
-} from '../context/state';
+} from "../context/state";
 
 // Import stores only in browser mode
 // In CLI mode, this will be undefined and we'll use fallback
@@ -41,17 +41,23 @@ let refreshPresetGeneratorsFn: (() => void) | undefined;
 // This prevents Solid.js store initialization errors in Node.js
 if (!isCLI()) {
   // Dynamic import will be resolved at build time by Vite
-  import('../stores/boot').then(stores => {
-    storesShouldSkipBootAnimation = stores.shouldSkipBootAnimation;
-  }).catch(() => {
-    // Ignore import errors (e.g., in test environment)
-  });
-  import('../stores/theme').then(stores => {
-    registerCustomPresetFn = stores.registerCustomPreset;
-  }).catch(() => {});
-  import('../vfs/proc').then(proc => {
-    refreshPresetGeneratorsFn = proc.refreshPresetGenerators;
-  }).catch(() => {});
+  import("../stores/boot")
+    .then((stores) => {
+      storesShouldSkipBootAnimation = stores.shouldSkipBootAnimation;
+    })
+    .catch(() => {
+      // Ignore import errors (e.g., in test environment)
+    });
+  import("../stores/theme")
+    .then((stores) => {
+      registerCustomPresetFn = stores.registerCustomPreset;
+    })
+    .catch(() => {});
+  import("../vfs/proc")
+    .then((proc) => {
+      refreshPresetGeneratorsFn = proc.refreshPresetGenerators;
+    })
+    .catch(() => {});
 }
 
 /**
@@ -104,16 +110,16 @@ class ShellEngine {
   private historyIndex = -1;
   private vfs: InMemoryVFS;
   private env: { [key: string]: string } = {
-    PATH: '/bin',
-    HOME: '/home/tronos',
-    USER: 'tronos',
-    TRONOS_VERSION: VERSION
+    PATH: "/bin",
+    HOME: "/home/tronos",
+    USER: "tronos",
+    TRONOS_VERSION: VERSION,
   };
   private aliases: Map<string, string> = new Map();
   private onAliasChange?: (aliases: Record<string, string>) => void;
   private onUIRequest?: (request: string) => void;
   private skipBootAnimation: boolean;
-  private sessionId = 'default';
+  private sessionId = "default";
   private exitRequested = false;
   private exitCode = 0;
 
@@ -128,7 +134,10 @@ class ShellEngine {
 
     // Use HybridVFS if host mount config is provided, otherwise use InMemoryVFS
     if (options?.hostMountConfig) {
-      this.vfs = new HybridVFS(options?.session?.fsNamespace, options.hostMountConfig);
+      this.vfs = new HybridVFS(
+        options?.session?.fsNamespace,
+        options.hostMountConfig,
+      );
     } else {
       this.vfs = new InMemoryVFS(options?.session?.fsNamespace);
     }
@@ -173,7 +182,12 @@ class ShellEngine {
    * Reloads the VFS with the new session's namespace and updates env/aliases.
    * Called by App.tsx when the active session changes (via tab click or command).
    */
-  public async switchToSession(session: { fsNamespace: string; env?: Record<string, string>; aliases?: Record<string, string>; history?: string[] }): Promise<void> {
+  public async switchToSession(session: {
+    fsNamespace: string;
+    env?: Record<string, string>;
+    aliases?: Record<string, string>;
+    history?: string[];
+  }): Promise<void> {
     await this.vfs.switchNamespace(session.fsNamespace);
 
     // Update context bus for the new session
@@ -196,7 +210,7 @@ class ShellEngine {
     }
 
     // Reset cwd to home
-    const home = this.env.HOME || '/home/tronos';
+    const home = this.env.HOME || "/home/tronos";
     if (this.vfs.exists(home) && this.vfs.isDirectory(home)) {
       this.vfs.chdir(home);
     }
@@ -225,7 +239,7 @@ class ShellEngine {
     await this.vfs.init();
 
     // Initialize context bus for this session
-    this.sessionId = (this.vfs as any).namespace || 'default';
+    this.sessionId = (this.vfs as any).namespace || "default";
     setActiveSession(this.sessionId);
     await loadPersistedContext(this.sessionId).catch(() => {});
 
@@ -238,7 +252,7 @@ class ShellEngine {
     // Load and execute .profile if it exists
     await this.loadProfile();
 
-    this.term.writeln('');
+    this.term.writeln("");
     this.run();
   }
 
@@ -246,7 +260,7 @@ class ShellEngine {
    * Load and execute .profile on session start
    */
   private async loadProfile() {
-    const home = this.env.HOME || '/home/tronos';
+    const home = this.env.HOME || "/home/tronos";
     const profilePath = `${home}/.profile`;
 
     try {
@@ -255,14 +269,14 @@ class ShellEngine {
         const stat = this.vfs.stat(profilePath);
 
         // Only execute if it's a file (not a directory)
-        if (stat.type === 'file') {
+        if (stat.type === "file") {
           const content = await this.vfs.read(profilePath);
 
           // Process file line by line, just like source command
-          const lines = content.split('\n').filter((line: string) => {
+          const lines = content.split("\n").filter((line: string) => {
             const trimmed = line.trim();
             // Skip empty lines and comments
-            return trimmed !== '' && !trimmed.startsWith('#');
+            return trimmed !== "" && !trimmed.startsWith("#");
           });
 
           // Execute each command from .profile
@@ -275,7 +289,7 @@ class ShellEngine {
     } catch (error) {
       // Gracefully handle errors - don't crash on .profile issues
       // This ensures the shell still starts even if .profile has problems
-      console.error('Error loading .profile:', error);
+      console.error("Error loading .profile:", error);
     }
   }
 
@@ -293,7 +307,7 @@ class ShellEngine {
   public async run() {
     while (true) {
       const line = await this.readLine();
-      if (line.trim() !== '') {
+      if (line.trim() !== "") {
         this.history.push(line);
         await this.execute(line);
       }
@@ -302,7 +316,7 @@ class ShellEngine {
         if (isCLI()) {
           process.exit(this.exitCode);
         } else {
-          this.term.writeln('Use the browser tab close button to exit.');
+          this.term.writeln("Use the browser tab close button to exit.");
           this.exitRequested = false;
         }
         break;
@@ -315,13 +329,16 @@ class ShellEngine {
    */
   private loadCustomThemes(): void {
     try {
-      if (this.vfs.exists('/etc/themes') && this.vfs.isDirectory('/etc/themes')) {
-        const files = this.vfs.list('/etc/themes');
+      if (
+        this.vfs.exists("/etc/themes") &&
+        this.vfs.isDirectory("/etc/themes")
+      ) {
+        const files = this.vfs.list("/etc/themes");
         for (const file of files) {
-          if (file.endsWith('.json')) {
+          if (file.endsWith(".json")) {
             try {
               const content = this.vfs.read(`/etc/themes/${file}`);
-              if (typeof content === 'string') {
+              if (typeof content === "string") {
                 const preset = JSON.parse(content);
                 if (preset.name && preset.colors) {
                   registerCustomPresetFn?.(preset.name, preset);
@@ -349,13 +366,13 @@ class ShellEngine {
       // Create a command executor that runs commands through the shell engine
       const executor: CronCommandExecutor = async (command: string) => {
         const context: ExecutionContext = {
-          stdin: '',
+          stdin: "",
           env: { ...this.env, PWD: this.vfs.cwd() },
           vfs: this.vfs,
           terminal: this.term,
           history: this.history,
           aliases: this.aliases,
-          size: this.term.getSize()
+          size: this.term.getSize(),
         };
 
         try {
@@ -363,8 +380,8 @@ class ShellEngine {
           const expandedTokens = expandAliases(tokens, this.aliases);
           const commands = buildAST(expandedTokens);
 
-          let stdout = '';
-          let stderr = '';
+          let stdout = "";
+          let stderr = "";
           let exitCode = 0;
 
           for (const cmd of commands) {
@@ -377,7 +394,7 @@ class ShellEngine {
           return { stdout, stderr, exitCode };
         } catch (err) {
           return {
-            stdout: '',
+            stdout: "",
             stderr: err instanceof Error ? err.message : String(err),
             exitCode: 1,
           };
@@ -388,7 +405,7 @@ class ShellEngine {
       await scheduler.init();
       scheduler.start();
     } catch (err) {
-      console.error('Failed to initialize cron scheduler:', err);
+      console.error("Failed to initialize cron scheduler:", err);
     }
   }
 
@@ -432,7 +449,7 @@ class ShellEngine {
 
   private async executeCommand(command: ParsedCommand) {
     const context: ExecutionContext = {
-      stdin: '',
+      stdin: "",
       env: { ...this.env, PWD: this.vfs.cwd() },
       vfs: this.vfs,
       terminal: this.term,
@@ -478,7 +495,7 @@ class ShellEngine {
       const aliasRequests = (context as any).aliasRequests;
       if (aliasRequests && Array.isArray(aliasRequests)) {
         for (const req of aliasRequests) {
-          if (req.action === 'add') {
+          if (req.action === "add") {
             this.aliases.set(req.name, req.command);
           }
         }
@@ -490,9 +507,9 @@ class ShellEngine {
       const unaliasRequests = (context as any).unaliasRequests;
       if (unaliasRequests && Array.isArray(unaliasRequests)) {
         for (const req of unaliasRequests) {
-          if (req.action === 'removeAll') {
+          if (req.action === "removeAll") {
             this.aliases.clear();
-          } else if (req.action === 'remove') {
+          } else if (req.action === "remove") {
             this.aliases.delete(req.name);
           }
         }
@@ -516,13 +533,15 @@ class ShellEngine {
             this.aliases = new Map(Object.entries(sessionSwitch.aliases));
           }
           // Reset cwd to home
-          const home = this.env.HOME || '/home/tronos';
+          const home = this.env.HOME || "/home/tronos";
           if (this.vfs.exists(home) && this.vfs.isDirectory(home)) {
             this.vfs.chdir(home);
           }
         } catch (error) {
           const msg = error instanceof Error ? error.message : String(error);
-          this.term.writeln(`\x1b[31mFailed to switch filesystem: ${msg}\x1b[0m`);
+          this.term.writeln(
+            `\x1b[31mFailed to switch filesystem: ${msg}\x1b[0m`,
+          );
         }
       }
 
@@ -566,12 +585,12 @@ class ShellEngine {
    */
   private async copyToClipboard(text: string): Promise<void> {
     try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
         await navigator.clipboard.writeText(text);
       }
     } catch (error) {
       // Clipboard access may be denied - fail silently
-      console.warn('Clipboard write failed:', error);
+      console.warn("Clipboard write failed:", error);
     }
   }
 
@@ -581,35 +600,35 @@ class ShellEngine {
    */
   private async pasteFromClipboard(): Promise<string> {
     try {
-      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      if (typeof navigator !== "undefined" && navigator.clipboard) {
         return await navigator.clipboard.readText();
       }
     } catch (error) {
       // Clipboard access may be denied - fail silently
-      console.warn('Clipboard read failed:', error);
+      console.warn("Clipboard read failed:", error);
     }
-    return '';
+    return "";
   }
 
   private getPrompt() {
     const cwd = this.vfs.cwd();
-    const home = this.env.HOME || '/home/tronos';
-    const user = this.env.USER || 'tronos';
+    const home = this.env.HOME || "/home/tronos";
+    const user = this.env.USER || "tronos";
     let displayPath = cwd;
 
     // Replace home directory with ~ for display
     if (cwd === home) {
-      displayPath = '~';
-    } else if (cwd.startsWith(home + '/')) {
-      displayPath = '~' + cwd.slice(home.length);
+      displayPath = "~";
+    } else if (cwd.startsWith(home + "/")) {
+      displayPath = "~" + cwd.slice(home.length);
     }
 
     return `${user}@tronos:${displayPath}$ `;
   }
 
   private readLine(): Promise<string> {
-    return new Promise(resolve => {
-      let line = '';
+    return new Promise((resolve) => {
+      let line = "";
       let cursorPos = 0; // Track cursor position within line
       let lastPasteTime = 0; // Timestamp of last paste handled by onData
       this.term.write(this.getPrompt());
@@ -628,9 +647,9 @@ class ShellEngine {
       const dataDisposable = this.term.onData((data: string) => {
         // Skip single characters (come through onKey) and escape sequences
         // (arrow keys, function keys etc. start with \x1b and are handled by onKey)
-        if (data.length > 1 && !data.startsWith('\x1b')) {
+        if (data.length > 1 && !data.startsWith("\x1b")) {
           // Filter out newlines to prevent command injection and keep single line
-          const sanitized = data.replace(/[\r\n]+/g, ' ').trim();
+          const sanitized = data.replace(/[\r\n]+/g, " ").trim();
           if (sanitized) {
             // Insert at cursor position
             line = line.slice(0, cursorPos) + sanitized + line.slice(cursorPos);
@@ -643,14 +662,21 @@ class ShellEngine {
       });
 
       const disposable = this.term.onKey((key: KeyEvent) => {
-        const printable = !key.domEvent.altKey && !key.domEvent.ctrlKey && !key.domEvent.metaKey;
+        const printable =
+          !key.domEvent.altKey &&
+          !key.domEvent.ctrlKey &&
+          !key.domEvent.metaKey;
 
         // Handle Ctrl/Cmd key combinations
-        const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-        const copyPasteModifier = isMac ? key.domEvent.metaKey : key.domEvent.ctrlKey;
+        const isMac =
+          typeof navigator !== "undefined" &&
+          /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+        const copyPasteModifier = isMac
+          ? key.domEvent.metaKey
+          : key.domEvent.ctrlKey;
 
         // Handle copy (Ctrl+C on Windows/Linux, Cmd+C on Mac)
-        if (copyPasteModifier && key.domEvent.key.toLowerCase() === 'c') {
+        if (copyPasteModifier && key.domEvent.key.toLowerCase() === "c") {
           // If text is selected, copy it to clipboard instead of interrupt
           if (this.term.hasSelection()) {
             const selectedText = this.term.getSelection();
@@ -660,9 +686,9 @@ class ShellEngine {
           }
           // Fall through to Ctrl+C interrupt only on non-Mac or if no selection
           if (!isMac) {
-            this.term.write('^C');
-            this.term.writeln('');
-            line = '';
+            this.term.write("^C");
+            this.term.writeln("");
+            line = "";
             cursorPos = 0;
             this.historyIndex = -1;
             this.term.write(this.getPrompt());
@@ -674,16 +700,17 @@ class ShellEngine {
         // Note: Most paste operations are handled by xterm.js via onData event.
         // This handler is kept as a fallback for environments where onData
         // doesn't receive pasted text (e.g., some browser configurations).
-        if (copyPasteModifier && key.domEvent.key.toLowerCase() === 'v') {
+        if (copyPasteModifier && key.domEvent.key.toLowerCase() === "v") {
           // Use async clipboard read as fallback
           // The onData handler will catch most paste operations
-          this.pasteFromClipboard().then(text => {
+          this.pasteFromClipboard().then((text) => {
             if (text) {
               // Filter out newlines to prevent command injection and keep single line
-              const sanitized = text.replace(/[\r\n]+/g, ' ').trim();
+              const sanitized = text.replace(/[\r\n]+/g, " ").trim();
               if (sanitized) {
                 // Insert at cursor position
-                line = line.slice(0, cursorPos) + sanitized + line.slice(cursorPos);
+                line =
+                  line.slice(0, cursorPos) + sanitized + line.slice(cursorPos);
                 cursorPos += sanitized.length;
                 redrawLine();
               }
@@ -695,7 +722,7 @@ class ShellEngine {
         // Handle Ctrl key combinations (not Cmd on Mac)
         if (key.domEvent.ctrlKey) {
           switch (key.domEvent.key.toLowerCase()) {
-            case 'l': // Ctrl+L - Clear screen
+            case "l": // Ctrl+L - Clear screen
               this.term.clear();
               this.term.write(this.getPrompt() + line);
               // Position cursor correctly after clear
@@ -703,52 +730,54 @@ class ShellEngine {
                 this.term.write(`\x1b[${line.length - cursorPos}D`);
               }
               return;
-            case 'c': // Ctrl+C - Cancel current input (when not copy)
+            case "c": // Ctrl+C - Cancel current input (when not copy)
               // On Mac, we already handled Cmd+C above, so Ctrl+C is always interrupt
               // On Windows/Linux, we only get here if no selection (copy handled above)
-              this.term.write('^C');
-              this.term.writeln('');
-              line = '';
+              this.term.write("^C");
+              this.term.writeln("");
+              line = "";
               cursorPos = 0;
               this.historyIndex = -1;
               this.term.write(this.getPrompt());
               return;
-            case 'd': // Ctrl+D - Exit (if input empty)
-              if (line === '') {
-                this.term.writeln('^D');
-                this.term.writeln('exit');
+            case "d": // Ctrl+D - Exit (if input empty)
+              if (line === "") {
+                this.term.writeln("^D");
+                this.term.writeln("exit");
                 if (isCLI()) {
                   disposable.dispose();
                   dataDisposable.dispose();
                   this.exitRequested = true;
                   this.exitCode = 0;
-                  resolve('');
+                  resolve("");
                 } else {
-                  this.term.writeln('Use the browser tab close button to exit.');
+                  this.term.writeln(
+                    "Use the browser tab close button to exit.",
+                  );
                   this.term.write(this.getPrompt());
                 }
               }
               return;
-            case 'a': // Ctrl+A - Move to beginning of line
+            case "a": // Ctrl+A - Move to beginning of line
               if (cursorPos > 0) {
                 this.term.write(`\x1b[${cursorPos}D`);
                 cursorPos = 0;
               }
               return;
-            case 'e': // Ctrl+E - Move to end of line
+            case "e": // Ctrl+E - Move to end of line
               if (cursorPos < line.length) {
                 this.term.write(`\x1b[${line.length - cursorPos}C`);
                 cursorPos = line.length;
               }
               return;
-            case 'u': // Ctrl+U - Delete to beginning of line
+            case "u": // Ctrl+U - Delete to beginning of line
               if (cursorPos > 0) {
                 line = line.slice(cursorPos);
                 cursorPos = 0;
                 redrawLine();
               }
               return;
-            case 'k': // Ctrl+K - Delete to end of line
+            case "k": // Ctrl+K - Delete to end of line
               if (cursorPos < line.length) {
                 line = line.slice(0, cursorPos);
                 redrawLine();
@@ -758,41 +787,41 @@ class ShellEngine {
         }
 
         switch (key.key) {
-          case '\r': // Enter
+          case "\r": // Enter
             disposable.dispose();
             dataDisposable.dispose();
-            this.term.writeln('');
+            this.term.writeln("");
             // Flush the newline to terminal before command executes
             // This ensures command output appears on a new line
             this.term.flush();
             this.historyIndex = -1;
             resolve(line);
             break;
-          case '\u007f': // Backspace
+          case "\u007f": // Backspace
             if (cursorPos > 0) {
               line = line.slice(0, cursorPos - 1) + line.slice(cursorPos);
               cursorPos--;
               redrawLine();
             }
             break;
-          case '\t': // Tab
+          case "\t": // Tab
             {
               const completion = this.getCompletion(line);
-              if (completion.type === 'complete') {
+              if (completion.type === "complete") {
                 // Single match - complete it
                 line = completion.newLine;
                 cursorPos = line.length;
                 this.term.write(`\x1b[2K\r${this.getPrompt()}${line}`);
-              } else if (completion.type === 'multiple') {
+              } else if (completion.type === "multiple") {
                 // Multiple matches - show them
-                this.term.writeln('');
-                this.term.writeln(completion.matches.join('  '));
+                this.term.writeln("");
+                this.term.writeln(completion.matches.join("  "));
                 this.term.write(this.getPrompt() + line);
                 cursorPos = line.length;
               }
             }
             break;
-          case '\x1b[A': // Up arrow
+          case "\x1b[A": // Up arrow
             if (this.historyIndex < this.history.length - 1) {
               this.historyIndex++;
               line = this.history[this.history.length - 1 - this.historyIndex];
@@ -800,7 +829,7 @@ class ShellEngine {
               this.term.write(`\x1b[2K\r${this.getPrompt()}${line}`);
             }
             break;
-          case '\x1b[B': // Down arrow
+          case "\x1b[B": // Down arrow
             if (this.historyIndex > 0) {
               this.historyIndex--;
               line = this.history[this.history.length - 1 - this.historyIndex];
@@ -808,21 +837,21 @@ class ShellEngine {
               this.term.write(`\x1b[2K\r${this.getPrompt()}${line}`);
             } else if (this.historyIndex === 0) {
               this.historyIndex = -1;
-              line = '';
+              line = "";
               cursorPos = 0;
               this.term.write(`\x1b[2K\r${this.getPrompt()}`);
             }
             break;
-          case '\x1b[D': // Left arrow
+          case "\x1b[D": // Left arrow
             if (cursorPos > 0) {
               cursorPos--;
-              this.term.write('\x1b[D');
+              this.term.write("\x1b[D");
             }
             break;
-          case '\x1b[C': // Right arrow
+          case "\x1b[C": // Right arrow
             if (cursorPos < line.length) {
               cursorPos++;
-              this.term.write('\x1b[C');
+              this.term.write("\x1b[C");
             }
             break;
           default:
@@ -847,32 +876,37 @@ class ShellEngine {
     });
   }
 
-  private getCompletion(line: string): { type: 'complete', newLine: string } | { type: 'multiple', matches: string[] } | { type: 'none' } {
+  private getCompletion(
+    line: string,
+  ):
+    | { type: "complete"; newLine: string }
+    | { type: "multiple"; matches: string[] }
+    | { type: "none" } {
     // Get the word being completed (last word in the line)
     const words = line.split(/\s+/);
-    const partialWord = words[words.length - 1] || '';
+    const partialWord = words[words.length - 1] || "";
 
     // Get files and directories in current directory
     try {
       const entries = this.vfs.list(this.vfs.cwd());
 
       // Filter matches
-      const matches = entries.filter(entry => entry.startsWith(partialWord));
+      const matches = entries.filter((entry) => entry.startsWith(partialWord));
 
       if (matches.length === 0) {
-        return { type: 'none' };
+        return { type: "none" };
       } else if (matches.length === 1) {
         // Single match - complete it
         const completed = matches[0];
-        const beforeWord = words.slice(0, -1).join(' ');
+        const beforeWord = words.slice(0, -1).join(" ");
         const newLine = beforeWord ? `${beforeWord} ${completed}` : completed;
-        return { type: 'complete', newLine };
+        return { type: "complete", newLine };
       } else {
         // Multiple matches - return them
-        return { type: 'multiple', matches };
+        return { type: "multiple", matches };
       }
     } catch (error) {
-      return { type: 'none' };
+      return { type: "none" };
     }
   }
 }

@@ -1,5 +1,10 @@
 import { For } from "solid-js";
-import { sessionState, switchSession, deleteSession, createSession } from "../stores/sessions";
+import {
+  sessionState,
+  switchSession,
+  deleteSession,
+  createSession,
+} from "../stores/sessions";
 
 export function TabBar() {
   // Convert sessions object to array for iteration
@@ -24,7 +29,7 @@ export function TabBar() {
 
   const handleNewTab = () => {
     const sessions = getSessions();
-    const existingNames = new Set(sessions.map(s => s.name));
+    const existingNames = new Set(sessions.map((s) => s.name));
     let counter = sessions.length + 1;
     let newName = `session-${counter}`;
     while (existingNames.has(newName)) {

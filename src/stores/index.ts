@@ -9,8 +9,8 @@ export {
   initSessions,
   addConversationMessage,
   getConversationHistory,
-  clearConversationHistory
-} from './sessions';
+  clearConversationHistory,
+} from "./sessions";
 
 export {
   aiConfigState,
@@ -24,10 +24,10 @@ export {
   loadPersistedAIConfig,
   loadEnvConfig,
   maskApiKey,
-  PROVIDER_DEFAULTS
-} from './ai';
+  PROVIDER_DEFAULTS,
+} from "./ai";
 
-export type { AIProvider, AIConfig } from './ai';
+export type { AIProvider, AIConfig } from "./ai";
 
 export {
   themeState,
@@ -50,9 +50,15 @@ export {
   loadPersistedTheme,
   COLOR_KEYS,
   PRESET_THEMES,
-} from './theme';
+} from "./theme";
 
-export type { Theme, ThemeConfig, ColorKey, ColorPalette, ThemePreset } from './theme';
+export type {
+  Theme,
+  ThemeConfig,
+  ColorKey,
+  ColorPalette,
+  ThemePreset,
+} from "./theme";
 
 export {
   bootConfigState,
@@ -61,10 +67,10 @@ export {
   shouldSkipBootAnimation,
   setSkipBootAnimation,
   resetBootConfig,
-  loadPersistedBootConfig
-} from './boot';
+  loadPersistedBootConfig,
+} from "./boot";
 
-export type { BootConfig } from './boot';
+export type { BootConfig } from "./boot";
 
 export {
   termsConfigState,
@@ -72,7 +78,7 @@ export {
   hasAcceptedTerms,
   acceptTerms,
   resetTermsConfig,
-  loadPersistedTermsConfig
-} from './terms';
+  loadPersistedTermsConfig,
+} from "./terms";
 
-export type { TermsConfig } from './terms';
+export type { TermsConfig } from "./terms";

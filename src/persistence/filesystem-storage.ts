@@ -48,7 +48,9 @@ function toPlainSession(session: Session): Session {
     env: { ...session.env },
     history: [...session.history],
     aliases: { ...session.aliases },
-    conversationHistory: session.conversationHistory ? [...session.conversationHistory] : undefined
+    conversationHistory: session.conversationHistory
+      ? [...session.conversationHistory]
+      : undefined,
   };
 }
 
@@ -107,11 +109,19 @@ export class FilesystemStorage implements StorageBackend {
   private async writeJSON(filePath: string, data: unknown): Promise<void> {
     const tmpPath = filePath + ".tmp";
     try {
-      await fs.promises.writeFile(tmpPath, JSON.stringify(data, null, 2), "utf-8");
+      await fs.promises.writeFile(
+        tmpPath,
+        JSON.stringify(data, null, 2),
+        "utf-8",
+      );
       await fs.promises.rename(tmpPath, filePath);
     } catch (error) {
       // Clean up temp file on failure
-      try { await fs.promises.unlink(tmpPath); } catch { /* ignore */ }
+      try {
+        await fs.promises.unlink(tmpPath);
+      } catch {
+        /* ignore */
+      }
       console.error(`Failed to write ${filePath}:`, error);
       throw error;
     }
@@ -121,10 +131,15 @@ export class FilesystemStorage implements StorageBackend {
    * Serialize access to a file so read-modify-write cycles don't interleave.
    * Concurrent calls for the same file are queued and executed in order.
    */
-  private async withFileLock<T>(filePath: string, fn: () => Promise<T>): Promise<T> {
+  private async withFileLock<T>(
+    filePath: string,
+    fn: () => Promise<T>,
+  ): Promise<T> {
     const previous = this.fileLocks.get(filePath) ?? Promise.resolve();
     let resolve: () => void;
-    const current = new Promise<void>(r => { resolve = r; });
+    const current = new Promise<void>((r) => {
+      resolve = r;
+    });
     this.fileLocks.set(filePath, current);
 
     await previous;
@@ -168,7 +183,8 @@ export class FilesystemStorage implements StorageBackend {
     const filePath = this.getFsFilePath(namespace);
 
     await this.withFileLock(filePath, async () => {
-      const existing = await this.readJSON<Record<string, FSNode>>(filePath) || {};
+      const existing =
+        (await this.readJSON<Record<string, FSNode>>(filePath)) || {};
       existing[path] = node;
       await this.writeJSON(filePath, existing);
     });
@@ -186,7 +202,10 @@ export class FilesystemStorage implements StorageBackend {
     });
   }
 
-  async syncFilesystem(namespace: string, nodes: Map<string, FSNode>): Promise<void> {
+  async syncFilesystem(
+    namespace: string,
+    nodes: Map<string, FSNode>,
+  ): Promise<void> {
     const filePath = this.getFsFilePath(namespace);
 
     await this.withFileLock(filePath, async () => {
@@ -202,7 +221,9 @@ export class FilesystemStorage implements StorageBackend {
 
   // Session operations
   async loadSessions(): Promise<Record<string, Session>> {
-    const data = await this.readJSON<Record<string, Session>>(this.sessionsFile);
+    const data = await this.readJSON<Record<string, Session>>(
+      this.sessionsFile,
+    );
     return data || {};
   }
 

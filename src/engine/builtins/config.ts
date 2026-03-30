@@ -7,14 +7,31 @@ import {
   maskApiKey,
   hasAcceptedTerms,
   acceptTerms,
-  resetTermsConfig
+  resetTermsConfig,
 } from "../../stores";
 import type { AIProvider } from "../../stores";
 
-const VALID_KEYS = ["provider", "model", "baseURL", "apiKey", "temperature", "maxTokens", "accept-terms"] as const;
-const VALID_PROVIDERS: AIProvider[] = ["tronos", "anthropic", "openai", "ollama", "openrouter"];
+const VALID_KEYS = [
+  "provider",
+  "model",
+  "baseURL",
+  "apiKey",
+  "temperature",
+  "maxTokens",
+  "accept-terms",
+] as const;
+const VALID_PROVIDERS: AIProvider[] = [
+  "tronos",
+  "anthropic",
+  "openai",
+  "ollama",
+  "openrouter",
+];
 
-export const config: BuiltinCommand = async (args: string[], _context: ExecutionContext): Promise<CommandResult> => {
+export const config: BuiltinCommand = async (
+  args: string[],
+  _context: ExecutionContext,
+): Promise<CommandResult> => {
   const subcommand = args[0] || "show";
 
   switch (subcommand) {
@@ -27,7 +44,7 @@ export const config: BuiltinCommand = async (args: string[], _context: Execution
         `baseURL: ${cfg.baseURL}`,
         `apiKey: ${maskedKey}`,
         `temperature: ${cfg.temperature}`,
-        `maxTokens: ${cfg.maxTokens}`
+        `maxTokens: ${cfg.maxTokens}`,
       ];
       if (cfg.provider === "tronos") {
         lines.push(`accept-terms: ${hasAcceptedTerms()}`);
@@ -45,15 +62,15 @@ export const config: BuiltinCommand = async (args: string[], _context: Execution
         return {
           stdout: "",
           stderr: "Usage: config set <key> <value>\n",
-          exitCode: 1
+          exitCode: 1,
         };
       }
 
-      if (!VALID_KEYS.includes(key as typeof VALID_KEYS[number])) {
+      if (!VALID_KEYS.includes(key as (typeof VALID_KEYS)[number])) {
         return {
           stdout: "",
           stderr: `Invalid key: ${key}. Valid keys: ${VALID_KEYS.join(", ")}\n`,
-          exitCode: 1
+          exitCode: 1,
         };
       }
 
@@ -64,7 +81,7 @@ export const config: BuiltinCommand = async (args: string[], _context: Execution
           return {
             stdout: "",
             stderr: "accept-terms must be true or false\n",
-            exitCode: 1
+            exitCode: 1,
           };
         }
         if (boolVal === "true") {
@@ -75,7 +92,7 @@ export const config: BuiltinCommand = async (args: string[], _context: Execution
         return {
           stdout: `Set accept-terms = ${boolVal}\n`,
           stderr: "",
-          exitCode: 0
+          exitCode: 0,
         };
       }
 
@@ -85,13 +102,14 @@ export const config: BuiltinCommand = async (args: string[], _context: Execution
           return {
             stdout: "",
             stderr: `Invalid provider: ${value}. Valid providers: ${VALID_PROVIDERS.join(", ")}\n`,
-            exitCode: 1
+            exitCode: 1,
           };
         }
         setAIProvider(value as AIProvider);
         let output = `Set provider = ${value}\n`;
         if (value === "ollama") {
-          const origin = typeof window !== "undefined" ? window.location.origin : "*";
+          const origin =
+            typeof window !== "undefined" ? window.location.origin : "*";
           output += `\nNote: Ollama requires CORS to be enabled for ${origin}.\n`;
           output += `Quit the Ollama desktop app first, then run from terminal:\n`;
           output += `  OLLAMA_ORIGINS="${origin}" ollama serve\n`;
@@ -99,7 +117,7 @@ export const config: BuiltinCommand = async (args: string[], _context: Execution
         return {
           stdout: output,
           stderr: "",
-          exitCode: 0
+          exitCode: 0,
         };
       }
 
@@ -111,7 +129,7 @@ export const config: BuiltinCommand = async (args: string[], _context: Execution
           return {
             stdout: "",
             stderr: "Temperature must be a number between 0 and 2\n",
-            exitCode: 1
+            exitCode: 1,
           };
         }
       }
@@ -121,7 +139,7 @@ export const config: BuiltinCommand = async (args: string[], _context: Execution
           return {
             stdout: "",
             stderr: "maxTokens must be a positive integer\n",
-            exitCode: 1
+            exitCode: 1,
           };
         }
       }
@@ -129,11 +147,12 @@ export const config: BuiltinCommand = async (args: string[], _context: Execution
       setAIConfig({ [key]: parsedValue });
 
       // Mask the API key in output
-      const displayValue = key === "apiKey" ? maskApiKey(String(parsedValue)) : parsedValue;
+      const displayValue =
+        key === "apiKey" ? maskApiKey(String(parsedValue)) : parsedValue;
       return {
         stdout: `Set ${key} = ${displayValue}\n`,
         stderr: "",
-        exitCode: 0
+        exitCode: 0,
       };
     }
 
@@ -143,7 +162,7 @@ export const config: BuiltinCommand = async (args: string[], _context: Execution
       return {
         stdout: `Configuration reset to defaults for provider '${currentProvider}'\n`,
         stderr: "",
-        exitCode: 0
+        exitCode: 0,
       };
     }
 
@@ -153,7 +172,7 @@ export const config: BuiltinCommand = async (args: string[], _context: Execution
         stdout: "Opening configuration UI...\n",
         stderr: "",
         exitCode: 0,
-        uiRequest: "showConfigModal"
+        uiRequest: "showConfigModal",
       };
     }
 
@@ -161,7 +180,7 @@ export const config: BuiltinCommand = async (args: string[], _context: Execution
       return {
         stdout: "",
         stderr: "Usage: config [show|set <key> <value>|reset|ui]\n",
-        exitCode: 1
+        exitCode: 1,
       };
   }
 };

@@ -9,20 +9,20 @@
  * @module vfs/mcp
  */
 
-import { getMCPClient } from '../mcp/client';
+import { getMCPClient } from "../mcp/client";
 
 /**
  * Check if a path is under /proc/mcp.
  */
 export function isMCPPath(path: string): boolean {
-  return path === '/proc/mcp' || path.startsWith('/proc/mcp/');
+  return path === "/proc/mcp" || path.startsWith("/proc/mcp/");
 }
 
 /**
  * Check if an MCP path is a directory.
  */
 export function isMCPDirectory(path: string): boolean {
-  if (path === '/proc/mcp') return true;
+  if (path === "/proc/mcp") return true;
 
   const parts = parseMCPPath(path);
   if (!parts) return false;
@@ -40,7 +40,7 @@ export function isMCPDirectory(path: string): boolean {
  * Check if an MCP path is a file.
  */
 export function isMCPFile(path: string): boolean {
-  if (path === '/proc/mcp/status') return true;
+  if (path === "/proc/mcp/status") return true;
 
   const parts = parseMCPPath(path);
   if (!parts) return false;
@@ -56,14 +56,14 @@ export function isMCPFile(path: string): boolean {
  * List contents of an MCP directory.
  */
 export function listMCPDirectory(path: string): string[] | undefined {
-  if (path === '/proc/mcp') {
+  if (path === "/proc/mcp") {
     const client = getMCPClient();
     const servers = client.listServers();
-    const names = servers.map(s => s.name);
-    if (!names.includes('status')) {
-      names.unshift('status');
+    const names = servers.map((s) => s.name);
+    if (!names.includes("status")) {
+      names.unshift("status");
     }
-    return names.length > 0 ? names : ['status'];
+    return names.length > 0 ? names : ["status"];
   }
 
   const parts = parseMCPPath(path);
@@ -73,14 +73,14 @@ export function listMCPDirectory(path: string): string[] | undefined {
   const server = client.getServer(parts.serverName);
   if (!server) return undefined;
 
-  return ['tools', ...server.tools.map(t => t.name)];
+  return ["tools", ...server.tools.map((t) => t.name)];
 }
 
 /**
  * Read an MCP VFS path.
  */
 export function readMCP(path: string): string {
-  if (path === '/proc/mcp/status') {
+  if (path === "/proc/mcp/status") {
     return getMCPClient().getStatusJSON();
   }
 
@@ -92,9 +92,9 @@ export function readMCP(path: string): string {
   const client = getMCPClient();
 
   // /proc/mcp/{server}/tools
-  if (parts.toolName === 'tools') {
+  if (parts.toolName === "tools") {
     const tools = client.listTools(parts.serverName);
-    return tools.map(t => t.name).join('\n');
+    return tools.map((t) => t.name).join("\n");
   }
 
   // /proc/mcp/{server}/{tool} — return last result
@@ -114,7 +114,7 @@ export async function writeMCP(path: string, data: string): Promise<void> {
     throw new Error(`write: cannot write to ${path}`);
   }
 
-  if (parts.toolName === 'tools') {
+  if (parts.toolName === "tools") {
     throw new Error(`write: /proc/mcp/${parts.serverName}/tools is read-only`);
   }
 
@@ -132,16 +132,19 @@ export async function writeMCP(path: string, data: string): Promise<void> {
 /**
  * Parse an MCP path into components.
  */
-function parseMCPPath(path: string): { serverName?: string; toolName?: string } | null {
+function parseMCPPath(
+  path: string,
+): { serverName?: string; toolName?: string } | null {
   // Remove /proc/mcp prefix
-  const suffix = path.replace(/^\/proc\/mcp\/?/, '');
+  const suffix = path.replace(/^\/proc\/mcp\/?/, "");
   if (!suffix) return {};
 
-  const segments = suffix.split('/').filter(Boolean);
+  const segments = suffix.split("/").filter(Boolean);
   if (segments.length === 0) return {};
   if (segments.length === 1) {
     // Could be "status" or a server name
-    if (segments[0] === 'status') return { serverName: undefined, toolName: undefined };
+    if (segments[0] === "status")
+      return { serverName: undefined, toolName: undefined };
     return { serverName: segments[0] };
   }
   if (segments.length === 2) {

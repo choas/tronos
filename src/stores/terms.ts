@@ -1,5 +1,9 @@
 import { createStore } from "solid-js/store";
-import { loadTermsConfig, saveTermsConfig, clearTermsConfig } from "../persistence/terms";
+import {
+  loadTermsConfig,
+  saveTermsConfig,
+  clearTermsConfig,
+} from "../persistence/terms";
 import { TERMS_VERSION } from "../engine/terms-content";
 
 /** Terms configuration interface */
@@ -21,15 +25,19 @@ const DEFAULT_CONFIG: TermsConfig = {
   version: "",
 };
 
-export const [termsConfigState, setTermsConfigState] = createStore<TermsConfigState>({
-  config: DEFAULT_CONFIG,
-});
+export const [termsConfigState, setTermsConfigState] =
+  createStore<TermsConfigState>({
+    config: DEFAULT_CONFIG,
+  });
 
 /**
  * Check if the user has accepted the current version of terms
  */
 export function hasAcceptedTerms(): boolean {
-  return termsConfigState.config.accepted && termsConfigState.config.version === TERMS_VERSION;
+  return (
+    termsConfigState.config.accepted &&
+    termsConfigState.config.version === TERMS_VERSION
+  );
 }
 
 /**

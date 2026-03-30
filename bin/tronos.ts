@@ -15,13 +15,13 @@
  * @module bin/tronos
  */
 
-import * as path from 'node:path';
-import * as os from 'node:os';
-import { createNodeTerminalAPI } from '../src/cli/terminal';
-import ShellEngine from '../src/engine/shell';
-import { initStorage } from '../src/persistence/storage';
-import type { HostMountConfig } from '../src/vfs/host';
-import { VERSION_STRING } from '../src/version';
+import * as path from "node:path";
+import * as os from "node:os";
+import { createNodeTerminalAPI } from "../src/cli/terminal";
+import ShellEngine from "../src/engine/shell";
+import { initStorage } from "../src/persistence/storage";
+import type { HostMountConfig } from "../src/vfs/host";
+import { VERSION_STRING } from "../src/version";
 
 /**
  * Parse command line arguments.
@@ -39,32 +39,32 @@ function parseArgs(args: string[]): CLIArgs {
     realFs: false,
     readOnly: false,
     help: false,
-    version: false
+    version: false,
   };
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
 
     switch (arg) {
-      case '--real-fs':
-      case '-r':
+      case "--real-fs":
+      case "-r":
         result.realFs = true;
         // Check if next arg is a path (doesn't start with -)
-        if (i + 1 < args.length && !args[i + 1].startsWith('-')) {
+        if (i + 1 < args.length && !args[i + 1].startsWith("-")) {
           result.hostPath = path.resolve(args[i + 1]);
           i++;
         }
         break;
-      case '--read-only':
-      case '--ro':
+      case "--read-only":
+      case "--ro":
         result.readOnly = true;
         break;
-      case '--help':
-      case '-h':
+      case "--help":
+      case "-h":
         result.help = true;
         break;
-      case '--version':
-      case '-v':
+      case "--version":
+      case "-v":
         result.version = true;
         break;
     }
@@ -123,20 +123,20 @@ async function main(): Promise<void> {
     const mountPath = args.hostPath ?? os.homedir();
     console.log(`Mounting real filesystem: ${mountPath} -> /mnt/host`);
     if (args.readOnly) {
-      console.log('  (read-only mode)');
+      console.log("  (read-only mode)");
     }
   }
 
-  console.log('Starting terminal...\n');
+  console.log("Starting terminal...\n");
 
   // Initialize filesystem-based storage for CLI mode
-  await initStorage('filesystem');
+  await initStorage("filesystem");
 
   // Prepare host mount config if --real-fs is enabled
   const hostMountConfig: HostMountConfig | undefined = args.realFs
     ? {
         hostPath: args.hostPath ?? os.homedir(),
-        allowWrite: !args.readOnly
+        allowWrite: !args.readOnly,
       }
     : undefined;
 
@@ -150,31 +150,35 @@ async function main(): Promise<void> {
     onUIRequest: (request: string) => {
       // Handle UI requests in CLI mode
       // Most UI requests (like config modal) won't work in CLI
-      if (request === 'showConfigModal') {
-        terminalApi.writeln('\x1b[33mNote: Configuration UI is not available in CLI mode.\x1b[0m');
-        terminalApi.writeln('Use environment variables to configure TronOS:');
-        terminalApi.writeln('  ANTHROPIC_API_KEY - Set Anthropic API key');
-        terminalApi.writeln('  OPENAI_API_KEY - Set OpenAI API key');
+      if (request === "showConfigModal") {
+        terminalApi.writeln(
+          "\x1b[33mNote: Configuration UI is not available in CLI mode.\x1b[0m",
+        );
+        terminalApi.writeln("Use environment variables to configure TronOS:");
+        terminalApi.writeln("  ANTHROPIC_API_KEY - Set Anthropic API key");
+        terminalApi.writeln("  OPENAI_API_KEY - Set OpenAI API key");
       }
     },
   });
 
   // Handle process termination gracefully
-  process.on('SIGINT', () => {
-    terminalApi.writeln('\n\x1b[33mReceived SIGINT. Shutting down...\x1b[0m');
+  process.on("SIGINT", () => {
+    terminalApi.writeln("\n\x1b[33mReceived SIGINT. Shutting down...\x1b[0m");
     terminalApi.dispose();
     process.exit(0);
   });
 
-  process.on('SIGTERM', () => {
-    terminalApi.writeln('\n\x1b[33mReceived SIGTERM. Shutting down...\x1b[0m');
+  process.on("SIGTERM", () => {
+    terminalApi.writeln("\n\x1b[33mReceived SIGTERM. Shutting down...\x1b[0m");
     terminalApi.dispose();
     process.exit(0);
   });
 
   // Handle uncaught errors
-  process.on('uncaughtException', (error) => {
-    terminalApi.writeln(`\n\x1b[31mUncaught exception: ${error.message}\x1b[0m`);
+  process.on("uncaughtException", (error) => {
+    terminalApi.writeln(
+      `\n\x1b[31mUncaught exception: ${error.message}\x1b[0m`,
+    );
     terminalApi.dispose();
     process.exit(1);
   });
@@ -183,7 +187,9 @@ async function main(): Promise<void> {
     // Boot the shell
     await shell.boot();
   } catch (error) {
-    terminalApi.writeln(`\x1b[31mFailed to start TronOS: ${error instanceof Error ? error.message : String(error)}\x1b[0m`);
+    terminalApi.writeln(
+      `\x1b[31mFailed to start TronOS: ${error instanceof Error ? error.message : String(error)}\x1b[0m`,
+    );
     terminalApi.dispose();
     process.exit(1);
   }
@@ -191,6 +197,6 @@ async function main(): Promise<void> {
 
 // Run the CLI
 main().catch((error) => {
-  console.error('Fatal error:', error);
+  console.error("Fatal error:", error);
   process.exit(1);
 });

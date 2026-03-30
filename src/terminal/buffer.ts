@@ -1,4 +1,4 @@
-import type { Terminal } from '@xterm/xterm';
+import type { Terminal } from "@xterm/xterm";
 
 /**
  * TerminalWriteBuffer provides batched, optimized writes to xterm.js
@@ -27,7 +27,7 @@ export class TerminalWriteBuffer {
    * Queue data with a newline to be written to the terminal
    */
   writeln(data: string): void {
-    this.buffer.push(data + '\n');
+    this.buffer.push(data + "\n");
     this.scheduleFlush();
   }
 
@@ -42,7 +42,7 @@ export class TerminalWriteBuffer {
 
     // Use requestAnimationFrame for browser environment
     // Fall back to setTimeout for test/node environments
-    if (typeof requestAnimationFrame !== 'undefined') {
+    if (typeof requestAnimationFrame !== "undefined") {
       this.rafId = requestAnimationFrame(() => this.flush());
     } else {
       this.rafId = setTimeout(() => this.flush(), 0) as unknown as number;
@@ -54,7 +54,7 @@ export class TerminalWriteBuffer {
    */
   flush(): void {
     if (this.rafId !== null) {
-      if (typeof cancelAnimationFrame !== 'undefined') {
+      if (typeof cancelAnimationFrame !== "undefined") {
         cancelAnimationFrame(this.rafId);
       } else {
         clearTimeout(this.rafId);
@@ -67,7 +67,7 @@ export class TerminalWriteBuffer {
     }
 
     // Concatenate all buffered writes into a single write call
-    const data = this.buffer.join('');
+    const data = this.buffer.join("");
     this.buffer = [];
 
     // Write to terminal in one operation
@@ -113,7 +113,7 @@ export class TerminalWriteBuffer {
    */
   cancel(): void {
     if (this.rafId !== null) {
-      if (typeof cancelAnimationFrame !== 'undefined') {
+      if (typeof cancelAnimationFrame !== "undefined") {
         cancelAnimationFrame(this.rafId);
       } else {
         clearTimeout(this.rafId);

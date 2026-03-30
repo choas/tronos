@@ -21,12 +21,16 @@ type ActiveTab = "all" | CollectionId;
 
 const COLLECTION_COUNTS = new Map<string, number>();
 for (const pkg of MARKETPLACE_PACKAGES) {
-  COLLECTION_COUNTS.set(pkg.collection, (COLLECTION_COUNTS.get(pkg.collection) || 0) + 1);
+  COLLECTION_COUNTS.set(
+    pkg.collection,
+    (COLLECTION_COUNTS.get(pkg.collection) || 0) + 1,
+  );
 }
 
 export function MarketplaceModal(props: MarketplaceModalProps) {
   const [searchQuery, setSearchQuery] = createSignal("");
-  const [activeCollection, setActiveCollection] = createSignal<ActiveTab>("all");
+  const [activeCollection, setActiveCollection] =
+    createSignal<ActiveTab>("all");
   const [installedSet, setInstalledSet] = createSignal<Set<string>>(new Set());
   const [pendingAction, setPendingAction] = createSignal<string | null>(null);
 
@@ -45,7 +49,12 @@ export function MarketplaceModal(props: MarketplaceModalProps) {
 
     return MARKETPLACE_PACKAGES.filter((pkg) => {
       if (tab !== "all" && pkg.collection !== tab) return false;
-      if (query && !pkg.name.toLowerCase().includes(query) && !pkg.description.toLowerCase().includes(query)) return false;
+      if (
+        query &&
+        !pkg.name.toLowerCase().includes(query) &&
+        !pkg.description.toLowerCase().includes(query)
+      )
+        return false;
       return true;
     });
   });
@@ -87,12 +96,20 @@ export function MarketplaceModal(props: MarketplaceModalProps) {
 
   return (
     <Show when={props.isOpen}>
-      <div class="marketplace-overlay" onClick={handleOverlayClick} onKeyDown={handleKeyDown} tabIndex={-1} ref={(el) => el.focus()}>
+      <div
+        class="marketplace-overlay"
+        onClick={handleOverlayClick}
+        onKeyDown={handleKeyDown}
+        tabIndex={-1}
+        ref={(el) => el.focus()}
+      >
         <div class="marketplace-modal">
           {/* Header */}
           <div class="marketplace-header">
             <h2>TronOS Marketplace</h2>
-            <button class="marketplace-close" onClick={props.onClose}>&times;</button>
+            <button class="marketplace-close" onClick={props.onClose}>
+              &times;
+            </button>
           </div>
 
           {/* Search */}
@@ -128,7 +145,9 @@ export function MarketplaceModal(props: MarketplaceModalProps) {
           {/* Package grid */}
           <div class="marketplace-body">
             <Show when={filteredPackages().length === 0}>
-              <div class="marketplace-empty">No packages match your search.</div>
+              <div class="marketplace-empty">
+                No packages match your search.
+              </div>
             </Show>
             <For each={filteredPackages()}>
               {(pkg) => {
@@ -138,7 +157,8 @@ export function MarketplaceModal(props: MarketplaceModalProps) {
                 const tier = tierLabel(pkg);
 
                 // Auth-aware state for enterprise packages
-                const authStatus = () => isEnterprise ? props.getAuthStatus() : null;
+                const authStatus = () =>
+                  isEnterprise ? props.getAuthStatus() : null;
                 const isAuthorized = () => {
                   if (!isEnterprise) return true;
                   const status = authStatus();
@@ -148,20 +168,34 @@ export function MarketplaceModal(props: MarketplaceModalProps) {
                 const isLoggedIn = () => authStatus()?.loggedIn ?? false;
 
                 return (
-                  <div class={`marketplace-card${isEnterprise && !isAuthorized() ? " enterprise" : ""}`}>
+                  <div
+                    class={`marketplace-card${isEnterprise && !isAuthorized() ? " enterprise" : ""}`}
+                  >
                     <div class="marketplace-card-header">
                       <span class="marketplace-card-name">{pkg.name}</span>
-                      <span class={`marketplace-badge marketplace-badge-${pkg.collection}`}>{pkg.collection}</span>
+                      <span
+                        class={`marketplace-badge marketplace-badge-${pkg.collection}`}
+                      >
+                        {pkg.collection}
+                      </span>
                       <Show when={tier}>
-                        <span class={`marketplace-badge marketplace-badge-${tier === "PRO" ? "pro" : "ent"}`}>{tier}</span>
+                        <span
+                          class={`marketplace-badge marketplace-badge-${tier === "PRO" ? "pro" : "ent"}`}
+                        >
+                          {tier}
+                        </span>
                       </Show>
                       <Show when={isInstalled()}>
-                        <span class="marketplace-badge marketplace-badge-installed">installed</span>
+                        <span class="marketplace-badge marketplace-badge-installed">
+                          installed
+                        </span>
                       </Show>
                     </div>
                     <div class="marketplace-card-desc">{pkg.description}</div>
                     <div class="marketplace-card-footer">
-                      <span class="marketplace-card-version">v{pkg.version}</span>
+                      <span class="marketplace-card-version">
+                        v{pkg.version}
+                      </span>
                       {/* Enterprise: not logged in → Login button */}
                       <Show when={isEnterprise && !isLoggedIn()}>
                         <button
@@ -172,13 +206,17 @@ export function MarketplaceModal(props: MarketplaceModalProps) {
                         </button>
                       </Show>
                       {/* Enterprise: logged in but insufficient tier */}
-                      <Show when={isEnterprise && isLoggedIn() && !isAuthorized()}>
+                      <Show
+                        when={isEnterprise && isLoggedIn() && !isAuthorized()}
+                      >
                         <button class="marketplace-btn-upgrade" disabled>
                           &#x1f512; Requires {tier}
                         </button>
                       </Show>
                       {/* Enterprise: authorized and installed */}
-                      <Show when={isEnterprise && isAuthorized() && isInstalled()}>
+                      <Show
+                        when={isEnterprise && isAuthorized() && isInstalled()}
+                      >
                         <button
                           class="marketplace-btn-uninstall"
                           disabled={isPending()}
@@ -188,7 +226,9 @@ export function MarketplaceModal(props: MarketplaceModalProps) {
                         </button>
                       </Show>
                       {/* Enterprise: authorized and not installed */}
-                      <Show when={isEnterprise && isAuthorized() && !isInstalled()}>
+                      <Show
+                        when={isEnterprise && isAuthorized() && !isInstalled()}
+                      >
                         <button
                           class="marketplace-btn-install"
                           disabled={isPending()}

@@ -1,31 +1,96 @@
-import { ls, cd, pwd, cat, echo, mkdir, touch, rm, cp, mv, head, tail, grep, wc } from './filesystem';
-import { clear, history, version } from './system';
-import { whoami, env, exportCmd, unset } from './environment';
-import { alias, unalias } from './alias';
-import { which, type } from './which';
-import { help } from './help';
-import { man } from './man';
-import { source, dot } from './source';
-import { session } from './session';
-import { config } from './config';
-import { ai } from './ai';
-import { curl, fetchCmd } from './network';
-import { theme } from './theme';
-import { reset, factoryReset } from './reset';
-import { boot } from './boot';
-import { tpkg } from './tpkg';
-import { feedback } from './feedback';
-import { timewarp } from './timewarp';
-import { cron } from './cron';
-import { update } from './update';
-import { exit } from './exit';
-import { event } from './event';
-import { mcp } from './mcp';
-import { agent } from './agent';
-import { guard } from './guard';
-import { ps } from './ps';
+import {
+  ls,
+  cd,
+  pwd,
+  cat,
+  echo,
+  mkdir,
+  touch,
+  rm,
+  cp,
+  mv,
+  head,
+  tail,
+  grep,
+  wc,
+} from "./filesystem";
+import { clear, history, version } from "./system";
+import { whoami, env, exportCmd, unset } from "./environment";
+import { alias, unalias } from "./alias";
+import { which, type } from "./which";
+import { help } from "./help";
+import { man } from "./man";
+import { source, dot } from "./source";
+import { session } from "./session";
+import { config } from "./config";
+import { ai } from "./ai";
+import { curl, fetchCmd } from "./network";
+import { theme } from "./theme";
+import { reset, factoryReset } from "./reset";
+import { boot } from "./boot";
+import { tpkg } from "./tpkg";
+import { feedback } from "./feedback";
+import { timewarp } from "./timewarp";
+import { cron } from "./cron";
+import { update } from "./update";
+import { exit } from "./exit";
+import { event } from "./event";
+import { mcp } from "./mcp";
+import { agent } from "./agent";
+import { guard } from "./guard";
+import { ps } from "./ps";
 
-export { ls, cd, pwd, cat, echo, mkdir, touch, rm, cp, mv, head, tail, grep, wc, clear, history, version, whoami, env, exportCmd, unset, alias, unalias, which, type, help, man, source, dot, session, config, ai, curl, fetchCmd, theme, reset, factoryReset, boot, tpkg, feedback, timewarp, cron, update, exit, event, mcp, agent, guard, ps };
+export {
+  ls,
+  cd,
+  pwd,
+  cat,
+  echo,
+  mkdir,
+  touch,
+  rm,
+  cp,
+  mv,
+  head,
+  tail,
+  grep,
+  wc,
+  clear,
+  history,
+  version,
+  whoami,
+  env,
+  exportCmd,
+  unset,
+  alias,
+  unalias,
+  which,
+  type,
+  help,
+  man,
+  source,
+  dot,
+  session,
+  config,
+  ai,
+  curl,
+  fetchCmd,
+  theme,
+  reset,
+  factoryReset,
+  boot,
+  tpkg,
+  feedback,
+  timewarp,
+  cron,
+  update,
+  exit,
+  event,
+  mcp,
+  agent,
+  guard,
+  ps,
+};
 
 export const BUILTIN_COMMANDS = {
   ls,
@@ -56,15 +121,15 @@ export const BUILTIN_COMMANDS = {
   help,
   man,
   source,
-  '.': dot,
+  ".": dot,
   session,
   config,
-  '@ai': ai,
+  "@ai": ai,
   curl,
   fetch: fetchCmd,
   theme,
   reset,
-  'factory-reset': factoryReset,
+  "factory-reset": factoryReset,
   boot,
   tpkg,
   feedback,

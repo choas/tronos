@@ -11,7 +11,7 @@
 declare const __BUILD_TIME__: string | undefined;
 
 /** Base TronOS version number */
-const BASE_VERSION = '1.1.2';
+const BASE_VERSION = "1.1.2";
 
 /**
  * Check if running in development mode.
@@ -21,14 +21,17 @@ function isDevMode(): boolean {
   // Vite sets import.meta.env.DEV in dev mode
   // When running directly with Bun (tests, CLI), check NODE_ENV or assume dev if BUILD_TIME is set
   try {
-    if (typeof import.meta.env !== 'undefined' && import.meta.env.DEV !== undefined) {
+    if (
+      typeof import.meta.env !== "undefined" &&
+      import.meta.env.DEV !== undefined
+    ) {
       return import.meta.env.DEV;
     }
   } catch {
     // import.meta.env not available
   }
   // Fall back to NODE_ENV check
-  return process.env.NODE_ENV !== 'production';
+  return process.env.NODE_ENV !== "production";
 }
 
 /**
@@ -37,7 +40,7 @@ function isDevMode(): boolean {
  */
 function getBuildTime(): string {
   // Use injected BUILD_TIME from Vite if available
-  if (typeof __BUILD_TIME__ !== 'undefined' && __BUILD_TIME__) {
+  if (typeof __BUILD_TIME__ !== "undefined" && __BUILD_TIME__) {
     return __BUILD_TIME__;
   }
   // Generate current timestamp for direct Bun execution
@@ -53,11 +56,11 @@ function formatBuildTime(isoDate: string): string {
   // e.g., "2026-02-04T15:30:45.123Z" -> "20260204T153045"
   const date = new Date(isoDate);
   const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const hours = String(date.getUTCHours()).padStart(2, '0');
-  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-  const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+  const seconds = String(date.getUTCSeconds()).padStart(2, "0");
   return `${year}${month}${day}T${hours}${minutes}${seconds}`;
 }
 
@@ -74,4 +77,4 @@ export const VERSION = isDevMode()
 export const VERSION_STRING = `TronOS v${VERSION}`;
 
 /** GitHub repository URL */
-export const REPO_URL = 'https://github.com/choas/tronos';
+export const REPO_URL = "https://github.com/choas/tronos";

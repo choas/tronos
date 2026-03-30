@@ -3,8 +3,8 @@
  * See spec Section 13.2
  */
 
-import type { BuiltinCommand } from '../types';
-import { aiosFetch } from '../../network/fetch';
+import type { BuiltinCommand } from "../types";
+import { aiosFetch } from "../../network/fetch";
 
 /**
  * Parse curl-style arguments
@@ -22,7 +22,7 @@ function parseCurlArgs(args: string[]): {
 } {
   const result = {
     url: null as string | null,
-    method: 'GET',
+    method: "GET",
     headers: {} as Record<string, string>,
     data: null as string | null,
     output: null as string | null,
@@ -35,19 +35,19 @@ function parseCurlArgs(args: string[]): {
   while (i < args.length) {
     const arg = args[i];
 
-    if (arg === '-X' || arg === '--request') {
+    if (arg === "-X" || arg === "--request") {
       if (i + 1 >= args.length) {
-        result.error = 'curl: option -X requires an argument';
+        result.error = "curl: option -X requires an argument";
         return result;
       }
       result.method = args[++i].toUpperCase();
-    } else if (arg === '-H' || arg === '--header') {
+    } else if (arg === "-H" || arg === "--header") {
       if (i + 1 >= args.length) {
-        result.error = 'curl: option -H requires an argument';
+        result.error = "curl: option -H requires an argument";
         return result;
       }
       const header = args[++i];
-      const colonIndex = header.indexOf(':');
+      const colonIndex = header.indexOf(":");
       if (colonIndex === -1) {
         result.error = `curl: invalid header format: ${header}`;
         return result;
@@ -55,34 +55,34 @@ function parseCurlArgs(args: string[]): {
       const name = header.slice(0, colonIndex).trim();
       const value = header.slice(colonIndex + 1).trim();
       result.headers[name] = value;
-    } else if (arg === '-d' || arg === '--data') {
+    } else if (arg === "-d" || arg === "--data") {
       if (i + 1 >= args.length) {
-        result.error = 'curl: option -d requires an argument';
+        result.error = "curl: option -d requires an argument";
         return result;
       }
       result.data = args[++i];
       // Default to POST when data is provided
-      if (result.method === 'GET') {
-        result.method = 'POST';
+      if (result.method === "GET") {
+        result.method = "POST";
       }
-    } else if (arg === '-o' || arg === '--output') {
+    } else if (arg === "-o" || arg === "--output") {
       if (i + 1 >= args.length) {
-        result.error = 'curl: option -o requires an argument';
+        result.error = "curl: option -o requires an argument";
         return result;
       }
       result.output = args[++i];
-    } else if (arg === '-i' || arg === '--include') {
+    } else if (arg === "-i" || arg === "--include") {
       result.includeHeaders = true;
-    } else if (arg === '-s' || arg === '--silent') {
+    } else if (arg === "-s" || arg === "--silent") {
       result.silent = true;
-    } else if (arg.startsWith('-')) {
+    } else if (arg.startsWith("-")) {
       // Handle combined short options (e.g., -is)
-      if (arg.length > 2 && !arg.startsWith('--')) {
+      if (arg.length > 2 && !arg.startsWith("--")) {
         const flags = arg.slice(1);
         for (const flag of flags) {
-          if (flag === 'i') {
+          if (flag === "i") {
             result.includeHeaders = true;
-          } else if (flag === 's') {
+          } else if (flag === "s") {
             result.silent = true;
           } else {
             result.error = `curl: unknown option: -${flag}`;
@@ -98,7 +98,7 @@ function parseCurlArgs(args: string[]): {
       if (result.url === null) {
         result.url = arg;
       } else {
-        result.error = 'curl: multiple URLs not supported';
+        result.error = "curl: multiple URLs not supported";
         return result;
       }
     }
@@ -112,7 +112,7 @@ function parseCurlArgs(args: string[]): {
  * Normalize URL - auto-add https:// if protocol is missing
  */
 function normalizeUrl(url: string): string {
-  if (!url.includes('://')) {
+  if (!url.includes("://")) {
     return `https://${url}`;
   }
   return url;
@@ -127,8 +127,8 @@ function formatResponseHeaders(response: Response): string {
   response.headers.forEach((value, name) => {
     lines.push(`${name}: ${value}`);
   });
-  lines.push('');
-  return lines.join('\n');
+  lines.push("");
+  return lines.join("\n");
 }
 
 /**
@@ -153,14 +153,14 @@ export const curl: BuiltinCommand = async (args, context) => {
   // Show usage if no arguments
   if (args.length === 0) {
     return {
-      stdout: '',
-      stderr: 'curl: try \'curl --help\' for more information',
+      stdout: "",
+      stderr: "curl: try 'curl --help' for more information",
       exitCode: 1,
     };
   }
 
   // Handle --help
-  if (args.includes('--help') || args.includes('-h')) {
+  if (args.includes("--help") || args.includes("-h")) {
     return {
       stdout: `Usage: curl [options] <url>
 
@@ -177,7 +177,7 @@ Examples:
   curl -X POST -H "Content-Type: application/json" -d '{"key":"value"}' api.example.com
   curl -o output.txt example.com/file
 `,
-      stderr: '',
+      stderr: "",
       exitCode: 0,
     };
   }
@@ -186,7 +186,7 @@ Examples:
 
   if (parsed.error) {
     return {
-      stdout: '',
+      stdout: "",
       stderr: parsed.error,
       exitCode: 1,
     };
@@ -194,8 +194,8 @@ Examples:
 
   if (!parsed.url) {
     return {
-      stdout: '',
-      stderr: 'curl: no URL specified',
+      stdout: "",
+      stderr: "curl: no URL specified",
       exitCode: 1,
     };
   }
@@ -212,8 +212,9 @@ Examples:
   if (parsed.data !== null) {
     requestOptions.body = parsed.data;
     // Set Content-Type if not already set and we have data
-    if (!parsed.headers['Content-Type'] && !parsed.headers['content-type']) {
-      (requestOptions.headers as Record<string, string>)['Content-Type'] = 'application/x-www-form-urlencoded';
+    if (!parsed.headers["Content-Type"] && !parsed.headers["content-type"]) {
+      (requestOptions.headers as Record<string, string>)["Content-Type"] =
+        "application/x-www-form-urlencoded";
     }
   }
 
@@ -221,46 +222,46 @@ Examples:
     const response = await aiosFetch(url, requestOptions);
     const body = await response.text();
 
-    let output = '';
+    let output = "";
 
     // Include headers if requested
     if (parsed.includeHeaders) {
-      output = formatResponseHeaders(response) + '\n' + body;
+      output = formatResponseHeaders(response) + "\n" + body;
     } else {
       output = body;
     }
 
     // Write to file if -o specified
     if (parsed.output && context.vfs) {
-      const outputPath = parsed.output.startsWith('/')
+      const outputPath = parsed.output.startsWith("/")
         ? parsed.output
-        : `${context.env.PWD || '/'}/${parsed.output}`;
+        : `${context.env.PWD || "/"}/${parsed.output}`;
 
       await context.vfs.write(outputPath, output);
 
       if (!parsed.silent) {
         return {
-          stdout: '',
-          stderr: '',
+          stdout: "",
+          stderr: "",
           exitCode: 0,
         };
       }
       return {
-        stdout: '',
-        stderr: '',
+        stdout: "",
+        stderr: "",
         exitCode: 0,
       };
     }
 
     return {
       stdout: output,
-      stderr: '',
+      stderr: "",
       exitCode: 0,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = error instanceof Error ? error.message : "Unknown error";
     return {
-      stdout: '',
+      stdout: "",
       stderr: `curl: ${message}`,
       exitCode: 1,
     };
@@ -276,7 +277,7 @@ Examples:
  * Automatically adds https:// if no protocol specified.
  */
 export const fetchCmd: BuiltinCommand = async (args, _context) => {
-  if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
+  if (args.length === 0 || args.includes("--help") || args.includes("-h")) {
     return {
       stdout: `Usage: fetch <url>
 
@@ -287,7 +288,7 @@ Examples:
   fetch example.com
   fetch api.github.com/users/octocat
 `,
-      stderr: '',
+      stderr: "",
       exitCode: args.length === 0 ? 1 : 0,
     };
   }
@@ -295,7 +296,7 @@ Examples:
   const url = normalizeUrl(args[0]);
 
   try {
-    const response = await aiosFetch(url, { method: 'GET' });
+    const response = await aiosFetch(url, { method: "GET" });
     const body = await response.text();
 
     if (!response.ok) {
@@ -308,13 +309,13 @@ Examples:
 
     return {
       stdout: body,
-      stderr: '',
+      stderr: "",
       exitCode: 0,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = error instanceof Error ? error.message : "Unknown error";
     return {
-      stdout: '',
+      stdout: "",
       stderr: `fetch: ${message}`,
       exitCode: 1,
     };

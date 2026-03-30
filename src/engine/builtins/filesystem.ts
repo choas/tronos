@@ -1,9 +1,9 @@
-import type { BuiltinCommand, CommandResult } from '../types';
-import { isDevPath, getDevPermissions } from '../../vfs/dev';
-import { isDocsFile, getDocsSizeSync } from '../../vfs/docs';
+import type { BuiltinCommand, CommandResult } from "../types";
+import { isDevPath, getDevPermissions } from "../../vfs/dev";
+import { isDocsFile, getDocsSizeSync } from "../../vfs/docs";
 
 interface FileNode {
-  type: 'file' | 'directory';
+  type: "file" | "directory";
   children?: string[];
   content?: string;
   permissions: string;
@@ -15,96 +15,96 @@ interface FileNode {
 
 // Mock VFS for now - will be replaced with real VFS later
 const mockFilesystem: Record<string, FileNode> = {
-  '/': {
-    type: 'directory',
-    children: ['home', 'bin', 'usr', 'etc', 'tmp'],
-    permissions: 'rwxr-xr-x',
-    owner: 'root',
-    group: 'root',
+  "/": {
+    type: "directory",
+    children: ["home", "bin", "usr", "etc", "tmp"],
+    permissions: "rwxr-xr-x",
+    owner: "root",
+    group: "root",
     size: 4096,
-    modified: new Date()
+    modified: new Date(),
   },
-  '/home': {
-    type: 'directory',
-    children: ['aios'],
-    permissions: 'rwxr-xr-x',
-    owner: 'root',
-    group: 'root',
+  "/home": {
+    type: "directory",
+    children: ["aios"],
+    permissions: "rwxr-xr-x",
+    owner: "root",
+    group: "root",
     size: 4096,
-    modified: new Date()
+    modified: new Date(),
   },
-  '/home/tronos': {
-    type: 'directory',
-    children: ['documents', 'downloads', '.profile'],
-    permissions: 'rwxr-xr-x',
-    owner: 'tronos',
-    group: 'tronos',
+  "/home/tronos": {
+    type: "directory",
+    children: ["documents", "downloads", ".profile"],
+    permissions: "rwxr-xr-x",
+    owner: "tronos",
+    group: "tronos",
     size: 4096,
-    modified: new Date()
+    modified: new Date(),
   },
-  '/home/tronos/documents': {
-    type: 'directory',
+  "/home/tronos/documents": {
+    type: "directory",
     children: [],
-    permissions: 'rwxr-xr-x',
-    owner: 'tronos',
-    group: 'tronos',
+    permissions: "rwxr-xr-x",
+    owner: "tronos",
+    group: "tronos",
     size: 4096,
-    modified: new Date()
+    modified: new Date(),
   },
-  '/home/tronos/downloads': {
-    type: 'directory',
+  "/home/tronos/downloads": {
+    type: "directory",
     children: [],
-    permissions: 'rwxr-xr-x',
-    owner: 'tronos',
-    group: 'tronos',
+    permissions: "rwxr-xr-x",
+    owner: "tronos",
+    group: "tronos",
     size: 4096,
-    modified: new Date()
+    modified: new Date(),
   },
-  '/home/tronos/.profile': {
-    type: 'file',
-    content: '# User profile\nexport PATH=$PATH:/bin\nexport USER=aios',
-    permissions: 'rw-r--r--',
-    owner: 'tronos',
-    group: 'tronos',
+  "/home/tronos/.profile": {
+    type: "file",
+    content: "# User profile\nexport PATH=$PATH:/bin\nexport USER=aios",
+    permissions: "rw-r--r--",
+    owner: "tronos",
+    group: "tronos",
     size: 52,
-    modified: new Date()
+    modified: new Date(),
   },
-  '/bin': {
-    type: 'directory',
-    children: ['ls.trx', 'cat.trx', 'echo.trx'],
-    permissions: 'rwxr-xr-x',
-    owner: 'root',
-    group: 'root',
+  "/bin": {
+    type: "directory",
+    children: ["ls.trx", "cat.trx", "echo.trx"],
+    permissions: "rwxr-xr-x",
+    owner: "root",
+    group: "root",
     size: 4096,
-    modified: new Date()
+    modified: new Date(),
   },
-  '/bin/ls.trx': {
-    type: 'file',
+  "/bin/ls.trx": {
+    type: "file",
     content: '#!/bin/bash\n# ls executable\necho "ls implementation"',
-    permissions: 'rwxr-xr-x',
-    owner: 'root',
-    group: 'root',
+    permissions: "rwxr-xr-x",
+    owner: "root",
+    group: "root",
     size: 45,
-    modified: new Date()
+    modified: new Date(),
   },
-  '/bin/cat.trx': {
-    type: 'file',
-    content: '#!/bin/bash\n# cat executable',
-    permissions: 'rwxr-xr-x',
-    owner: 'root',
-    group: 'root',
+  "/bin/cat.trx": {
+    type: "file",
+    content: "#!/bin/bash\n# cat executable",
+    permissions: "rwxr-xr-x",
+    owner: "root",
+    group: "root",
     size: 30,
-    modified: new Date()
+    modified: new Date(),
   },
-  '/bin/echo.trx': {
-    type: 'file',
-    content: '#!/bin/bash\n# echo executable',
-    permissions: 'rwxr-xr-x',
-    owner: 'root',
-    group: 'root',
+  "/bin/echo.trx": {
+    type: "file",
+    content: "#!/bin/bash\n# echo executable",
+    permissions: "rwxr-xr-x",
+    owner: "root",
+    group: "root",
     size: 30,
-    modified: new Date()
-  }
+    modified: new Date(),
+  },
 };
 
 function formatPermissions(permissions: string): string {
@@ -113,26 +113,30 @@ function formatPermissions(permissions: string): string {
 
 function formatSize(size: number, humanReadable: boolean): string {
   if (humanReadable) {
-    const units = ['B', 'K', 'M', 'G'];
+    const units = ["B", "K", "M", "G"];
     let unitIndex = 0;
     let displaySize = size;
-    
+
     while (displaySize >= 1024 && unitIndex < units.length - 1) {
       displaySize /= 1024;
       unitIndex++;
     }
-    
+
     return `${displaySize.toFixed(displaySize < 10 ? 1 : 0)}${units[unitIndex]}`;
   }
   return size.toString();
 }
 
-function formatFileName(name: string, isDirectory: boolean, isExecutable: boolean): string {
+function formatFileName(
+  name: string,
+  isDirectory: boolean,
+  isExecutable: boolean,
+): string {
   // ANSI color codes
-  const BLUE = '\x1b[34m';
-  const GREEN = '\x1b[32m';
-  const RESET = '\x1b[0m';
-  
+  const BLUE = "\x1b[34m";
+  const GREEN = "\x1b[32m";
+  const RESET = "\x1b[0m";
+
   if (isDirectory) {
     return `${BLUE}${name}${RESET}`;
   }
@@ -142,92 +146,103 @@ function formatFileName(name: string, isDirectory: boolean, isExecutable: boolea
   return name;
 }
 
-function listDirectory(path: string, options: { all: boolean; long: boolean; humanReadable: boolean }): CommandResult {
+function listDirectory(
+  path: string,
+  options: { all: boolean; long: boolean; humanReadable: boolean },
+): CommandResult {
   const node = mockFilesystem[path];
-  
+
   if (!node) {
     return {
-      stdout: '',
+      stdout: "",
       stderr: `ls: cannot access '${path}': No such file or directory`,
-      exitCode: 2
+      exitCode: 2,
     };
   }
-  
-  if (node.type !== 'directory') {
+
+  if (node.type !== "directory") {
     // If it's a file, just list the file itself
-    const isExecutable = node.permissions.includes('x');
-    const fileName = formatFileName(path.split('/').pop() || path, false, isExecutable);
+    const isExecutable = node.permissions.includes("x");
+    const fileName = formatFileName(
+      path.split("/").pop() || path,
+      false,
+      isExecutable,
+    );
     return {
       stdout: fileName,
-      stderr: '',
-      exitCode: 0
+      stderr: "",
+      exitCode: 0,
     };
   }
-  
+
   const children = node.children || [];
   let entries = children;
-  
+
   // Filter out hidden files unless -a is used
   if (!options.all) {
-    entries = children.filter(name => !name.startsWith('.'));
+    entries = children.filter((name) => !name.startsWith("."));
   }
-  
+
   if (options.long) {
-    let output = '';
+    let output = "";
     for (const entry of entries) {
-      const entryPath = path === '/' ? `/${entry}` : `${path}/${entry}`;
+      const entryPath = path === "/" ? `/${entry}` : `${path}/${entry}`;
       const entryNode = mockFilesystem[entryPath];
 
       if (entryNode) {
-        const isDir = entryNode.type === 'directory';
-        const typeChar = isDir ? 'd' : '-';
+        const isDir = entryNode.type === "directory";
+        const typeChar = isDir ? "d" : "-";
         const perms = formatPermissions(entryNode.permissions);
         const size = formatSize(entryNode.size, options.humanReadable);
-        const modified = entryNode.modified.toISOString().split('T')[0];
-        const name = formatFileName(entry, isDir, !isDir && entryNode.permissions.includes('x'));
+        const modified = entryNode.modified.toISOString().split("T")[0];
+        const name = formatFileName(
+          entry,
+          isDir,
+          !isDir && entryNode.permissions.includes("x"),
+        );
 
         output += `${typeChar}${perms} 1 ${entryNode.owner} ${entryNode.group} ${size.padStart(8)} ${modified} ${name}\n`;
       }
     }
     return {
       stdout: output.trim(),
-      stderr: '',
-      exitCode: 0
+      stderr: "",
+      exitCode: 0,
     };
   } else {
     // Simple listing
     const formattedEntries = entries.map((entry: string) => {
-      const entryPath = path === '/' ? `/${entry}` : `${path}/${entry}`;
+      const entryPath = path === "/" ? `/${entry}` : `${path}/${entry}`;
       const entryNode = mockFilesystem[entryPath];
-      const isDir = entryNode?.type === 'directory';
-      const isExecutable = entryNode?.permissions.includes('x');
+      const isDir = entryNode?.type === "directory";
+      const isExecutable = entryNode?.permissions.includes("x");
       return formatFileName(entry, isDir, !!isExecutable);
     });
-    
+
     return {
-      stdout: formattedEntries.join('  '),
-      stderr: '',
-      exitCode: 0
+      stdout: formattedEntries.join("  "),
+      stderr: "",
+      exitCode: 0,
     };
   }
 }
 
-import type { ExecutionContext } from '../types';
+import type { ExecutionContext } from "../types";
 
 function listDirectoryVFS(
   paths: string[],
   options: { all: boolean; long: boolean; humanReadable: boolean },
-  context: ExecutionContext
+  context: ExecutionContext,
 ): CommandResult {
   const vfs = context.vfs!;
-  let stdout = '';
-  let stderr = '';
+  let stdout = "";
+  let stderr = "";
   let exitCode = 0;
 
   // Resolve paths using VFS
-  const resolvedPaths = paths.map(p => {
+  const resolvedPaths = paths.map((p) => {
     // "." means current working directory
-    if (p === '.') {
+    if (p === ".") {
       return vfs.cwd();
     }
     // Use VFS resolve for relative paths
@@ -249,11 +264,11 @@ function listDirectoryVFS(
     if (vfs.isFile(resolvedPath)) {
       const stat = vfs.stat(resolvedPath);
       const name = stat.name;
-      const isExecutable = name.endsWith('.trx');
+      const isExecutable = name.endsWith(".trx");
       const isCharDevice = isDevPath(resolvedPath);
 
       if (resolvedPaths.length > 1) {
-        if (stdout.length > 0) stdout += '\n\n';
+        if (stdout.length > 0) stdout += "\n\n";
         stdout += `${originalPath}:\n`;
       }
 
@@ -263,21 +278,21 @@ function listDirectoryVFS(
         let perms: string;
 
         if (isCharDevice) {
-          typeChar = 'c';
-          perms = getDevPermissions(resolvedPath) || 'rw-rw-rw-';
+          typeChar = "c";
+          perms = getDevPermissions(resolvedPath) || "rw-rw-rw-";
         } else if (isExecutable) {
-          typeChar = '-';
-          perms = 'rwxr-xr-x';
+          typeChar = "-";
+          perms = "rwxr-xr-x";
         } else {
-          typeChar = '-';
-          perms = 'rw-r--r--';
+          typeChar = "-";
+          perms = "rw-r--r--";
         }
 
         let size = 0;
         if (!isCharDevice) {
           try {
             const content = vfs.read(resolvedPath);
-            if (typeof content === 'string') {
+            if (typeof content === "string") {
               size = content.length;
             }
           } catch {
@@ -287,7 +302,9 @@ function listDirectoryVFS(
         // Character devices show size as 0
 
         const sizeStr = formatSize(size, options.humanReadable);
-        const modified = new Date(stat.meta.updatedAt).toISOString().split('T')[0];
+        const modified = new Date(stat.meta.updatedAt)
+          .toISOString()
+          .split("T")[0];
         const formattedName = formatFileName(name, false, isExecutable);
         stdout += `${typeChar}${perms} 1 user user ${sizeStr.padStart(8)} ${modified} ${formattedName}`;
       } else {
@@ -301,7 +318,7 @@ function listDirectoryVFS(
     try {
       // Add header for multiple paths
       if (resolvedPaths.length > 1) {
-        if (stdout.length > 0) stdout += '\n\n';
+        if (stdout.length > 0) stdout += "\n\n";
         stdout += `${originalPath}:\n`;
       }
 
@@ -310,7 +327,7 @@ function listDirectoryVFS(
 
       // Filter hidden files unless -a flag
       if (!options.all) {
-        filteredEntries = entries.filter(name => !name.startsWith('.'));
+        filteredEntries = entries.filter((name) => !name.startsWith("."));
       }
 
       if (options.long) {
@@ -318,45 +335,50 @@ function listDirectoryVFS(
         const detailedEntries = vfs.listDetailed(resolvedPath);
         let filtered = detailedEntries;
         if (!options.all) {
-          filtered = detailedEntries.filter(node => !node.name.startsWith('.'));
+          filtered = detailedEntries.filter(
+            (node) => !node.name.startsWith("."),
+          );
         }
 
         for (const node of filtered) {
-          const isDir = node.type === 'directory';
-          const isExecutable = node.name.endsWith('.trx');
-          const filePath = resolvedPath === '/' ? `/${node.name}` : `${resolvedPath}/${node.name}`;
+          const isDir = node.type === "directory";
+          const isExecutable = node.name.endsWith(".trx");
+          const filePath =
+            resolvedPath === "/"
+              ? `/${node.name}`
+              : `${resolvedPath}/${node.name}`;
 
           // Check if this is a character device (in /dev)
-          const isCharDevice = isDevPath(filePath) && node.type === 'file';
+          const isCharDevice = isDevPath(filePath) && node.type === "file";
 
           // Determine type character and permissions string
           let typeChar: string;
           let perms: string;
 
           if (isDir) {
-            typeChar = 'd';
-            perms = 'rwxr-xr-x';
+            typeChar = "d";
+            perms = "rwxr-xr-x";
           } else if (isCharDevice) {
-            typeChar = 'c';
+            typeChar = "c";
             // Get actual device permissions
-            perms = getDevPermissions(filePath) || 'rw-rw-rw-';
+            perms = getDevPermissions(filePath) || "rw-rw-rw-";
           } else if (isExecutable) {
-            typeChar = '-';
-            perms = 'rwxr-xr-x';
+            typeChar = "-";
+            perms = "rwxr-xr-x";
           } else {
-            typeChar = '-';
-            perms = 'rw-r--r--';
+            typeChar = "-";
+            perms = "rw-r--r--";
           }
 
           // Calculate size
           let size = 0;
-          if (node.type === 'virtual' && isDocsFile(filePath)) {
+          if (node.type === "virtual" && isDocsFile(filePath)) {
             size = getDocsSizeSync(filePath) ?? 0;
-          } else if (node.type === 'file' && !isCharDevice) {
+          } else if (node.type === "file" && !isCharDevice) {
             try {
               const content = vfs.read(filePath);
               // Handle async read
-              if (typeof content === 'string') {
+              if (typeof content === "string") {
                 size = content.length;
               }
             } catch {
@@ -368,24 +390,27 @@ function listDirectoryVFS(
           // Character devices show size as 0
 
           const sizeStr = formatSize(size, options.humanReadable);
-          const modified = new Date(node.meta.updatedAt).toISOString().split('T')[0];
+          const modified = new Date(node.meta.updatedAt)
+            .toISOString()
+            .split("T")[0];
           const formattedName = formatFileName(node.name, isDir, isExecutable);
 
           stdout += `${typeChar}${perms} 1 user user ${sizeStr.padStart(8)} ${modified} ${formattedName}\n`;
         }
 
         // Remove trailing newline for consistency
-        stdout = stdout.replace(/\n$/, '');
+        stdout = stdout.replace(/\n$/, "");
       } else {
         // Simple listing
-        const formattedEntries = filteredEntries.map(name => {
-          const entryPath = resolvedPath === '/' ? `/${name}` : `${resolvedPath}/${name}`;
+        const formattedEntries = filteredEntries.map((name) => {
+          const entryPath =
+            resolvedPath === "/" ? `/${name}` : `${resolvedPath}/${name}`;
           const isDir = vfs.isDirectory(entryPath);
-          const isExecutable = name.endsWith('.trx');
+          const isExecutable = name.endsWith(".trx");
           return formatFileName(name, isDir, isExecutable);
         });
 
-        stdout += formattedEntries.join('  ');
+        stdout += formattedEntries.join("  ");
       }
     } catch (error) {
       stderr += `ls: cannot access '${originalPath}': ${(error as Error).message}\n`;
@@ -396,7 +421,7 @@ function listDirectoryVFS(
   return {
     stdout,
     stderr: stderr.trim(),
-    exitCode
+    exitCode,
   };
 }
 
@@ -404,25 +429,25 @@ export const ls: BuiltinCommand = async (args, context) => {
   const options = {
     all: false,
     long: false,
-    humanReadable: false
+    humanReadable: false,
   };
 
   const paths: string[] = [];
 
   // Parse command line arguments
   for (const arg of args) {
-    if (arg === '-a' || arg === '--all') {
+    if (arg === "-a" || arg === "--all") {
       options.all = true;
-    } else if (arg === '-l' || arg === '--long') {
+    } else if (arg === "-l" || arg === "--long") {
       options.long = true;
-    } else if (arg === '-h' || arg === '--human-readable') {
+    } else if (arg === "-h" || arg === "--human-readable") {
       options.humanReadable = true;
-    } else if (arg.startsWith('-')) {
+    } else if (arg.startsWith("-")) {
       // Handle combined flags like -la, -lh, -lah
       for (const char of arg.slice(1)) {
-        if (char === 'a') options.all = true;
-        else if (char === 'l') options.long = true;
-        else if (char === 'h') options.humanReadable = true;
+        if (char === "a") options.all = true;
+        else if (char === "l") options.long = true;
+        else if (char === "h") options.humanReadable = true;
       }
     } else {
       paths.push(arg);
@@ -431,7 +456,7 @@ export const ls: BuiltinCommand = async (args, context) => {
 
   // If no paths specified, use current directory from VFS
   if (paths.length === 0) {
-    paths.push('.');
+    paths.push(".");
   }
 
   // Use VFS if available
@@ -440,11 +465,11 @@ export const ls: BuiltinCommand = async (args, context) => {
   }
 
   // Fallback to mock filesystem (legacy path)
-  const resolvedPaths = paths.map(p => {
-    if (p === '.') return '/';
-    if (p.startsWith('./')) return '/' + p.slice(2);
-    if (p.startsWith('/')) return p;
-    return '/' + p;
+  const resolvedPaths = paths.map((p) => {
+    if (p === ".") return "/";
+    if (p.startsWith("./")) return "/" + p.slice(2);
+    if (p.startsWith("/")) return p;
+    return "/" + p;
   });
 
   if (resolvedPaths.length === 1) {
@@ -452,10 +477,10 @@ export const ls: BuiltinCommand = async (args, context) => {
   }
 
   // Multiple paths - list each with header
-  let output = '';
+  let output = "";
   for (let i = 0; i < resolvedPaths.length; i++) {
     const p = resolvedPaths[i];
-    if (i > 0) output += '\n\n';
+    if (i > 0) output += "\n\n";
     if (resolvedPaths.length > 1) {
       output += `${p}:\n`;
     }
@@ -468,19 +493,19 @@ export const ls: BuiltinCommand = async (args, context) => {
 
   return {
     stdout: output,
-    stderr: '',
-    exitCode: 0
+    stderr: "",
+    exitCode: 0,
   };
 };
 
 export const cd: BuiltinCommand = async (args, context) => {
-  const path = args[0] || context.env.HOME || '/home/tronos';
+  const path = args[0] || context.env.HOME || "/home/tronos";
 
   // Handle ~ expansion
   let targetPath = path;
-  if (path === '~' || path.startsWith('~/')) {
-    const home = context.env.HOME || '/home/tronos';
-    targetPath = path === '~' ? home : home + path.slice(1);
+  if (path === "~" || path.startsWith("~/")) {
+    const home = context.env.HOME || "/home/tronos";
+    targetPath = path === "~" ? home : home + path.slice(1);
   }
 
   // Validate the target path before attempting to change directory
@@ -490,18 +515,18 @@ export const cd: BuiltinCommand = async (args, context) => {
     // Check if path exists
     if (!context.vfs.exists(resolvedPath)) {
       return {
-        stdout: '',
+        stdout: "",
         stderr: `cd: ${path}: No such file or directory`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
     // Check if path is a directory
     if (!context.vfs.isDirectory(resolvedPath)) {
       return {
-        stdout: '',
+        stdout: "",
         stderr: `cd: ${path}: Not a directory`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
   }
@@ -511,18 +536,18 @@ export const cd: BuiltinCommand = async (args, context) => {
   (context as any).requestedCd = targetPath;
 
   return {
-    stdout: '',
-    stderr: '',
-    exitCode: 0
+    stdout: "",
+    stderr: "",
+    exitCode: 0,
   };
 };
 
 export const pwd: BuiltinCommand = async (_args, context) => {
-  const cwd = context.env.PWD || '/';
+  const cwd = context.env.PWD || "/";
   return {
     stdout: cwd,
-    stderr: '',
-    exitCode: 0
+    stderr: "",
+    exitCode: 0,
   };
 };
 
@@ -532,19 +557,19 @@ export const cat: BuiltinCommand = async (args, context) => {
     if (context.stdin !== undefined) {
       return {
         stdout: context.stdin,
-        stderr: '',
-        exitCode: 0
+        stderr: "",
+        exitCode: 0,
       };
     }
     return {
-      stdout: '',
-      stderr: 'cat: missing file operand',
-      exitCode: 1
+      stdout: "",
+      stderr: "cat: missing file operand",
+      exitCode: 1,
     };
   }
 
-  let stdout = '';
-  let stderr = '';
+  let stdout = "";
+  let stderr = "";
   let exitCode = 0;
 
   for (const arg of args) {
@@ -557,31 +582,31 @@ export const cat: BuiltinCommand = async (args, context) => {
         }
         stdout += content;
         if (args.length > 1) {
-          stdout += '\n';
+          stdout += "\n";
         }
       } else {
         // Fallback to mock filesystem for backward compatibility
-        const resolvedPath = arg.startsWith('/') ? arg : '/' + arg;
+        const resolvedPath = arg.startsWith("/") ? arg : "/" + arg;
         const node = mockFilesystem[resolvedPath];
-        
+
         if (!node) {
           stderr += `cat: ${arg}: No such file or directory\n`;
           exitCode = 1;
           continue;
         }
-        
-        if (node.type !== 'file') {
+
+        if (node.type !== "file") {
           stderr += `cat: ${arg}: Is a directory\n`;
           exitCode = 1;
           continue;
         }
-        
+
         if (args.length > 1) {
           stdout += `==> ${arg} <==\n`;
         }
-        stdout += node.content || '';
+        stdout += node.content || "";
         if (args.length > 1) {
-          stdout += '\n';
+          stdout += "\n";
         }
       }
     } catch (error) {
@@ -591,99 +616,100 @@ export const cat: BuiltinCommand = async (args, context) => {
   }
 
   // Remove trailing newline for single files
-  if (args.length === 1 && stdout.endsWith('\n')) {
+  if (args.length === 1 && stdout.endsWith("\n")) {
     stdout = stdout.slice(0, -1);
   }
 
   return {
     stdout,
     stderr,
-    exitCode
+    exitCode,
   };
 };
 
 function processEscapeSequences(str: string): string {
-  return str.replace(/\\n/g, '\n')
-            .replace(/\\t/g, '\t')
-            .replace(/\\r/g, '\r')
-            .replace(/\\b/g, '\b')
-            .replace(/\\f/g, '\f')
-            .replace(/\\v/g, '\v')
-            .replace(/\\0/g, '\0')
-            .replace(/\\\\/g, '\\')
-            .replace(/\\"/g, '"')
-            .replace(/\\'/g, "'");
+  return str
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t")
+    .replace(/\\r/g, "\r")
+    .replace(/\\b/g, "\b")
+    .replace(/\\f/g, "\f")
+    .replace(/\\v/g, "\v")
+    .replace(/\\0/g, "\0")
+    .replace(/\\\\/g, "\\")
+    .replace(/\\"/g, '"')
+    .replace(/\\'/g, "'");
 }
 
 export const echo: BuiltinCommand = async (args, _context) => {
   // Parse arguments to handle quoted strings and escape sequences
   let escapeSequences = false;
   let trailingNewline = true;
-  
+
   const processedArgs: string[] = [];
-  
+
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    
-    if (arg === '-n') {
+
+    if (arg === "-n") {
       trailingNewline = false;
-    } else if (arg === '-e') {
+    } else if (arg === "-e") {
       escapeSequences = true;
-    } else if (arg === '-E') {
+    } else if (arg === "-E") {
       escapeSequences = false;
     } else {
       // Process the argument
       let processedArg = arg;
-      
+
       // Handle escape sequences if -e flag is set
       if (escapeSequences) {
         processedArg = processEscapeSequences(processedArg);
       }
-      
+
       processedArgs.push(processedArg);
     }
   }
-  
+
   // Join arguments with spaces
-  let output = processedArgs.join(' ');
-  
+  let output = processedArgs.join(" ");
+
   // Add trailing newline unless -n was specified
   if (trailingNewline) {
-    output += '\n';
+    output += "\n";
   }
-  
+
   return {
     stdout: output,
-    stderr: '',
-    exitCode: 0
+    stderr: "",
+    exitCode: 0,
   };
 };
 
 export const mkdir: BuiltinCommand = async (args, context) => {
   if (args.length === 0) {
     return {
-      stdout: '',
-      stderr: 'mkdir: missing operand',
-      exitCode: 1
+      stdout: "",
+      stderr: "mkdir: missing operand",
+      exitCode: 1,
     };
   }
 
   let recursive = false;
   const paths: string[] = [];
-  
+
   // Parse command line arguments
   for (const arg of args) {
-    if (arg === '-p' || arg === '--parents') {
+    if (arg === "-p" || arg === "--parents") {
       recursive = true;
-    } else if (arg.startsWith('-')) {
+    } else if (arg.startsWith("-")) {
       // Handle combined flags like -pv (though only -p is valid)
       for (const char of arg.slice(1)) {
-        if (char === 'p') recursive = true;
+        if (char === "p") recursive = true;
         else {
           return {
-            stdout: '',
+            stdout: "",
             stderr: `mkdir: invalid option -- '${char}'`,
-            exitCode: 1
+            exitCode: 1,
           };
         }
       }
@@ -692,7 +718,7 @@ export const mkdir: BuiltinCommand = async (args, context) => {
     }
   }
 
-  let stderr = '';
+  let stderr = "";
   let exitCode = 0;
 
   for (const path of paths) {
@@ -702,32 +728,32 @@ export const mkdir: BuiltinCommand = async (args, context) => {
         context.vfs.mkdir(path, recursive);
       } else {
         // Fallback to mock filesystem
-        const resolvedPath = path.startsWith('/') ? path : '/' + path;
-        
+        const resolvedPath = path.startsWith("/") ? path : "/" + path;
+
         if (mockFilesystem[resolvedPath]) {
           stderr += `mkdir: cannot create directory '${path}': File exists\n`;
           exitCode = 1;
           continue;
         }
-        
+
         // Add to parent directory's children
-        const parentPath = '/' + path.split('/').slice(0, -1).join('/');
-        const parentDir = mockFilesystem[parentPath] || mockFilesystem['/'];
-        
-        if (parentDir && parentDir.type === 'directory') {
-          const dirName = path.split('/').pop() || path;
+        const parentPath = "/" + path.split("/").slice(0, -1).join("/");
+        const parentDir = mockFilesystem[parentPath] || mockFilesystem["/"];
+
+        if (parentDir && parentDir.type === "directory") {
+          const dirName = path.split("/").pop() || path;
           parentDir.children = parentDir.children || [];
           parentDir.children.push(dirName);
-          
+
           // Create directory entry
           mockFilesystem[resolvedPath] = {
-            type: 'directory',
+            type: "directory",
             children: [],
-            permissions: 'rwxr-xr-x',
-            owner: 'user',
-            group: 'user',
+            permissions: "rwxr-xr-x",
+            owner: "user",
+            group: "user",
             size: 4096,
-            modified: new Date()
+            modified: new Date(),
           };
         } else {
           stderr += `mkdir: cannot create directory '${path}': No such file or directory\n`;
@@ -741,22 +767,22 @@ export const mkdir: BuiltinCommand = async (args, context) => {
   }
 
   return {
-    stdout: '',
+    stdout: "",
     stderr: stderr.trim(),
-    exitCode
+    exitCode,
   };
 };
 
 export const touch: BuiltinCommand = async (args, context) => {
   if (args.length === 0) {
     return {
-      stdout: '',
-      stderr: 'touch: missing file operand',
-      exitCode: 1
+      stdout: "",
+      stderr: "touch: missing file operand",
+      exitCode: 1,
     };
   }
 
-  let stderr = '';
+  let stderr = "";
   let exitCode = 0;
 
   for (const path of args) {
@@ -766,7 +792,7 @@ export const touch: BuiltinCommand = async (args, context) => {
         if (context.vfs.exists(path)) {
           // File exists, update timestamp
           const node = context.vfs.stat(path);
-          if (node.type === 'file') {
+          if (node.type === "file") {
             node.meta.updatedAt = Date.now();
           } else {
             stderr += `touch: '${path}': Is a directory\n`;
@@ -774,33 +800,33 @@ export const touch: BuiltinCommand = async (args, context) => {
           }
         } else {
           // File doesn't exist, create empty file
-          context.vfs.write(path, '');
+          context.vfs.write(path, "");
         }
       } else {
         // Fallback to mock filesystem
-        const resolvedPath = path.startsWith('/') ? path : '/' + path;
-        
+        const resolvedPath = path.startsWith("/") ? path : "/" + path;
+
         if (mockFilesystem[resolvedPath]) {
           // Update existing file's timestamp
           mockFilesystem[resolvedPath].modified = new Date();
         } else {
           // Create new empty file
-          const parentPath = '/' + path.split('/').slice(0, -1).join('/');
-          const parentDir = mockFilesystem[parentPath] || mockFilesystem['/'];
-          
-          if (parentDir && parentDir.type === 'directory') {
-            const fileName = path.split('/').pop() || path;
+          const parentPath = "/" + path.split("/").slice(0, -1).join("/");
+          const parentDir = mockFilesystem[parentPath] || mockFilesystem["/"];
+
+          if (parentDir && parentDir.type === "directory") {
+            const fileName = path.split("/").pop() || path;
             parentDir.children = parentDir.children || [];
             parentDir.children.push(fileName);
-            
+
             mockFilesystem[resolvedPath] = {
-              type: 'file',
-              content: '',
-              permissions: 'rw-r--r--',
-              owner: 'user',
-              group: 'user',
+              type: "file",
+              content: "",
+              permissions: "rw-r--r--",
+              owner: "user",
+              group: "user",
               size: 0,
-              modified: new Date()
+              modified: new Date(),
             };
           } else {
             stderr += `touch: '${path}': No such file or directory\n`;
@@ -815,49 +841,52 @@ export const touch: BuiltinCommand = async (args, context) => {
   }
 
   return {
-    stdout: '',
+    stdout: "",
     stderr: stderr.trim(),
-    exitCode
+    exitCode,
   };
 };
 
-function removeFilesystemNode(path: string, recursive: boolean): { success: boolean; error?: string } {
+function removeFilesystemNode(
+  path: string,
+  recursive: boolean,
+): { success: boolean; error?: string } {
   const node = mockFilesystem[path];
-  
+
   if (!node) {
     return { success: false, error: `No such file or directory` };
   }
-  
-  if (node.type === 'directory' && !recursive) {
+
+  if (node.type === "directory" && !recursive) {
     const children = node.children || [];
     if (children.length > 0) {
       return { success: false, error: `Directory not empty` };
     }
   }
-  
-  if (node.type === 'directory' && recursive) {
+
+  if (node.type === "directory" && recursive) {
     // Recursively remove all children
     const children = node.children || [];
     for (const child of children) {
-      const childPath = path === '/' ? `/${child}` : `${path}/${child}`;
+      const childPath = path === "/" ? `/${child}` : `${path}/${child}`;
       const result = removeFilesystemNode(childPath, true);
       if (!result.success) {
         return result;
       }
     }
   }
-  
+
   // Remove from parent's children
-  const parentPath = '/' + path.split('/').slice(0, -1).join('/');
+  const parentPath = "/" + path.split("/").slice(0, -1).join("/");
   const parentDir = mockFilesystem[parentPath];
   if (parentDir && parentDir.children) {
-    const fileName = path.split('/').pop() || path;
+    const fileName = path.split("/").pop() || path;
     const index = parentDir.children.indexOf(fileName);
     if (index !== -1) {
       parentDir.children.splice(index, 1);
     }
   }
-  
+
   // Delete the node
   delete mockFilesystem[path];
   return { success: true };
@@ -866,32 +895,32 @@ function removeFilesystemNode(path: string, recursive: boolean): { success: bool
 export const rm: BuiltinCommand = async (args, context) => {
   if (args.length === 0) {
     return {
-      stdout: '',
-      stderr: 'rm: missing operand',
-      exitCode: 1
+      stdout: "",
+      stderr: "rm: missing operand",
+      exitCode: 1,
     };
   }
 
   let recursive = false;
   let force = false;
   const paths: string[] = [];
-  
+
   // Parse command line arguments
   for (const arg of args) {
-    if (arg === '-r' || arg === '--recursive' || arg === '-R') {
+    if (arg === "-r" || arg === "--recursive" || arg === "-R") {
       recursive = true;
-    } else if (arg === '-f' || arg === '--force') {
+    } else if (arg === "-f" || arg === "--force") {
       force = true;
-    } else if (arg.startsWith('-')) {
+    } else if (arg.startsWith("-")) {
       // Handle combined flags like -rf, -fr
       for (const char of arg.slice(1)) {
-        if (char === 'r' || char === 'R') recursive = true;
-        else if (char === 'f') force = true;
+        if (char === "r" || char === "R") recursive = true;
+        else if (char === "f") force = true;
         else {
           return {
-            stdout: '',
+            stdout: "",
             stderr: `rm: invalid option -- '${char}'`,
-            exitCode: 1
+            exitCode: 1,
           };
         }
       }
@@ -902,13 +931,13 @@ export const rm: BuiltinCommand = async (args, context) => {
 
   if (paths.length === 0) {
     return {
-      stdout: '',
-      stderr: 'rm: missing operand',
-      exitCode: 1
+      stdout: "",
+      stderr: "rm: missing operand",
+      exitCode: 1,
     };
   }
 
-  let stderr = '';
+  let stderr = "";
   let exitCode = 0;
 
   for (const path of paths) {
@@ -925,8 +954,8 @@ export const rm: BuiltinCommand = async (args, context) => {
         }
       } else {
         // Fallback to mock filesystem
-        const resolvedPath = path.startsWith('/') ? path : '/' + path;
-        
+        const resolvedPath = path.startsWith("/") ? path : "/" + path;
+
         if (!mockFilesystem[resolvedPath]) {
           if (!force) {
             stderr += `rm: cannot remove '${path}': No such file or directory\n`;
@@ -934,25 +963,29 @@ export const rm: BuiltinCommand = async (args, context) => {
           }
           continue;
         }
-        
+
         const node = mockFilesystem[resolvedPath];
-        
+
         // Check if trying to remove non-empty directory without -r
-        if (node.type === 'directory' && !recursive && (node.children?.length || 0) > 0) {
+        if (
+          node.type === "directory" &&
+          !recursive &&
+          (node.children?.length || 0) > 0
+        ) {
           if (!force) {
             stderr += `rm: cannot remove '${path}': Directory not empty\n`;
             exitCode = 1;
           }
           continue;
         }
-        
+
         // For directories without -r and -f, confirm before deletion
-        if (node.type === 'directory' && !recursive && !force) {
+        if (node.type === "directory" && !recursive && !force) {
           stderr += `rm: cannot remove '${path}': Is a directory\n`;
           exitCode = 1;
           continue;
         }
-        
+
         const result = removeFilesystemNode(resolvedPath, recursive);
         if (!result.success && !force) {
           stderr += `rm: cannot remove '${path}': ${result.error}\n`;
@@ -968,86 +1001,92 @@ export const rm: BuiltinCommand = async (args, context) => {
   }
 
   return {
-    stdout: '',
+    stdout: "",
     stderr: stderr.trim(),
-    exitCode
+    exitCode,
   };
 };
 
-function copyFilesystemNode(srcPath: string, destPath: string, recursive: boolean): { success: boolean; error?: string } {
+function copyFilesystemNode(
+  srcPath: string,
+  destPath: string,
+  recursive: boolean,
+): { success: boolean; error?: string } {
   const srcNode = mockFilesystem[srcPath];
-  
+
   if (!srcNode) {
     return { success: false, error: `No such file or directory` };
   }
-  
+
   const destNode = mockFilesystem[destPath];
-  
+
   // Handle destination as directory vs file
-  if (destNode && destNode.type === 'directory') {
+  if (destNode && destNode.type === "directory") {
     // Copy into directory, preserving name
-    const srcName = srcPath.split('/').pop() || srcPath;
-    const finalDestPath = destPath === '/' ? `/${srcName}` : `${destPath}/${srcName}`;
-    
+    const srcName = srcPath.split("/").pop() || srcPath;
+    const finalDestPath =
+      destPath === "/" ? `/${srcName}` : `${destPath}/${srcName}`;
+
     if (mockFilesystem[finalDestPath]) {
       return { success: false, error: `File exists` };
     }
-    
+
     destPath = finalDestPath;
   }
-  
+
   // Check if destination already exists
   if (mockFilesystem[destPath]) {
     return { success: false, error: `File exists` };
   }
-  
-  if (srcNode.type === 'directory' && !recursive) {
+
+  if (srcNode.type === "directory" && !recursive) {
     const children = srcNode.children || [];
     if (children.length > 0) {
       return { success: false, error: `Omitting directory` };
     }
   }
-  
+
   // Add destination to parent directory's children
-  const destParentPath = '/' + destPath.split('/').slice(0, -1).join('/');
+  const destParentPath = "/" + destPath.split("/").slice(0, -1).join("/");
   const destParentDir = mockFilesystem[destParentPath];
-  
-  if (!destParentDir || destParentDir.type !== 'directory') {
+
+  if (!destParentDir || destParentDir.type !== "directory") {
     return { success: false, error: `No such file or directory` };
   }
-  
-  const destName = destPath.split('/').pop() || destPath;
+
+  const destName = destPath.split("/").pop() || destPath;
   destParentDir.children = destParentDir.children || [];
   destParentDir.children.push(destName);
-  
+
   // Create copy of the node
-  if (srcNode.type === 'file') {
+  if (srcNode.type === "file") {
     mockFilesystem[destPath] = {
-      type: 'file',
+      type: "file",
       content: srcNode.content,
       permissions: srcNode.permissions,
       owner: srcNode.owner,
       group: srcNode.group,
       size: srcNode.size,
-      modified: new Date()
+      modified: new Date(),
     };
   } else {
     // Directory
     mockFilesystem[destPath] = {
-      type: 'directory',
+      type: "directory",
       children: [],
       permissions: srcNode.permissions,
       owner: srcNode.owner,
       group: srcNode.group,
       size: srcNode.size,
-      modified: new Date()
+      modified: new Date(),
     };
-    
+
     // Recursively copy children if recursive is true
     if (recursive) {
       const srcChildren = srcNode.children || [];
       for (const child of srcChildren) {
-        const childSrcPath = srcPath === '/' ? `/${child}` : `${srcPath}/${child}`;
+        const childSrcPath =
+          srcPath === "/" ? `/${child}` : `${srcPath}/${child}`;
         const childDestPath = `${destPath}/${child}`;
         const result = copyFilesystemNode(childSrcPath, childDestPath, true);
         if (!result.success) {
@@ -1056,95 +1095,99 @@ function copyFilesystemNode(srcPath: string, destPath: string, recursive: boolea
       }
     }
   }
-  
+
   return { success: true };
 }
 
-function moveFilesystemNode(srcPath: string, destPath: string): { success: boolean; error?: string } {
+function moveFilesystemNode(
+  srcPath: string,
+  destPath: string,
+): { success: boolean; error?: string } {
   const srcNode = mockFilesystem[srcPath];
-  
+
   if (!srcNode) {
     return { success: false, error: `No such file or directory` };
   }
-  
+
   const destNode = mockFilesystem[destPath];
-  
+
   // Handle destination as directory vs file
-  if (destNode && destNode.type === 'directory') {
+  if (destNode && destNode.type === "directory") {
     // Move into directory, preserving name
-    const srcName = srcPath.split('/').pop() || srcPath;
-    const finalDestPath = destPath === '/' ? `/${srcName}` : `${destPath}/${srcName}`;
-    
+    const srcName = srcPath.split("/").pop() || srcPath;
+    const finalDestPath =
+      destPath === "/" ? `/${srcName}` : `${destPath}/${srcName}`;
+
     if (mockFilesystem[finalDestPath]) {
       return { success: false, error: `File exists` };
     }
-    
+
     destPath = finalDestPath;
   }
-  
+
   // Check if destination already exists
   if (mockFilesystem[destPath]) {
     return { success: false, error: `File exists` };
   }
-  
+
   // Remove from source parent directory
-  const srcParentPath = '/' + srcPath.split('/').slice(0, -1).join('/');
+  const srcParentPath = "/" + srcPath.split("/").slice(0, -1).join("/");
   const srcParentDir = mockFilesystem[srcParentPath];
   if (srcParentDir && srcParentDir.children) {
-    const srcName = srcPath.split('/').pop() || srcPath;
+    const srcName = srcPath.split("/").pop() || srcPath;
     const index = srcParentDir.children.indexOf(srcName);
     if (index !== -1) {
       srcParentDir.children.splice(index, 1);
     }
   }
-  
+
   // Add to destination parent directory
-  const destParentPath = '/' + destPath.split('/').slice(0, -1).join('/');
+  const destParentPath = "/" + destPath.split("/").slice(0, -1).join("/");
   const destParentDir = mockFilesystem[destParentPath];
-  
-  if (!destParentDir || destParentDir.type !== 'directory') {
+
+  if (!destParentDir || destParentDir.type !== "directory") {
     return { success: false, error: `No such file or directory` };
   }
-  
-  const destName = destPath.split('/').pop() || destPath;
+
+  const destName = destPath.split("/").pop() || destPath;
   destParentDir.children = destParentDir.children || [];
   destParentDir.children.push(destName);
-  
+
   // Move the node
   mockFilesystem[destPath] = srcNode;
   delete mockFilesystem[srcPath];
-  
+
   // Update modified time
   srcNode.modified = new Date();
-  
+
   return { success: true };
 }
 
 export const cp: BuiltinCommand = async (args, context) => {
   if (args.length < 2) {
     return {
-      stdout: '',
-      stderr: 'cp: missing file operand',
-      exitCode: 1
+      stdout: "",
+      stderr: "cp: missing file operand",
+      exitCode: 1,
     };
   }
 
   let recursive = false;
   const paths: string[] = [];
-  
+
   // Parse command line arguments
   for (const arg of args) {
-    if (arg === '-r' || arg === '-R' || arg === '--recursive') {
+    if (arg === "-r" || arg === "-R" || arg === "--recursive") {
       recursive = true;
-    } else if (arg.startsWith('-')) {
+    } else if (arg.startsWith("-")) {
       // Handle combined flags
       for (const char of arg.slice(1)) {
-        if (char === 'r' || char === 'R') recursive = true;
+        if (char === "r" || char === "R") recursive = true;
         else {
           return {
-            stdout: '',
+            stdout: "",
             stderr: `cp: invalid option -- '${char}'`,
-            exitCode: 1
+            exitCode: 1,
           };
         }
       }
@@ -1155,16 +1198,16 @@ export const cp: BuiltinCommand = async (args, context) => {
 
   if (paths.length < 2) {
     return {
-      stdout: '',
-      stderr: 'cp: missing destination file operand',
-      exitCode: 1
+      stdout: "",
+      stderr: "cp: missing destination file operand",
+      exitCode: 1,
     };
   }
 
   const sourcePaths = paths.slice(0, -1);
   const destPath = paths[paths.length - 1];
-  
-  let stderr = '';
+
+  let stderr = "";
   let exitCode = 0;
 
   if (context.vfs) {
@@ -1179,12 +1222,18 @@ export const cp: BuiltinCommand = async (args, context) => {
     }
   } else {
     // Fallback to mock filesystem
-    const resolvedDestPath = destPath.startsWith('/') ? destPath : '/' + destPath;
-    
+    const resolvedDestPath = destPath.startsWith("/")
+      ? destPath
+      : "/" + destPath;
+
     for (const srcPath of sourcePaths) {
-      const resolvedSrcPath = srcPath.startsWith('/') ? srcPath : '/' + srcPath;
-      
-      const result = copyFilesystemNode(resolvedSrcPath, resolvedDestPath, recursive);
+      const resolvedSrcPath = srcPath.startsWith("/") ? srcPath : "/" + srcPath;
+
+      const result = copyFilesystemNode(
+        resolvedSrcPath,
+        resolvedDestPath,
+        recursive,
+      );
       if (!result.success) {
         stderr += `cp: cannot copy '${srcPath}' to '${destPath}': ${result.error}\n`;
         exitCode = 1;
@@ -1193,25 +1242,25 @@ export const cp: BuiltinCommand = async (args, context) => {
   }
 
   return {
-    stdout: '',
+    stdout: "",
     stderr: stderr.trim(),
-    exitCode
+    exitCode,
   };
 };
 
 export const mv: BuiltinCommand = async (args, context) => {
   if (args.length < 2) {
     return {
-      stdout: '',
-      stderr: 'mv: missing file operand',
-      exitCode: 1
+      stdout: "",
+      stderr: "mv: missing file operand",
+      exitCode: 1,
     };
   }
 
   const sourcePaths = args.slice(0, -1);
   const destPath = args[args.length - 1];
-  
-  let stderr = '';
+
+  let stderr = "";
   let exitCode = 0;
 
   if (context.vfs) {
@@ -1226,11 +1275,13 @@ export const mv: BuiltinCommand = async (args, context) => {
     }
   } else {
     // Fallback to mock filesystem
-    const resolvedDestPath = destPath.startsWith('/') ? destPath : '/' + destPath;
-    
+    const resolvedDestPath = destPath.startsWith("/")
+      ? destPath
+      : "/" + destPath;
+
     for (const srcPath of sourcePaths) {
-      const resolvedSrcPath = srcPath.startsWith('/') ? srcPath : '/' + srcPath;
-      
+      const resolvedSrcPath = srcPath.startsWith("/") ? srcPath : "/" + srcPath;
+
       const result = moveFilesystemNode(resolvedSrcPath, resolvedDestPath);
       if (!result.success) {
         stderr += `mv: cannot move '${srcPath}' to '${destPath}': ${result.error}\n`;
@@ -1240,46 +1291,46 @@ export const mv: BuiltinCommand = async (args, context) => {
   }
 
   return {
-    stdout: '',
+    stdout: "",
     stderr: stderr.trim(),
-    exitCode
+    exitCode,
   };
 };
 
 export const head: BuiltinCommand = async (args, context) => {
   let lineCount = 10;
   const paths: string[] = [];
-  
+
   // Parse command line arguments
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    
-    if (arg === '-n' && i < args.length - 1) {
+
+    if (arg === "-n" && i < args.length - 1) {
       const count = parseInt(args[i + 1]);
       if (isNaN(count) || count < 0) {
         return {
-          stdout: '',
-          stderr: 'head: invalid line count',
-          exitCode: 1
+          stdout: "",
+          stderr: "head: invalid line count",
+          exitCode: 1,
         };
       }
       lineCount = count;
       i++; // Skip the next argument since it's the count
-    } else if (arg.startsWith('-n')) {
+    } else if (arg.startsWith("-n")) {
       const count = parseInt(arg.slice(2));
       if (isNaN(count) || count < 0) {
         return {
-          stdout: '',
-          stderr: 'head: invalid line count',
-          exitCode: 1
+          stdout: "",
+          stderr: "head: invalid line count",
+          exitCode: 1,
         };
       }
       lineCount = count;
-    } else if (arg.startsWith('-') && !arg.startsWith('-n')) {
+    } else if (arg.startsWith("-") && !arg.startsWith("-n")) {
       return {
-        stdout: '',
+        stdout: "",
         stderr: `head: invalid option -- '${arg.slice(1)}'`,
-        exitCode: 1
+        exitCode: 1,
       };
     } else {
       paths.push(arg);
@@ -1289,36 +1340,36 @@ export const head: BuiltinCommand = async (args, context) => {
   // If no paths specified, read from stdin
   if (paths.length === 0) {
     if (context.stdin !== undefined) {
-      let lines = context.stdin.split('\n');
+      let lines = context.stdin.split("\n");
       // Remove trailing empty string if input ended with newline
-      if (lines[lines.length - 1] === '') {
+      if (lines[lines.length - 1] === "") {
         lines = lines.slice(0, -1);
       }
       const selectedLines = lines.slice(0, lineCount);
-      const output = selectedLines.join('\n');
+      const output = selectedLines.join("\n");
       return {
-        stdout: output ? output + '\n' : '',
-        stderr: '',
-        exitCode: 0
+        stdout: output ? output + "\n" : "",
+        stderr: "",
+        exitCode: 0,
       };
     }
     return {
-      stdout: '',
-      stderr: 'head: missing file operand',
-      exitCode: 1
+      stdout: "",
+      stderr: "head: missing file operand",
+      exitCode: 1,
     };
   }
 
-  let stdout = '';
-  let stderr = '';
+  let stdout = "";
+  let stderr = "";
   let exitCode = 0;
 
   for (let i = 0; i < paths.length; i++) {
     const path = paths[i];
-    
+
     try {
       let content: string;
-      
+
       if (context.vfs) {
         // Use VFS if available
         if (!context.vfs.exists(path)) {
@@ -1327,7 +1378,7 @@ export const head: BuiltinCommand = async (args, context) => {
           continue;
         }
         const stat = context.vfs.stat(path);
-        if (stat.type === 'directory') {
+        if (stat.type === "directory") {
           stderr += `head: error reading '${path}': Is a directory\n`;
           exitCode = 1;
           continue;
@@ -1335,7 +1386,7 @@ export const head: BuiltinCommand = async (args, context) => {
         content = await context.vfs.read(path);
       } else {
         // Fallback to mock filesystem
-        const resolvedPath = path.startsWith('/') ? path : '/' + path;
+        const resolvedPath = path.startsWith("/") ? path : "/" + path;
         const node = mockFilesystem[resolvedPath];
 
         if (!node) {
@@ -1344,31 +1395,30 @@ export const head: BuiltinCommand = async (args, context) => {
           continue;
         }
 
-        if (node.type !== 'file') {
+        if (node.type !== "file") {
           stderr += `head: error reading '${path}': Is a directory\n`;
           exitCode = 1;
           continue;
         }
 
-        content = node.content || '';
+        content = node.content || "";
       }
 
       // Add header for multiple files
       if (paths.length > 1) {
-        if (i > 0) stdout += '\n';
+        if (i > 0) stdout += "\n";
         stdout += `==> ${path} <==\n`;
       }
 
       // Split into lines and take first N lines
-      const lines = content.split('\n');
+      const lines = content.split("\n");
       const headLines = lines.slice(0, lineCount);
-      stdout += headLines.join('\n');
+      stdout += headLines.join("\n");
 
       // Ensure trailing newline only if original content ended with one
-      if (content.endsWith('\n') && headLines.length > 0) {
-        stdout += '\n';
+      if (content.endsWith("\n") && headLines.length > 0) {
+        stdout += "\n";
       }
-
     } catch (error) {
       stderr += `head: ${path}: ${(error as Error).message}\n`;
       exitCode = 1;
@@ -1376,46 +1426,46 @@ export const head: BuiltinCommand = async (args, context) => {
   }
 
   return {
-    stdout: stdout.replace(/\n$/, ''), // Remove trailing newline
+    stdout: stdout.replace(/\n$/, ""), // Remove trailing newline
     stderr: stderr.trim(),
-    exitCode
+    exitCode,
   };
 };
 
 export const tail: BuiltinCommand = async (args, context) => {
   let lineCount = 10;
   const paths: string[] = [];
-  
+
   // Parse command line arguments
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    
-    if (arg === '-n' && i < args.length - 1) {
+
+    if (arg === "-n" && i < args.length - 1) {
       const count = parseInt(args[i + 1]);
       if (isNaN(count) || count < 0) {
         return {
-          stdout: '',
-          stderr: 'tail: invalid line count',
-          exitCode: 1
+          stdout: "",
+          stderr: "tail: invalid line count",
+          exitCode: 1,
         };
       }
       lineCount = count;
       i++; // Skip the next argument since it's the count
-    } else if (arg.startsWith('-n')) {
+    } else if (arg.startsWith("-n")) {
       const count = parseInt(arg.slice(2));
       if (isNaN(count) || count < 0) {
         return {
-          stdout: '',
-          stderr: 'tail: invalid line count',
-          exitCode: 1
+          stdout: "",
+          stderr: "tail: invalid line count",
+          exitCode: 1,
         };
       }
       lineCount = count;
-    } else if (arg.startsWith('-') && !arg.startsWith('-n')) {
+    } else if (arg.startsWith("-") && !arg.startsWith("-n")) {
       return {
-        stdout: '',
+        stdout: "",
         stderr: `tail: invalid option -- '${arg.slice(1)}'`,
-        exitCode: 1
+        exitCode: 1,
       };
     } else {
       paths.push(arg);
@@ -1425,37 +1475,37 @@ export const tail: BuiltinCommand = async (args, context) => {
   // If no paths specified, read from stdin
   if (paths.length === 0) {
     if (context.stdin !== undefined) {
-      let lines = context.stdin.split('\n');
+      let lines = context.stdin.split("\n");
       // Remove trailing empty string if input ended with newline
-      if (lines[lines.length - 1] === '') {
+      if (lines[lines.length - 1] === "") {
         lines = lines.slice(0, -1);
       }
       const startIndex = Math.max(0, lines.length - lineCount);
       const selectedLines = lines.slice(startIndex);
-      const output = selectedLines.join('\n');
+      const output = selectedLines.join("\n");
       return {
-        stdout: output ? output + '\n' : '',
-        stderr: '',
-        exitCode: 0
+        stdout: output ? output + "\n" : "",
+        stderr: "",
+        exitCode: 0,
       };
     }
     return {
-      stdout: '',
-      stderr: 'tail: missing file operand',
-      exitCode: 1
+      stdout: "",
+      stderr: "tail: missing file operand",
+      exitCode: 1,
     };
   }
 
-  let stdout = '';
-  let stderr = '';
+  let stdout = "";
+  let stderr = "";
   let exitCode = 0;
 
   for (let i = 0; i < paths.length; i++) {
     const path = paths[i];
-    
+
     try {
       let content: string;
-      
+
       if (context.vfs) {
         // Use VFS if available
         if (!context.vfs.exists(path)) {
@@ -1464,7 +1514,7 @@ export const tail: BuiltinCommand = async (args, context) => {
           continue;
         }
         const stat = context.vfs.stat(path);
-        if (stat.type === 'directory') {
+        if (stat.type === "directory") {
           stderr += `tail: error reading '${path}': Is a directory\n`;
           exitCode = 1;
           continue;
@@ -1472,7 +1522,7 @@ export const tail: BuiltinCommand = async (args, context) => {
         content = await context.vfs.read(path);
       } else {
         // Fallback to mock filesystem
-        const resolvedPath = path.startsWith('/') ? path : '/' + path;
+        const resolvedPath = path.startsWith("/") ? path : "/" + path;
         const node = mockFilesystem[resolvedPath];
 
         if (!node) {
@@ -1480,36 +1530,39 @@ export const tail: BuiltinCommand = async (args, context) => {
           exitCode = 1;
           continue;
         }
-        
-        if (node.type !== 'file') {
+
+        if (node.type !== "file") {
           stderr += `tail: error reading '${path}': Is a directory\n`;
           exitCode = 1;
           continue;
         }
-        
-        content = node.content || '';
+
+        content = node.content || "";
       }
-      
+
       // Add header for multiple files
       if (paths.length > 1) {
-        if (i > 0) stdout += '\n';
+        if (i > 0) stdout += "\n";
         stdout += `==> ${path} <==\n`;
       }
-      
+
       // Split into lines and take last N lines
-      const lines = content.split('\n');
+      const lines = content.split("\n");
       // Handle case where file doesn't end with newline
-      if (lines.length > 1 && lines[lines.length - 1] === '' && content.endsWith('\n')) {
+      if (
+        lines.length > 1 &&
+        lines[lines.length - 1] === "" &&
+        content.endsWith("\n")
+      ) {
         lines.pop(); // Remove empty string from final newline
       }
       const tailLines = lines.slice(-lineCount);
-      stdout += tailLines.join('\n');
-      
+      stdout += tailLines.join("\n");
+
       // Add trailing newline if original content had one
-      if (content.endsWith('\n')) {
-        stdout += '\n';
+      if (content.endsWith("\n")) {
+        stdout += "\n";
       }
-      
     } catch (error) {
       stderr += `tail: ${path}: ${(error as Error).message}\n`;
       exitCode = 1;
@@ -1517,16 +1570,16 @@ export const tail: BuiltinCommand = async (args, context) => {
   }
 
   return {
-    stdout: stdout.replace(/\n$/, ''), // Remove trailing newline
+    stdout: stdout.replace(/\n$/, ""), // Remove trailing newline
     stderr: stderr.trim(),
-    exitCode
+    exitCode,
   };
 };
 
 function highlightMatch(text: string, pattern: RegExp): string {
-  const BOLD_RED = '\x1b[1;31m';
-  const RESET = '\x1b[0m';
-  
+  const BOLD_RED = "\x1b[1;31m";
+  const RESET = "\x1b[0m";
+
   return text.replace(pattern, (match) => {
     return `${BOLD_RED}${match}${RESET}`;
   });
@@ -1535,9 +1588,9 @@ function highlightMatch(text: string, pattern: RegExp): string {
 export const grep: BuiltinCommand = async (args, context) => {
   if (args.length === 0) {
     return {
-      stdout: '',
-      stderr: 'grep: missing pattern',
-      exitCode: 2
+      stdout: "",
+      stderr: "grep: missing pattern",
+      exitCode: 2,
     };
   }
 
@@ -1546,41 +1599,41 @@ export const grep: BuiltinCommand = async (args, context) => {
   let invertMatch = false;
   let ignoreCase = false;
   let paths: string[] = [];
-  
+
   // Parse command line arguments
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    
-    if (arg === '-n' || arg === '--line-number') {
+
+    if (arg === "-n" || arg === "--line-number") {
       showLineNumbers = true;
-    } else if (arg === '-v' || arg === '--invert-match') {
+    } else if (arg === "-v" || arg === "--invert-match") {
       invertMatch = true;
-    } else if (arg === '-i' || arg === '--ignore-case') {
+    } else if (arg === "-i" || arg === "--ignore-case") {
       ignoreCase = true;
-    } else if (arg.startsWith('-') && !arg.startsWith('--')) {
+    } else if (arg.startsWith("-") && !arg.startsWith("--")) {
       // Handle combined flags
       for (const char of arg.slice(1)) {
-        if (char === 'n') showLineNumbers = true;
-        else if (char === 'v') invertMatch = true;
-        else if (char === 'i') ignoreCase = true;
+        if (char === "n") showLineNumbers = true;
+        else if (char === "v") invertMatch = true;
+        else if (char === "i") ignoreCase = true;
         else {
           return {
-            stdout: '',
+            stdout: "",
             stderr: `grep: invalid option -- '${char}'`,
-            exitCode: 2
+            exitCode: 2,
           };
         }
       }
     } else if (!pattern) {
       // First non-option argument is the pattern
       try {
-        const flags = ignoreCase ? 'gi' : 'g';
+        const flags = ignoreCase ? "gi" : "g";
         pattern = new RegExp(arg, flags);
       } catch (error) {
         return {
-          stdout: '',
+          stdout: "",
           stderr: `grep: invalid pattern '${arg}': ${(error as Error).message}`,
-          exitCode: 2
+          exitCode: 2,
         };
       }
     } else {
@@ -1590,16 +1643,16 @@ export const grep: BuiltinCommand = async (args, context) => {
 
   if (!pattern) {
     return {
-      stdout: '',
-      stderr: 'grep: missing pattern',
-      exitCode: 2
+      stdout: "",
+      stderr: "grep: missing pattern",
+      exitCode: 2,
     };
   }
 
   // If no paths specified, read from stdin
   if (paths.length === 0) {
     if (context.stdin !== undefined) {
-      const lines = context.stdin.split('\n');
+      const lines = context.stdin.split("\n");
       const matchedLines: string[] = [];
 
       lines.forEach((line, index) => {
@@ -1614,29 +1667,29 @@ export const grep: BuiltinCommand = async (args, context) => {
       });
 
       return {
-        stdout: matchedLines.length > 0 ? matchedLines.join('\n') + '\n' : '',
-        stderr: '',
-        exitCode: matchedLines.length > 0 ? 0 : 1
+        stdout: matchedLines.length > 0 ? matchedLines.join("\n") + "\n" : "",
+        stderr: "",
+        exitCode: matchedLines.length > 0 ? 0 : 1,
       };
     }
     return {
-      stdout: '',
-      stderr: 'grep: missing file operand',
-      exitCode: 2
+      stdout: "",
+      stderr: "grep: missing file operand",
+      exitCode: 2,
     };
   }
 
-  let stdout = '';
-  let stderr = '';
+  let stdout = "";
+  let stderr = "";
   let exitCode = 0;
   let matchFound = false;
 
   for (let i = 0; i < paths.length; i++) {
     const path = paths[i];
-    
+
     try {
       let content: string;
-      
+
       if (context.vfs) {
         // Use VFS if available
         if (!context.vfs.exists(path)) {
@@ -1645,7 +1698,7 @@ export const grep: BuiltinCommand = async (args, context) => {
           continue;
         }
         const stat = context.vfs.stat(path);
-        if (stat.type === 'directory') {
+        if (stat.type === "directory") {
           stderr += `grep: ${path}: Is a directory\n`;
           exitCode = 2;
           continue;
@@ -1653,7 +1706,7 @@ export const grep: BuiltinCommand = async (args, context) => {
         content = await context.vfs.read(path);
       } else {
         // Fallback to mock filesystem
-        const resolvedPath = path.startsWith('/') ? path : '/' + path;
+        const resolvedPath = path.startsWith("/") ? path : "/" + path;
         const node = mockFilesystem[resolvedPath];
 
         if (!node) {
@@ -1661,82 +1714,89 @@ export const grep: BuiltinCommand = async (args, context) => {
           exitCode = 2;
           continue;
         }
-        
-        if (node.type !== 'file') {
+
+        if (node.type !== "file") {
           stderr += `grep: ${path}: Is a directory\n`;
           exitCode = 2;
           continue;
         }
-        
-        content = node.content || '';
+
+        content = node.content || "";
       }
-      
-      const lines = content.split('\n');
+
+      const lines = content.split("\n");
       // Handle case where file doesn't end with newline
-      if (lines.length > 1 && lines[lines.length - 1] === '' && content.endsWith('\n')) {
+      if (
+        lines.length > 1 &&
+        lines[lines.length - 1] === "" &&
+        content.endsWith("\n")
+      ) {
         lines.pop(); // Remove empty string from final newline
       }
-      
+
       let fileHasMatch = false;
-      
+
       for (let lineNum = 0; lineNum < lines.length; lineNum++) {
         const line = lines[lineNum];
         const matches = pattern.test(line);
-        
+
         // Reset regex lastIndex for global patterns
         if (pattern.global) {
           pattern.lastIndex = 0;
         }
-        
-        const shouldShow = (matches && !invertMatch) || (!matches && invertMatch);
-        
+
+        const shouldShow =
+          (matches && !invertMatch) || (!matches && invertMatch);
+
         if (shouldShow) {
           matchFound = true;
           fileHasMatch = true;
-          
-          let outputLine = '';
-          
+
+          let outputLine = "";
+
           // Add filename prefix for multiple files
           if (paths.length > 1) {
             outputLine += `${path}:`;
           }
-          
+
           // Add line number if requested
           if (showLineNumbers) {
             outputLine += `${lineNum + 1}:`;
           }
-          
+
           // Highlight matches and add the line content (don't highlight when inverting)
           let displayLine = line;
           if (!invertMatch) {
-            displayLine = highlightMatch(line, new RegExp(pattern.source, pattern.flags));
+            displayLine = highlightMatch(
+              line,
+              new RegExp(pattern.source, pattern.flags),
+            );
           }
           outputLine += displayLine;
-          
-          stdout += outputLine + '\n';
+
+          stdout += outputLine + "\n";
         }
       }
-      
+
       // If no matches found and this is the only file, set exit code to 1
       if (!fileHasMatch && paths.length === 1) {
         exitCode = 1;
       }
-      
     } catch (error) {
       stderr += `grep: ${path}: ${(error as Error).message}\n`;
       exitCode = 2;
     }
   }
 
-      // If no matches found across all files, set exit code to 1 (but don't override error codes)
+  // If no matches found across all files, set exit code to 1 (but don't override error codes)
   if (!matchFound && exitCode === 0) {
     exitCode = 1;
   }
 
   return {
-    stdout: stdout.replace(/\n$/, ''), // Remove trailing newline
+    stdout: stdout.replace(/\n$/, ""), // Remove trailing newline
     stderr: stderr.trim(),
-    exitCode
+    exitCode,
   };
 };
 
@@ -1751,8 +1811,11 @@ function countContent(content: string): WCCounts {
   const lineCount = (content.match(/\n/g) || []).length;
 
   // Count words: split by whitespace and filter out empty strings
-  const words = content.trim().split(/\s+/).filter(word => word.length > 0);
-  const wordCount = content.trim() === '' ? 0 : words.length;
+  const words = content
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0);
+  const wordCount = content.trim() === "" ? 0 : words.length;
 
   // Count characters: simple length
   const charCount = content.length;
@@ -1760,7 +1823,7 @@ function countContent(content: string): WCCounts {
   return {
     lines: lineCount,
     words: wordCount,
-    characters: charCount
+    characters: charCount,
   };
 }
 
@@ -1769,39 +1832,39 @@ export const wc: BuiltinCommand = async (args, context) => {
   let countWords = true;
   let countChars = true;
   const paths: string[] = [];
-  
+
   // Parse command line arguments
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    
-    if (arg === '-l' || arg === '--lines') {
+
+    if (arg === "-l" || arg === "--lines") {
       countWords = false;
       countChars = false;
-    } else if (arg === '-w' || arg === '--words') {
+    } else if (arg === "-w" || arg === "--words") {
       countLines = false;
       countChars = false;
-    } else if (arg === '-c' || arg === '--bytes') {
+    } else if (arg === "-c" || arg === "--bytes") {
       countLines = false;
       countWords = false;
-    } else if (arg.startsWith('-') && !arg.startsWith('--')) {
+    } else if (arg.startsWith("-") && !arg.startsWith("--")) {
       // Handle combined flags like -lw, -lc, -wc, -lwc
       let hasLineFlag = false;
       let hasWordFlag = false;
       let hasCharFlag = false;
-      
+
       for (const char of arg.slice(1)) {
-        if (char === 'l') hasLineFlag = true;
-        else if (char === 'w') hasWordFlag = true;
-        else if (char === 'c') hasCharFlag = true;
+        if (char === "l") hasLineFlag = true;
+        else if (char === "w") hasWordFlag = true;
+        else if (char === "c") hasCharFlag = true;
         else {
           return {
-            stdout: '',
+            stdout: "",
             stderr: `wc: invalid option -- '${char}'`,
-            exitCode: 1
+            exitCode: 1,
           };
         }
       }
-      
+
       // If any specific flags are provided, only count those
       if (hasLineFlag || hasWordFlag || hasCharFlag) {
         countLines = hasLineFlag;
@@ -1824,32 +1887,32 @@ export const wc: BuiltinCommand = async (args, context) => {
       if (countChars) parts.push(counts.characters.toString());
 
       return {
-        stdout: parts.join(' '),
-        stderr: '',
-        exitCode: 0
+        stdout: parts.join(" "),
+        stderr: "",
+        exitCode: 0,
       };
     }
     return {
-      stdout: '',
-      stderr: 'wc: missing file operand',
-      exitCode: 1
+      stdout: "",
+      stderr: "wc: missing file operand",
+      exitCode: 1,
     };
   }
 
-  let stdout = '';
-  let stderr = '';
+  let stdout = "";
+  let stderr = "";
   let exitCode = 0;
-  
+
   let totalLines = 0;
   let totalWords = 0;
   let totalChars = 0;
 
   for (let i = 0; i < paths.length; i++) {
     const path = paths[i];
-    
+
     try {
       let content: string;
-      
+
       if (context.vfs) {
         // Use VFS if available
         if (!context.vfs.exists(path)) {
@@ -1858,7 +1921,7 @@ export const wc: BuiltinCommand = async (args, context) => {
           continue;
         }
         const stat = context.vfs.stat(path);
-        if (stat.type === 'directory') {
+        if (stat.type === "directory") {
           stderr += `wc: ${path}: Is a directory\n`;
           exitCode = 1;
           continue;
@@ -1866,7 +1929,7 @@ export const wc: BuiltinCommand = async (args, context) => {
         content = await context.vfs.read(path);
       } else {
         // Fallback to mock filesystem
-        const resolvedPath = path.startsWith('/') ? path : '/' + path;
+        const resolvedPath = path.startsWith("/") ? path : "/" + path;
         const node = mockFilesystem[resolvedPath];
 
         if (!node) {
@@ -1874,24 +1937,24 @@ export const wc: BuiltinCommand = async (args, context) => {
           exitCode = 1;
           continue;
         }
-        
-        if (node.type !== 'file') {
+
+        if (node.type !== "file") {
           stderr += `wc: ${path}: Is a directory\n`;
           exitCode = 1;
           continue;
         }
-        
-        content = node.content || '';
+
+        content = node.content || "";
       }
-      
+
       const counts = countContent(content);
       totalLines += counts.lines;
       totalWords += counts.words;
       totalChars += counts.characters;
-      
+
       // Build output line
-      let outputLine = '';
-      
+      let outputLine = "";
+
       if (countLines) {
         outputLine += `${counts.lines.toString().padStart(8)}`;
       }
@@ -1901,14 +1964,13 @@ export const wc: BuiltinCommand = async (args, context) => {
       if (countChars) {
         outputLine += `${counts.characters.toString().padStart(8)}`;
       }
-      
+
       // Add filename if multiple files
       if (paths.length > 1) {
         outputLine += ` ${path}`;
       }
-      
-      stdout += outputLine + '\n';
-      
+
+      stdout += outputLine + "\n";
     } catch (error) {
       stderr += `wc: ${path}: ${(error as Error).message}\n`;
       exitCode = 1;
@@ -1917,8 +1979,8 @@ export const wc: BuiltinCommand = async (args, context) => {
 
   // Add total line if multiple files
   if (paths.length > 1 && exitCode === 0) {
-    let totalLine = '';
-    
+    let totalLine = "";
+
     if (countLines) {
       totalLine += `${totalLines.toString().padStart(8)}`;
     }
@@ -1928,14 +1990,14 @@ export const wc: BuiltinCommand = async (args, context) => {
     if (countChars) {
       totalLine += `${totalChars.toString().padStart(8)}`;
     }
-    
-    totalLine += ' total';
-    stdout += totalLine + '\n';
+
+    totalLine += " total";
+    stdout += totalLine + "\n";
   }
 
   return {
-    stdout: stdout.replace(/\n$/, ''), // Remove trailing newline
+    stdout: stdout.replace(/\n$/, ""), // Remove trailing newline
     stderr: stderr.trim(),
-    exitCode
+    exitCode,
   };
 };

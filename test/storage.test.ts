@@ -8,7 +8,7 @@ import {
   getStorage,
   setStorage,
   isStorageInitialized,
-  type StorageBackend
+  type StorageBackend,
 } from "../src/persistence/storage";
 
 describe("Storage abstraction layer", () => {
@@ -61,7 +61,7 @@ describe("Storage abstraction layer", () => {
         clearTheme: vi.fn().mockResolvedValue(undefined),
         loadBootConfig: vi.fn().mockResolvedValue(null),
         saveBootConfig: vi.fn().mockResolvedValue(undefined),
-        clearBootConfig: vi.fn().mockResolvedValue(undefined)
+        clearBootConfig: vi.fn().mockResolvedValue(undefined),
       };
 
       setStorage(mockBackend);
@@ -91,7 +91,7 @@ describe("Storage abstraction layer", () => {
         clearTheme: vi.fn().mockResolvedValue(undefined),
         loadBootConfig: vi.fn().mockResolvedValue(null),
         saveBootConfig: vi.fn().mockResolvedValue(undefined),
-        clearBootConfig: vi.fn().mockResolvedValue(undefined)
+        clearBootConfig: vi.fn().mockResolvedValue(undefined),
       };
 
       setStorage(mockBackend);
@@ -120,7 +120,7 @@ describe("Storage abstraction layer", () => {
         clearTheme: vi.fn(),
         loadBootConfig: vi.fn(),
         saveBootConfig: vi.fn(),
-        clearBootConfig: vi.fn()
+        clearBootConfig: vi.fn(),
       };
 
       // Verify all methods exist

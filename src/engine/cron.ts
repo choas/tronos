@@ -11,7 +11,7 @@
  * @module engine/cron
  */
 
-import { getDB } from '../persistence/db';
+import { getDB } from "../persistence/db";
 
 /**
  * A scheduled cron job definition.
@@ -60,20 +60,20 @@ interface CronFields {
 function parseCronField(field: string, min: number, max: number): Set<number> {
   const values = new Set<number>();
 
-  for (const part of field.split(',')) {
+  for (const part of field.split(",")) {
     const trimmed = part.trim();
 
     // Handle step values: */N or M-N/S
-    if (trimmed.includes('/')) {
-      const [range, stepStr] = trimmed.split('/');
+    if (trimmed.includes("/")) {
+      const [range, stepStr] = trimmed.split("/");
       const step = parseInt(stepStr, 10);
       if (isNaN(step) || step <= 0) throw new Error(`Invalid step: ${stepStr}`);
 
       let start = min;
       let end = max;
-      if (range !== '*') {
-        if (range.includes('-')) {
-          const [s, e] = range.split('-').map(Number);
+      if (range !== "*") {
+        if (range.includes("-")) {
+          const [s, e] = range.split("-").map(Number);
           start = s;
           end = e;
         } else {
@@ -87,11 +87,12 @@ function parseCronField(field: string, min: number, max: number): Set<number> {
     }
 
     // Handle ranges: M-N
-    if (trimmed.includes('-')) {
-      const [startStr, endStr] = trimmed.split('-');
+    if (trimmed.includes("-")) {
+      const [startStr, endStr] = trimmed.split("-");
       const start = parseInt(startStr, 10);
       const end = parseInt(endStr, 10);
-      if (isNaN(start) || isNaN(end)) throw new Error(`Invalid range: ${trimmed}`);
+      if (isNaN(start) || isNaN(end))
+        throw new Error(`Invalid range: ${trimmed}`);
       for (let i = start; i <= end; i++) {
         values.add(i);
       }
@@ -99,7 +100,7 @@ function parseCronField(field: string, min: number, max: number): Set<number> {
     }
 
     // Handle wildcard
-    if (trimmed === '*') {
+    if (trimmed === "*") {
       for (let i = min; i <= max; i++) {
         values.add(i);
       }
@@ -128,39 +129,43 @@ function parseCronField(field: string, min: number, max: number): Set<number> {
  * @param schedule - The cron schedule string
  * @returns Parsed fields or null for @every intervals
  */
-export function parseCronSchedule(schedule: string): { type: 'cron'; fields: CronFields } | { type: 'interval'; intervalMs: number } {
+export function parseCronSchedule(
+  schedule: string,
+):
+  | { type: "cron"; fields: CronFields }
+  | { type: "interval"; intervalMs: number } {
   const trimmed = schedule.trim();
 
   // Handle shorthands
-  if (trimmed.startsWith('@')) {
+  if (trimmed.startsWith("@")) {
     switch (trimmed) {
-      case '@yearly':
-      case '@annually':
-        return { type: 'cron', fields: parseCronFields('0 0 1 1 *') };
-      case '@monthly':
-        return { type: 'cron', fields: parseCronFields('0 0 1 * *') };
-      case '@weekly':
-        return { type: 'cron', fields: parseCronFields('0 0 * * 0') };
-      case '@daily':
-      case '@midnight':
-        return { type: 'cron', fields: parseCronFields('0 0 * * *') };
-      case '@hourly':
-        return { type: 'cron', fields: parseCronFields('0 * * * *') };
+      case "@yearly":
+      case "@annually":
+        return { type: "cron", fields: parseCronFields("0 0 1 1 *") };
+      case "@monthly":
+        return { type: "cron", fields: parseCronFields("0 0 1 * *") };
+      case "@weekly":
+        return { type: "cron", fields: parseCronFields("0 0 * * 0") };
+      case "@daily":
+      case "@midnight":
+        return { type: "cron", fields: parseCronFields("0 0 * * *") };
+      case "@hourly":
+        return { type: "cron", fields: parseCronFields("0 * * * *") };
       default: {
         // Handle @every Nm or @every Nh
         const everyMatch = trimmed.match(/^@every\s+(\d+)([mh])$/);
         if (everyMatch) {
           const amount = parseInt(everyMatch[1], 10);
           const unit = everyMatch[2];
-          const multiplier = unit === 'h' ? 60 * 60 * 1000 : 60 * 1000;
-          return { type: 'interval', intervalMs: amount * multiplier };
+          const multiplier = unit === "h" ? 60 * 60 * 1000 : 60 * 1000;
+          return { type: "interval", intervalMs: amount * multiplier };
         }
         throw new Error(`Unknown schedule shorthand: ${trimmed}`);
       }
     }
   }
 
-  return { type: 'cron', fields: parseCronFields(trimmed) };
+  return { type: "cron", fields: parseCronFields(trimmed) };
 }
 
 /**
@@ -169,7 +174,9 @@ export function parseCronSchedule(schedule: string): { type: 'cron'; fields: Cro
 function parseCronFields(expr: string): CronFields {
   const parts = expr.trim().split(/\s+/);
   if (parts.length !== 5) {
-    throw new Error(`Invalid cron expression: expected 5 fields, got ${parts.length}`);
+    throw new Error(
+      `Invalid cron expression: expected 5 fields, got ${parts.length}`,
+    );
   }
 
   return {
@@ -211,12 +218,15 @@ function cronMatchesDate(fields: CronFields, date: Date): boolean {
 /**
  * Calculate the next run time from now for a given schedule.
  */
-export function getNextRunTime(schedule: string, fromTime?: number): number | null {
+export function getNextRunTime(
+  schedule: string,
+  fromTime?: number,
+): number | null {
   try {
     const parsed = parseCronSchedule(schedule);
     const now = fromTime ?? Date.now();
 
-    if (parsed.type === 'interval') {
+    if (parsed.type === "interval") {
       return now + parsed.intervalMs;
     }
 
@@ -241,8 +251,8 @@ export function getNextRunTime(schedule: string, fromTime?: number): number | nu
 }
 
 // Storage key prefix for IndexedDB config store
-const CRON_JOBS_KEY = 'cron:jobs';
-const CRON_LOG_KEY = 'cron:log';
+const CRON_JOBS_KEY = "cron:jobs";
+const CRON_LOG_KEY = "cron:log";
 const MAX_LOG_ENTRIES = 100;
 
 /**
@@ -251,7 +261,7 @@ const MAX_LOG_ENTRIES = 100;
 export async function loadCronJobs(): Promise<CronJob[]> {
   try {
     const db = getDB();
-    const jobs = await db.get('config', CRON_JOBS_KEY);
+    const jobs = await db.get("config", CRON_JOBS_KEY);
     return (jobs as CronJob[] | undefined) ?? [];
   } catch {
     return [];
@@ -264,9 +274,9 @@ export async function loadCronJobs(): Promise<CronJob[]> {
 export async function saveCronJobs(jobs: CronJob[]): Promise<void> {
   try {
     const db = getDB();
-    await db.put('config', jobs, CRON_JOBS_KEY);
+    await db.put("config", jobs, CRON_JOBS_KEY);
   } catch (err) {
-    console.error('Failed to persist cron jobs:', err);
+    console.error("Failed to persist cron jobs:", err);
   }
 }
 
@@ -276,7 +286,7 @@ export async function saveCronJobs(jobs: CronJob[]): Promise<void> {
 export async function loadCronLog(): Promise<CronLogEntry[]> {
   try {
     const db = getDB();
-    const log = await db.get('config', CRON_LOG_KEY);
+    const log = await db.get("config", CRON_LOG_KEY);
     return (log as CronLogEntry[] | undefined) ?? [];
   } catch {
     return [];
@@ -291,16 +301,18 @@ export async function saveCronLog(log: CronLogEntry[]): Promise<void> {
     const db = getDB();
     // Keep only the last MAX_LOG_ENTRIES entries
     const trimmed = log.slice(-MAX_LOG_ENTRIES);
-    await db.put('config', trimmed, CRON_LOG_KEY);
+    await db.put("config", trimmed, CRON_LOG_KEY);
   } catch (err) {
-    console.error('Failed to persist cron log:', err);
+    console.error("Failed to persist cron log:", err);
   }
 }
 
 /**
  * Type for the command executor function injected into the scheduler.
  */
-export type CronCommandExecutor = (command: string) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
+export type CronCommandExecutor = (
+  command: string,
+) => Promise<{ stdout: string; stderr: string; exitCode: number }>;
 
 /**
  * Background cron job scheduler.
@@ -312,7 +324,8 @@ export class CronScheduler {
   private jobs: CronJob[] = [];
   private log: CronLogEntry[] = [];
   private intervalId: ReturnType<typeof setInterval> | null = null;
-  private intervalJobs: Map<string, { lastRun: number; intervalMs: number }> = new Map();
+  private intervalJobs: Map<string, { lastRun: number; intervalMs: number }> =
+    new Map();
   private executor: CronCommandExecutor | null = null;
   private _running = false;
 
@@ -332,10 +345,10 @@ export class CronScheduler {
 
     // Initialize interval tracking for @every jobs
     for (const job of this.jobs) {
-      if (job.enabled && job.schedule.startsWith('@every')) {
+      if (job.enabled && job.schedule.startsWith("@every")) {
         try {
           const parsed = parseCronSchedule(job.schedule);
-          if (parsed.type === 'interval') {
+          if (parsed.type === "interval") {
             this.intervalJobs.set(job.id, {
               lastRun: job.lastRun ?? Date.now(),
               intervalMs: parsed.intervalMs,
@@ -391,7 +404,7 @@ export class CronScheduler {
    */
   public getLog(jobId?: string): CronLogEntry[] {
     if (jobId) {
-      return this.log.filter(e => e.jobId === jobId);
+      return this.log.filter((e) => e.jobId === jobId);
     }
     return [...this.log];
   }
@@ -399,7 +412,11 @@ export class CronScheduler {
   /**
    * Add a new cron job.
    */
-  public async addJob(schedule: string, command: string, label?: string): Promise<CronJob> {
+  public async addJob(
+    schedule: string,
+    command: string,
+    label?: string,
+  ): Promise<CronJob> {
     const error = validateSchedule(schedule);
     if (error) {
       throw new Error(error);
@@ -422,8 +439,11 @@ export class CronScheduler {
     // Track interval jobs
     try {
       const parsed = parseCronSchedule(schedule);
-      if (parsed.type === 'interval') {
-        this.intervalJobs.set(id, { lastRun: Date.now(), intervalMs: parsed.intervalMs });
+      if (parsed.type === "interval") {
+        this.intervalJobs.set(id, {
+          lastRun: Date.now(),
+          intervalMs: parsed.intervalMs,
+        });
       }
     } catch {
       // Already validated above
@@ -437,7 +457,7 @@ export class CronScheduler {
    * Remove a cron job by ID.
    */
   public async removeJob(id: string): Promise<boolean> {
-    const idx = this.jobs.findIndex(j => j.id === id);
+    const idx = this.jobs.findIndex((j) => j.id === id);
     if (idx === -1) return false;
 
     this.jobs.splice(idx, 1);
@@ -450,7 +470,7 @@ export class CronScheduler {
    * Enable a job.
    */
   public async enableJob(id: string): Promise<boolean> {
-    const job = this.jobs.find(j => j.id === id);
+    const job = this.jobs.find((j) => j.id === id);
     if (!job) return false;
 
     job.enabled = true;
@@ -459,10 +479,15 @@ export class CronScheduler {
     // Re-setup interval tracking if needed
     try {
       const parsed = parseCronSchedule(job.schedule);
-      if (parsed.type === 'interval') {
-        this.intervalJobs.set(id, { lastRun: Date.now(), intervalMs: parsed.intervalMs });
+      if (parsed.type === "interval") {
+        this.intervalJobs.set(id, {
+          lastRun: Date.now(),
+          intervalMs: parsed.intervalMs,
+        });
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
 
     await saveCronJobs(this.jobs);
     return true;
@@ -472,7 +497,7 @@ export class CronScheduler {
    * Disable a job.
    */
   public async disableJob(id: string): Promise<boolean> {
-    const job = this.jobs.find(j => j.id === id);
+    const job = this.jobs.find((j) => j.id === id);
     if (!job) return false;
 
     job.enabled = false;
@@ -485,8 +510,11 @@ export class CronScheduler {
   /**
    * Update a job's schedule and/or command.
    */
-  public async editJob(id: string, updates: { schedule?: string; command?: string; label?: string }): Promise<boolean> {
-    const job = this.jobs.find(j => j.id === id);
+  public async editJob(
+    id: string,
+    updates: { schedule?: string; command?: string; label?: string },
+  ): Promise<boolean> {
+    const job = this.jobs.find((j) => j.id === id);
     if (!job) return false;
 
     if (updates.schedule !== undefined) {
@@ -498,10 +526,15 @@ export class CronScheduler {
       this.intervalJobs.delete(id);
       try {
         const parsed = parseCronSchedule(job.schedule);
-        if (parsed.type === 'interval') {
-          this.intervalJobs.set(id, { lastRun: Date.now(), intervalMs: parsed.intervalMs });
+        if (parsed.type === "interval") {
+          this.intervalJobs.set(id, {
+            lastRun: Date.now(),
+            intervalMs: parsed.intervalMs,
+          });
         }
-      } catch { /* skip */ }
+      } catch {
+        /* skip */
+      }
     }
 
     if (updates.command !== undefined) {
@@ -520,7 +553,7 @@ export class CronScheduler {
    * Get a job by ID.
    */
   public getJob(id: string): CronJob | undefined {
-    return this.jobs.find(j => j.id === id);
+    return this.jobs.find((j) => j.id === id);
   }
 
   /**
@@ -547,7 +580,10 @@ export class CronScheduler {
         // Check cron-expression jobs
         try {
           const parsed = parseCronSchedule(job.schedule);
-          if (parsed.type === 'cron' && cronMatchesDate(parsed.fields, currentDate)) {
+          if (
+            parsed.type === "cron" &&
+            cronMatchesDate(parsed.fields, currentDate)
+          ) {
             shouldRun = true;
           }
         } catch {
@@ -601,7 +637,7 @@ export class CronScheduler {
         jobId: job.id,
         timestamp: now,
         exitCode: 1,
-        stdout: '',
+        stdout: "",
         stderr: err instanceof Error ? err.message : String(err),
       };
 
@@ -622,14 +658,14 @@ export class CronScheduler {
    * Format jobs as crontab-style output (for /proc/cron/jobs).
    */
   public toCrontab(): string {
-    if (this.jobs.length === 0) return '# no cron jobs\n';
+    if (this.jobs.length === 0) return "# no cron jobs\n";
 
-    const lines: string[] = ['# TronOS crontab'];
+    const lines: string[] = ["# TronOS crontab"];
     for (const job of this.jobs) {
-      const status = job.enabled ? '' : '# [disabled] ';
+      const status = job.enabled ? "" : "# [disabled] ";
       lines.push(`${status}${job.schedule} ${job.command}`);
     }
-    return lines.join('\n') + '\n';
+    return lines.join("\n") + "\n";
   }
 }
 
@@ -638,14 +674,16 @@ export class CronScheduler {
  */
 function generateShortId(): string {
   const arr = new Uint8Array(3);
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
     crypto.getRandomValues(arr);
   } else {
     for (let i = 0; i < arr.length; i++) {
       arr[i] = Math.floor(Math.random() * 256);
     }
   }
-  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('');
+  return Array.from(arr)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 // Global scheduler instance (shared across the app)

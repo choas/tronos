@@ -5,9 +5,9 @@
  * that reflect the current state of the system.
  */
 
-import { getAIConfig, isAIConfigured } from '../stores/ai';
-import { VERSION_STRING } from '../version';
-import { getCronScheduler } from '../engine/cron';
+import { getAIConfig, isAIConfigured } from "../stores/ai";
+import { VERSION_STRING } from "../version";
+import { getCronScheduler } from "../engine/cron";
 import {
   getTheme,
   getColor,
@@ -16,17 +16,17 @@ import {
   getPreset,
   COLOR_KEYS,
   type ColorKey,
-} from '../stores/theme';
+} from "../stores/theme";
 import {
   readWorkspace,
   writeWorkspace,
   readFocus,
   readHistory,
   getActiveSession,
-} from '../context/state';
-import { getEventBus } from '../events/bus';
-import { getAgentRuntime } from '../agents/runtime';
-import { getGuardQueue } from '../agents/guard';
+} from "../context/state";
+import { getEventBus } from "../events/bus";
+import { getAgentRuntime } from "../agents/runtime";
+import { getGuardQueue } from "../agents/guard";
 import {
   isMCPPath,
   isMCPDirectory,
@@ -34,7 +34,7 @@ import {
   readMCP,
   writeMCP,
   listMCPDirectory,
-} from './mcp';
+} from "./mcp";
 
 /** Boot time for uptime calculation */
 let bootTime: number = Date.now();
@@ -57,9 +57,9 @@ export function getBootTime(): number {
  * Format bytes into human-readable string
  */
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
+  if (bytes === 0) return "0 B";
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 }
@@ -73,7 +73,7 @@ export interface ProcContext {
 
 /** Default context with empty environment */
 let procContext: ProcContext = {
-  env: {}
+  env: {},
 };
 
 /**
@@ -98,69 +98,76 @@ export type ProcWriteHandler = (data: string) => void | Promise<void>;
  */
 export const procGenerators: Record<string, ProcGenerator> = {
   // AI configuration info
-  '/proc/ai/model': () => getAIConfig().model,
-  '/proc/ai/provider': () => getAIConfig().provider,
-  '/proc/ai/status': () => isAIConfigured() ? 'configured' : 'not configured',
+  "/proc/ai/model": () => getAIConfig().model,
+  "/proc/ai/provider": () => getAIConfig().provider,
+  "/proc/ai/status": () => (isAIConfigured() ? "configured" : "not configured"),
 
   // System information
-  '/proc/system/version': () => VERSION_STRING,
-  '/proc/system/uptime': () => {
+  "/proc/system/version": () => VERSION_STRING,
+  "/proc/system/uptime": () => {
     const seconds = Math.floor((Date.now() - bootTime) / 1000);
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
     return `${hours}h ${minutes}m ${secs}s`;
   },
-  '/proc/system/memory': () => {
+  "/proc/system/memory": () => {
     // performance.memory is a non-standard Chrome extension
     const perfMemory = (performance as any)?.memory;
     const used = perfMemory?.usedJSHeapSize || 0;
     const total = perfMemory?.jsHeapSizeLimit || 0;
     if (used === 0 && total === 0) {
-      return 'Memory info not available';
+      return "Memory info not available";
     }
     return `Used: ${formatBytes(used)}\nTotal: ${formatBytes(total)}`;
   },
 
   // Environment (dynamically reads from context)
-  '/proc/env': () => {
+  "/proc/env": () => {
     return Object.entries(procContext.env)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([k, v]) => `${k}=${v}`)
-      .join('\n');
+      .join("\n");
   },
 
   // Cron jobs in crontab format
-  '/proc/cron/jobs': () => {
+  "/proc/cron/jobs": () => {
     return getCronScheduler().toCrontab();
   },
 
   // Theme: active theme name
-  '/proc/theme/active': () => getTheme(),
+  "/proc/theme/active": () => getTheme(),
 
   // Context bus
-  '/proc/context/workspace': () => readWorkspace(getActiveSession()),
-  '/proc/context/focus': () => readFocus(getActiveSession()),
-  '/proc/context/history': () => readHistory(getActiveSession()),
+  "/proc/context/workspace": () => readWorkspace(getActiveSession()),
+  "/proc/context/focus": () => readFocus(getActiveSession()),
+  "/proc/context/history": () => readHistory(getActiveSession()),
 
   // Event bus
-  '/proc/events/stream': () => {
+  "/proc/events/stream": () => {
     const bus = getEventBus();
     const recent = bus.getHistory(50);
-    return recent.map(e => JSON.stringify(e)).join('\n');
+    return recent.map((e) => JSON.stringify(e)).join("\n");
   },
-  '/proc/events/subscribers': () => {
+  "/proc/events/subscribers": () => {
     const bus = getEventBus();
     const subs = bus.getSubscriptions();
-    return JSON.stringify(subs.map(s => ({
-      id: s.id,
-      pattern: s.pattern,
-      command: s.command,
-    })), null, 2);
+    return JSON.stringify(
+      subs.map((s) => ({
+        id: s.id,
+        pattern: s.pattern,
+        command: s.command,
+      })),
+      null,
+      2,
+    );
   },
-  '/proc/events/history': () => {
+  "/proc/events/history": () => {
     const bus = getEventBus();
-    return bus.getHistory().map(e => JSON.stringify(e)).join('\n');
+    return bus
+      .getHistory()
+      .map((e) => JSON.stringify(e))
+      .join("\n");
   },
 };
 
@@ -168,7 +175,8 @@ export const procGenerators: Record<string, ProcGenerator> = {
  * Map of /proc paths to write handlers (for writable proc files)
  */
 export const procWriteHandlers: Record<string, ProcWriteHandler> = {
-  '/proc/context/workspace': (data: string) => writeWorkspace(data, getActiveSession()),
+  "/proc/context/workspace": (data: string) =>
+    writeWorkspace(data, getActiveSession()),
 };
 
 // Register write handlers for /proc/theme/colors/*
@@ -189,10 +197,10 @@ function registerPresetGenerators(): void {
     const procPath = `/proc/theme/presets/${name}`;
     procGenerators[procPath] = () => {
       const preset = getPreset(name);
-      if (!preset) return '';
+      if (!preset) return "";
       return Object.entries(preset.colors)
         .map(([k, v]) => `${k}=${v}`)
-        .join('\n');
+        .join("\n");
     };
   }
 }
@@ -211,7 +219,7 @@ export function refreshPresetGenerators(): void {
  * Check if a path is a /proc path
  */
 export function isProcPath(path: string): boolean {
-  return path === '/proc' || path.startsWith('/proc/');
+  return path === "/proc" || path.startsWith("/proc/");
 }
 
 /**
@@ -229,18 +237,26 @@ export function getProcGenerator(path: string): ProcGenerator | undefined {
   }
 
   // Dynamic: Agent paths /proc/agents/{id}/{field}
-  if (path.startsWith('/proc/agents/')) {
+  if (path.startsWith("/proc/agents/")) {
     return getAgentProcGenerator(path);
   }
 
   // Dynamic: Guard paths
-  if (path === '/proc/guard/pending') {
-    return () => getGuardQueue().getPending().map(r => JSON.stringify(r)).join('\n');
+  if (path === "/proc/guard/pending") {
+    return () =>
+      getGuardQueue()
+        .getPending()
+        .map((r) => JSON.stringify(r))
+        .join("\n");
   }
-  if (path === '/proc/guard/log') {
-    return () => getGuardQueue().getLog().map(r => JSON.stringify(r)).join('\n');
+  if (path === "/proc/guard/log") {
+    return () =>
+      getGuardQueue()
+        .getLog()
+        .map((r) => JSON.stringify(r))
+        .join("\n");
   }
-  if (path === '/proc/guard/policy') {
+  if (path === "/proc/guard/policy") {
     return () => JSON.stringify(getGuardQueue().getPolicy(), null, 2);
   }
 
@@ -251,7 +267,7 @@ export function getProcGenerator(path: string): ProcGenerator | undefined {
  * Get a proc generator for agent-specific paths.
  */
 function getAgentProcGenerator(path: string): ProcGenerator | undefined {
-  const parts = path.replace('/proc/agents/', '').split('/');
+  const parts = path.replace("/proc/agents/", "").split("/");
   if (parts.length !== 2) return undefined;
 
   const [id, field] = parts;
@@ -262,14 +278,22 @@ function getAgentProcGenerator(path: string): ProcGenerator | undefined {
     if (!agent) return `Agent ${id} not found`;
 
     switch (field) {
-      case 'name': return agent.name;
-      case 'goal': return agent.goal;
-      case 'status': return agent.status;
-      case 'permissions': return JSON.stringify(agent.permissions, null, 2);
-      case 'log': return agent.log.map(e => JSON.stringify(e)).join('\n');
-      case 'pid': return String(agent.pid);
-      case 'violations': return agent.violations.map(v => JSON.stringify(v)).join('\n');
-      default: return `Unknown agent field: ${field}`;
+      case "name":
+        return agent.name;
+      case "goal":
+        return agent.goal;
+      case "status":
+        return agent.status;
+      case "permissions":
+        return JSON.stringify(agent.permissions, null, 2);
+      case "log":
+        return agent.log.map((e) => JSON.stringify(e)).join("\n");
+      case "pid":
+        return String(agent.pid);
+      case "violations":
+        return agent.violations.map((v) => JSON.stringify(v)).join("\n");
+      default:
+        return `Unknown agent field: ${field}`;
     }
   };
 }
@@ -278,7 +302,9 @@ function getAgentProcGenerator(path: string): ProcGenerator | undefined {
  * Get the write handler for a /proc path, if it exists.
  * Handles dynamic MCP tool writes.
  */
-export function getProcWriteHandler(path: string): ProcWriteHandler | undefined {
+export function getProcWriteHandler(
+  path: string,
+): ProcWriteHandler | undefined {
   const handler = procWriteHandlers[path];
   if (handler) return handler;
 
@@ -304,17 +330,27 @@ export function isProcWritable(path: string): boolean {
  * Structure of /proc filesystem for directory listings
  */
 export const procStructure: Record<string, string[]> = {
-  '/proc': ['ai', 'system', 'env', 'cron', 'theme', 'context', 'events', 'agents', 'guard'],
-  '/proc/ai': ['model', 'provider', 'status'],
-  '/proc/system': ['version', 'uptime', 'memory'],
-  '/proc/cron': ['jobs'],
-  '/proc/theme': ['active', 'colors', 'presets'],
-  '/proc/theme/colors': [...COLOR_KEYS],
-  '/proc/theme/presets': [], // dynamically populated
-  '/proc/context': ['workspace', 'focus', 'history'],
-  '/proc/events': ['stream', 'subscribers', 'history'],
-  '/proc/agents': [],  // dynamically populated
-  '/proc/guard': ['pending', 'log', 'policy'],
+  "/proc": [
+    "ai",
+    "system",
+    "env",
+    "cron",
+    "theme",
+    "context",
+    "events",
+    "agents",
+    "guard",
+  ],
+  "/proc/ai": ["model", "provider", "status"],
+  "/proc/system": ["version", "uptime", "memory"],
+  "/proc/cron": ["jobs"],
+  "/proc/theme": ["active", "colors", "presets"],
+  "/proc/theme/colors": [...COLOR_KEYS],
+  "/proc/theme/presets": [], // dynamically populated
+  "/proc/context": ["workspace", "focus", "history"],
+  "/proc/events": ["stream", "subscribers", "history"],
+  "/proc/agents": [], // dynamically populated
+  "/proc/guard": ["pending", "log", "policy"],
 };
 
 /**
@@ -325,8 +361,11 @@ export function isProcDirectory(path: string): boolean {
   // Dynamic: MCP server directories
   if (isMCPPath(path) && isMCPDirectory(path)) return true;
   // Dynamic: Agent directories /proc/agents/{id}
-  if (path.startsWith('/proc/agents/') && !path.replace('/proc/agents/', '').includes('/')) {
-    const id = path.replace('/proc/agents/', '');
+  if (
+    path.startsWith("/proc/agents/") &&
+    !path.replace("/proc/agents/", "").includes("/")
+  ) {
+    const id = path.replace("/proc/agents/", "");
     return getAgentRuntime().getAgent(id) !== undefined;
   }
   return false;
@@ -336,7 +375,7 @@ export function isProcDirectory(path: string): boolean {
  * List contents of a /proc directory
  */
 export function listProcDirectory(path: string): string[] | undefined {
-  if (path === '/proc/theme/presets') {
+  if (path === "/proc/theme/presets") {
     return getAllPresetNames();
   }
   // Dynamic: MCP directories
@@ -344,14 +383,27 @@ export function listProcDirectory(path: string): string[] | undefined {
     return listMCPDirectory(path);
   }
   // Dynamic: Agent list
-  if (path === '/proc/agents') {
-    return getAgentRuntime().listAgents().map(a => a.id);
+  if (path === "/proc/agents") {
+    return getAgentRuntime()
+      .listAgents()
+      .map((a) => a.id);
   }
   // Dynamic: Agent details directory
-  if (path.startsWith('/proc/agents/') && !path.replace('/proc/agents/', '').includes('/')) {
-    const id = path.replace('/proc/agents/', '');
+  if (
+    path.startsWith("/proc/agents/") &&
+    !path.replace("/proc/agents/", "").includes("/")
+  ) {
+    const id = path.replace("/proc/agents/", "");
     if (getAgentRuntime().getAgent(id)) {
-      return ['name', 'goal', 'status', 'permissions', 'log', 'pid', 'violations'];
+      return [
+        "name",
+        "goal",
+        "status",
+        "permissions",
+        "log",
+        "pid",
+        "violations",
+      ];
     }
     return undefined;
   }

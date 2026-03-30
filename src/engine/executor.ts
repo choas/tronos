@@ -18,11 +18,28 @@
  * @module engine/executor
  */
 
-import type { ParsedCommand, SimpleCommand, Pipeline, LogicalSequence, CommandResult, ExecutionContext, Redirect, ExeMetadata, ExeParseResult } from './types';
-import { BUILTIN_COMMANDS } from './builtins';
-import { ExitSignal, createSandboxTerminalAPI, isFeatureAvailable } from '../executor/sandbox';
-import { tokenize, buildAST } from './parser';
-import { getPackageNameForExe, getMissingRequiredConfig } from './builtins/tpkg';
+import type {
+  ParsedCommand,
+  SimpleCommand,
+  Pipeline,
+  LogicalSequence,
+  CommandResult,
+  ExecutionContext,
+  Redirect,
+  ExeMetadata,
+  ExeParseResult,
+} from "./types";
+import { BUILTIN_COMMANDS } from "./builtins";
+import {
+  ExitSignal,
+  createSandboxTerminalAPI,
+  isFeatureAvailable,
+} from "../executor/sandbox";
+import { tokenize, buildAST } from "./parser";
+import {
+  getPackageNameForExe,
+  getMissingRequiredConfig,
+} from "./builtins/tpkg";
 
 /**
  * Parse metadata from an .trx file's header comments.
@@ -59,7 +76,7 @@ import { getPackageNameForExe, getMissingRequiredConfig } from './builtins/tpkg'
  * }
  */
 export function parseExeMetadata(source: string): ExeParseResult {
-  const lines = source.split('\n');
+  const lines = source.split("\n");
   const metadata: Partial<ExeMetadata> = {};
   let bodyStartIndex = 0;
 
@@ -67,18 +84,18 @@ export function parseExeMetadata(source: string): ExeParseResult {
     const line = lines[i].trim();
 
     // Skip empty lines at the top
-    if (line === '') {
+    if (line === "") {
       continue;
     }
 
     // Skip shebang line
-    if (line.startsWith('#!')) {
+    if (line.startsWith("#!")) {
       bodyStartIndex = i + 1;
       continue;
     }
 
     // Check for metadata comment (// @key: value or // key: value)
-    if (line.startsWith('//')) {
+    if (line.startsWith("//")) {
       const commentContent = line.substring(2).trim();
 
       // Match either "@key: value" or "key: value" format
@@ -89,27 +106,30 @@ export function parseExeMetadata(source: string): ExeParseResult {
         const normalizedKey = key.toLowerCase();
 
         switch (normalizedKey) {
-          case 'name':
+          case "name":
             metadata.name = value.trim();
             break;
-          case 'description':
+          case "description":
             metadata.description = value.trim();
             break;
-          case 'version':
+          case "version":
             metadata.version = value.trim();
             break;
-          case 'author':
+          case "author":
             metadata.author = value.trim();
             break;
-          case 'created':
+          case "created":
             metadata.created = value.trim();
             break;
-          case 'license':
+          case "license":
             metadata.license = value.trim();
             break;
-          case 'requires':
+          case "requires":
             // Parse comma-separated list of requirements
-            metadata.requires = value.split(',').map(r => r.trim()).filter(r => r.length > 0);
+            metadata.requires = value
+              .split(",")
+              .map((r) => r.trim())
+              .filter((r) => r.length > 0);
             break;
         }
         bodyStartIndex = i + 1;
@@ -130,17 +150,17 @@ export function parseExeMetadata(source: string): ExeParseResult {
   if (!metadata.name) {
     return {
       success: false,
-      error: 'Missing required metadata field: name'
+      error: "Missing required metadata field: name",
     };
   }
 
   // Extract the body (everything from bodyStartIndex onwards)
-  const body = lines.slice(bodyStartIndex).join('\n').trim();
+  const body = lines.slice(bodyStartIndex).join("\n").trim();
 
   return {
     success: true,
     metadata: metadata as ExeMetadata,
-    body
+    body,
   };
 }
 
@@ -154,40 +174,51 @@ export function parseExeMetadata(source: string): ExeParseResult {
  *
  * This extracts just the inner code.
  */
-function extractFunctionBody(body: string): { success: boolean; code?: string; error?: string } {
+function extractFunctionBody(body: string): {
+  success: boolean;
+  code?: string;
+  error?: string;
+} {
   // Match: (async function(t) { ... }) or (async function (t) { ... })
   // The body might have the parameter named differently (t, api, terminal, etc.)
-  const match = body.match(/^\s*\(\s*async\s+function\s*\(\s*(\w+)\s*\)\s*\{([\s\S]*)\}\s*\)\s*$/);
+  const match = body.match(
+    /^\s*\(\s*async\s+function\s*\(\s*(\w+)\s*\)\s*\{([\s\S]*)\}\s*\)\s*$/,
+  );
 
   if (match) {
     return {
       success: true,
-      code: match[2]
+      code: match[2],
     };
   }
 
   // Try alternate format without outer parentheses (anonymous function)
-  const altMatch = body.match(/^\s*async\s+function\s*\(\s*(\w+)\s*\)\s*\{([\s\S]*)\}\s*$/);
+  const altMatch = body.match(
+    /^\s*async\s+function\s*\(\s*(\w+)\s*\)\s*\{([\s\S]*)\}\s*$/,
+  );
   if (altMatch) {
     return {
       success: true,
-      code: altMatch[2]
+      code: altMatch[2],
     };
   }
 
   // Try named function format: async function main(t) { ... }
   // This is the format generated by AI prompts
-  const namedMatch = body.match(/^\s*async\s+function\s+(\w+)\s*\(\s*(\w+)\s*\)\s*\{([\s\S]*)\}\s*$/);
+  const namedMatch = body.match(
+    /^\s*async\s+function\s+(\w+)\s*\(\s*(\w+)\s*\)\s*\{([\s\S]*)\}\s*$/,
+  );
   if (namedMatch) {
     return {
       success: true,
-      code: namedMatch[3]
+      code: namedMatch[3],
     };
   }
 
   return {
     success: false,
-    error: 'Invalid .trx format: expected async function(t) { ... } or async function main(t) { ... }'
+    error:
+      "Invalid .trx format: expected async function(t) { ... } or async function main(t) { ... }",
   };
 }
 
@@ -200,12 +231,15 @@ function extractFunctionBody(body: string): { success: boolean; code?: string; e
  * 3. Search in PATH directories (default: /bin) for name.trx
  * 4. If the name already ends in .trx, skip adding the extension
  */
-function resolveExePath(commandName: string, ctx: ExecutionContext): string | null {
+function resolveExePath(
+  commandName: string,
+  ctx: ExecutionContext,
+): string | null {
   const vfs = ctx.vfs;
   if (!vfs) return null;
 
   // Check if it's an absolute or relative path with .trx/.exe extension
-  if (commandName.endsWith('.trx') || commandName.endsWith('.exe')) {
+  if (commandName.endsWith(".trx") || commandName.endsWith(".exe")) {
     const resolvedPath = vfs.resolve(commandName);
     if (vfs.exists(resolvedPath) && vfs.isFile(resolvedPath)) {
       return resolvedPath;
@@ -214,9 +248,9 @@ function resolveExePath(commandName: string, ctx: ExecutionContext): string | nu
   }
 
   // Check if it's a relative path (./something or ../something) without extension
-  if (commandName.startsWith('./') || commandName.startsWith('../')) {
+  if (commandName.startsWith("./") || commandName.startsWith("../")) {
     // Try .trx first, then legacy .exe
-    for (const ext of ['.trx', '.exe']) {
+    for (const ext of [".trx", ".exe"]) {
       const withExt = commandName + ext;
       const resolvedPath = vfs.resolve(withExt);
       if (vfs.exists(resolvedPath) && vfs.isFile(resolvedPath)) {
@@ -232,11 +266,11 @@ function resolveExePath(commandName: string, ctx: ExecutionContext): string | nu
   }
 
   // Search in PATH directories (.trx first, then legacy .exe)
-  const pathEnv = ctx.env.PATH || '/bin';
-  const pathDirs = pathEnv.split(':');
+  const pathEnv = ctx.env.PATH || "/bin";
+  const pathDirs = pathEnv.split(":");
 
   for (const dir of pathDirs) {
-    for (const ext of ['.trx', '.exe']) {
+    for (const ext of [".trx", ".exe"]) {
       const exePath = `${dir}/${commandName}${ext}`;
       if (vfs.exists(exePath) && vfs.isFile(exePath)) {
         return exePath;
@@ -280,14 +314,14 @@ function resolveExePath(commandName: string, ctx: ExecutionContext): string | nu
 export async function executeExe(
   exePath: string,
   args: string[],
-  ctx: ExecutionContext
+  ctx: ExecutionContext,
 ): Promise<CommandResult> {
   const vfs = ctx.vfs;
   if (!vfs) {
     return {
-      stdout: '',
-      stderr: 'No filesystem available',
-      exitCode: 1
+      stdout: "",
+      stderr: "No filesystem available",
+      exitCode: 1,
     };
   }
 
@@ -297,9 +331,9 @@ export async function executeExe(
     source = await vfs.read(exePath);
   } catch (error) {
     return {
-      stdout: '',
+      stdout: "",
       stderr: `Cannot read ${exePath}: ${error}`,
-      exitCode: 1
+      exitCode: 1,
     };
   }
 
@@ -307,9 +341,9 @@ export async function executeExe(
   const parseResult = parseExeMetadata(source);
   if (!parseResult.success) {
     return {
-      stdout: '',
+      stdout: "",
       stderr: `Parse error in ${exePath}: ${parseResult.error}`,
-      exitCode: 1
+      exitCode: 1,
     };
   }
 
@@ -320,9 +354,9 @@ export async function executeExe(
     for (const req of metadata!.requires) {
       if (!isFeatureAvailable(req)) {
         return {
-          stdout: '',
+          stdout: "",
           stderr: `${metadata!.name}: requires '${req}' which is not available`,
-          exitCode: 1
+          exitCode: 1,
         };
       }
     }
@@ -332,9 +366,9 @@ export async function executeExe(
   const extractResult = extractFunctionBody(body!);
   if (!extractResult.success) {
     return {
-      stdout: '',
+      stdout: "",
       stderr: `${exePath}: ${extractResult.error}`,
-      exitCode: 1
+      exitCode: 1,
     };
   }
 
@@ -345,13 +379,13 @@ export async function executeExe(
       const commands = buildAST(tokens);
 
       if (commands.length === 0) {
-        return { stdout: '', stderr: '', exitCode: 0 };
+        return { stdout: "", stderr: "", exitCode: 0 };
       }
 
       // Execute all commands and return the last result
-      let lastResult: CommandResult = { stdout: '', stderr: '', exitCode: 0 };
-      let combinedStdout = '';
-      let combinedStderr = '';
+      let lastResult: CommandResult = { stdout: "", stderr: "", exitCode: 0 };
+      let combinedStdout = "";
+      let combinedStderr = "";
 
       for (const cmd of commands) {
         lastResult = await executeCommand(cmd, ctx);
@@ -362,13 +396,13 @@ export async function executeExe(
       return {
         stdout: combinedStdout,
         stderr: combinedStderr,
-        exitCode: lastResult.exitCode
+        exitCode: lastResult.exitCode,
       };
     } catch (error) {
       return {
-        stdout: '',
+        stdout: "",
         stderr: `exec error: ${error}`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
   };
@@ -377,11 +411,12 @@ export async function executeExe(
   const packageName = getPackageNameForExe(exePath, ctx);
 
   // 7. Check for missing required config and emit warnings
-  let stderr = '';
+  let stderr = "";
   if (packageName) {
     const missingConfig = getMissingRequiredConfig(packageName, ctx);
     if (missingConfig.length > 0) {
-      const warningMsg = `Warning: Missing required config for ${packageName}: ${missingConfig.join(', ')}\n` +
+      const warningMsg =
+        `Warning: Missing required config for ${packageName}: ${missingConfig.join(", ")}\n` +
         `Run 'tpkg config ${packageName}' to configure.\n`;
       stderr = warningMsg;
       // Also write warning to terminal if available
@@ -392,15 +427,17 @@ export async function executeExe(
   }
 
   // 8. Create Terminal API sandbox with package context
-  const terminalAPI = createSandboxTerminalAPI(ctx, args, commandExecutor, { packageName });
+  const terminalAPI = createSandboxTerminalAPI(ctx, args, commandExecutor, {
+    packageName,
+  });
 
   // 9. Execute the code
   // Use the AsyncFunction constructor to create a function from the code
   // The function receives the terminal API as parameter 't'
-  const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+  const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
   // Capture output for non-terminal contexts
-  let stdout = '';
+  let stdout = "";
 
   // Create a wrapper API that captures output for pipe support
   // while also writing directly to terminal for live display.
@@ -412,15 +449,15 @@ export async function executeExe(
       terminalAPI.write(text);
     },
     writeln: (text: string) => {
-      stdout += text + '\n';
+      stdout += text + "\n";
       terminalAPI.writeln(text);
-    }
+    },
   };
 
   try {
     // Create the async function with the extracted body
     // The parameter is 't' which receives the terminal API
-    const fn = new AsyncFunction('t', extractResult.code!);
+    const fn = new AsyncFunction("t", extractResult.code!);
 
     // Execute the function with the sandbox API
     await fn(wrappedAPI);
@@ -429,7 +466,7 @@ export async function executeExe(
       stdout,
       stderr,
       exitCode: 0,
-      directOutput: true
+      directOutput: true,
     };
   } catch (error) {
     // Check if this is an ExitSignal (normal program exit)
@@ -438,7 +475,7 @@ export async function executeExe(
         stdout,
         stderr,
         exitCode: error.code,
-        directOutput: true
+        directOutput: true,
       };
     }
 
@@ -448,7 +485,7 @@ export async function executeExe(
       stdout,
       stderr: stderr + `${metadata!.name}: ${errorMessage}`,
       exitCode: 1,
-      directOutput: true
+      directOutput: true,
     };
   }
 }
@@ -487,7 +524,7 @@ export async function executeExe(
  */
 export async function executePipeline(
   pipeline: Pipeline,
-  ctx: ExecutionContext
+  ctx: ExecutionContext,
 ): Promise<CommandResult> {
   let input = "";
   let lastResult: CommandResult = { stdout: "", stderr: "", exitCode: 0 };
@@ -500,7 +537,7 @@ export async function executePipeline(
     // Create a context with piped input
     const pipeCtx: ExecutionContext = {
       ...ctx,
-      stdin: input
+      stdin: input,
     };
 
     try {
@@ -509,7 +546,7 @@ export async function executePipeline(
 
       // Collect stderr from all commands in the pipeline
       if (lastResult.stderr) {
-        combinedStderr += (combinedStderr ? '\n' : '') + lastResult.stderr;
+        combinedStderr += (combinedStderr ? "\n" : "") + lastResult.stderr;
       }
 
       // Output becomes input for next command
@@ -525,8 +562,11 @@ export async function executePipeline(
       const message = error instanceof Error ? error.message : String(error);
       return {
         stdout: "",
-        stderr: combinedStderr + (combinedStderr ? '\n' : '') + `${cmd.command}: ${message}`,
-        exitCode: 1
+        stderr:
+          combinedStderr +
+          (combinedStderr ? "\n" : "") +
+          `${cmd.command}: ${message}`,
+        exitCode: 1,
       };
     }
   }
@@ -535,7 +575,7 @@ export async function executePipeline(
   return {
     stdout: lastResult.stdout,
     stderr: combinedStderr,
-    exitCode: lastResult.exitCode
+    exitCode: lastResult.exitCode,
   };
 }
 
@@ -570,22 +610,22 @@ export async function executePipeline(
  */
 export async function executeSimpleCommand(
   command: SimpleCommand,
-  ctx: ExecutionContext
+  ctx: ExecutionContext,
 ): Promise<CommandResult> {
   const { command: commandName, args, redirects } = command;
 
   // Handle input redirection (<) before command execution
   let execCtx = { ...ctx };
   for (const redirect of redirects) {
-    if (redirect.type === 'redirect' && redirect.file.startsWith('<')) {
+    if (redirect.type === "redirect" && redirect.file.startsWith("<")) {
       // This is input redirection - read the file
       const inputFile = redirect.file.substring(1).trim();
 
       if (!ctx.vfs) {
         return {
-          stdout: '',
+          stdout: "",
           stderr: `${inputFile}: no filesystem available`,
-          exitCode: 1
+          exitCode: 1,
         };
       }
 
@@ -594,30 +634,30 @@ export async function executeSimpleCommand(
       // Check if file exists
       if (!ctx.vfs.exists(resolvedPath)) {
         return {
-          stdout: '',
+          stdout: "",
           stderr: `${inputFile}: No such file or directory`,
-          exitCode: 1
+          exitCode: 1,
         };
       }
 
       // Check if it's a directory
       if (ctx.vfs.isDirectory(resolvedPath)) {
         return {
-          stdout: '',
+          stdout: "",
           stderr: `${inputFile}: Is a directory`,
-          exitCode: 1
+          exitCode: 1,
         };
       }
 
       try {
         const content = await ctx.vfs.read(resolvedPath);
-        execCtx.stdin = content || '';
+        execCtx.stdin = content || "";
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return {
-          stdout: '',
+          stdout: "",
           stderr: `${inputFile}: ${message}`,
-          exitCode: 1
+          exitCode: 1,
         };
       }
     }
@@ -627,7 +667,8 @@ export async function executeSimpleCommand(
   let result: CommandResult;
 
   if (isBuiltin(commandName)) {
-    const builtin = BUILTIN_COMMANDS[commandName as keyof typeof BUILTIN_COMMANDS];
+    const builtin =
+      BUILTIN_COMMANDS[commandName as keyof typeof BUILTIN_COMMANDS];
     if (builtin) {
       try {
         result = await builtin(args, execCtx);
@@ -637,16 +678,16 @@ export async function executeSimpleCommand(
         // Handle unexpected errors from builtin commands
         const message = error instanceof Error ? error.message : String(error);
         result = {
-          stdout: '',
+          stdout: "",
           stderr: `${commandName}: ${message}`,
-          exitCode: 1
+          exitCode: 1,
         };
       }
     } else {
       result = {
-        stdout: '',
+        stdout: "",
         stderr: `${commandName}: builtin command not implemented`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
   } else {
@@ -659,16 +700,16 @@ export async function executeSimpleCommand(
         // Handle unexpected errors from executable execution
         const message = error instanceof Error ? error.message : String(error);
         result = {
-          stdout: '',
+          stdout: "",
           stderr: `${commandName}: ${message}`,
-          exitCode: 1
+          exitCode: 1,
         };
       }
     } else {
       result = {
-        stdout: '',
+        stdout: "",
         stderr: `${commandName}: command not found`,
-        exitCode: 127
+        exitCode: 127,
       };
     }
   }
@@ -685,19 +726,19 @@ export async function executeSimpleCommand(
 async function handleRedirects(
   result: CommandResult,
   redirects: Redirect[],
-  ctx: ExecutionContext
+  ctx: ExecutionContext,
 ): Promise<CommandResult> {
   for (const redirect of redirects) {
     // Skip input redirection - already handled
-    if (redirect.file.startsWith('<')) {
+    if (redirect.file.startsWith("<")) {
       continue;
     }
 
     if (!ctx.vfs) {
       return {
-        stdout: '',
+        stdout: "",
         stderr: `Cannot redirect to ${redirect.file}: no filesystem available`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
@@ -705,12 +746,12 @@ async function handleRedirects(
 
     try {
       switch (redirect.type) {
-        case 'redirect': // >
+        case "redirect": // >
           await ctx.vfs.write(path, result.stdout);
-          result.stdout = "";  // Output was redirected
+          result.stdout = ""; // Output was redirected
           break;
 
-        case 'append': // >>
+        case "append": // >>
           await ctx.vfs.append(path, result.stdout);
           result.stdout = "";
           break;
@@ -718,9 +759,9 @@ async function handleRedirects(
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return {
-        stdout: '',
+        stdout: "",
         stderr: `${redirect.file}: ${message}`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
   }
@@ -756,7 +797,7 @@ async function handleRedirects(
  */
 export async function executeLogicalSequence(
   sequence: LogicalSequence,
-  ctx: ExecutionContext
+  ctx: ExecutionContext,
 ): Promise<CommandResult> {
   let leftResult: CommandResult;
 
@@ -767,15 +808,15 @@ export async function executeLogicalSequence(
     // Handle unexpected errors in left command
     const message = error instanceof Error ? error.message : String(error);
     leftResult = {
-      stdout: '',
+      stdout: "",
       stderr: message,
-      exitCode: 1
+      exitCode: 1,
     };
   }
 
   // Determine if we should execute the right command
   let shouldExecuteRight = false;
-  if (sequence.operator === 'and') {
+  if (sequence.operator === "and") {
     // && - execute right only if left succeeded
     shouldExecuteRight = leftResult.exitCode === 0;
   } else {
@@ -795,9 +836,9 @@ export async function executeLogicalSequence(
     // Handle unexpected errors in right command
     const message = error instanceof Error ? error.message : String(error);
     return {
-      stdout: '',
+      stdout: "",
       stderr: message,
-      exitCode: 1
+      exitCode: 1,
     };
   }
 }
@@ -825,30 +866,30 @@ export async function executeLogicalSequence(
  */
 export async function executeCommand(
   command: ParsedCommand,
-  ctx: ExecutionContext
+  ctx: ExecutionContext,
 ): Promise<CommandResult> {
   try {
     switch (command.type) {
-      case 'Command':
+      case "Command":
         return await executeSimpleCommand(command, ctx);
-      case 'Pipeline':
+      case "Pipeline":
         return await executePipeline(command, ctx);
-      case 'LogicalSequence':
+      case "LogicalSequence":
         return await executeLogicalSequence(command, ctx);
       default:
         return {
-          stdout: '',
-          stderr: 'Unknown command type',
-          exitCode: 1
+          stdout: "",
+          stderr: "Unknown command type",
+          exitCode: 1,
         };
     }
   } catch (error) {
     // Catch any unexpected errors during command execution
     const message = error instanceof Error ? error.message : String(error);
     return {
-      stdout: '',
+      stdout: "",
       stderr: message,
-      exitCode: 1
+      exitCode: 1,
     };
   }
 }
@@ -860,13 +901,13 @@ export async function executeCommand(
  */
 function copyContextModifications(from: any, to: any): void {
   const modifiableKeys = [
-    'exportRequests',
-    'unsetRequests',
-    'aliasRequests',
-    'unaliasRequests',
-    'sourceCommands',
-    'requestedCd',
-    'exitRequested'
+    "exportRequests",
+    "unsetRequests",
+    "aliasRequests",
+    "unaliasRequests",
+    "sourceCommands",
+    "requestedCd",
+    "exitRequested",
   ];
 
   for (const key of modifiableKeys) {

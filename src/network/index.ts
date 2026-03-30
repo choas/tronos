@@ -2,4 +2,4 @@
  * Network module exports
  */
 
-export { aiosFetch } from './fetch';
+export { aiosFetch } from "./fetch";

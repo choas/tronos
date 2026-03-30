@@ -1,8 +1,17 @@
 import { createStore } from "solid-js/store";
-import { loadAIConfig, saveAIConfig, clearAIConfig } from "../persistence/config";
+import {
+  loadAIConfig,
+  saveAIConfig,
+  clearAIConfig,
+} from "../persistence/config";
 
 /** Supported AI providers */
-export type AIProvider = "tronos" | "anthropic" | "openai" | "ollama" | "openrouter";
+export type AIProvider =
+  | "tronos"
+  | "anthropic"
+  | "openai"
+  | "ollama"
+  | "openrouter";
 
 /** AI configuration interface */
 export interface AIConfig {
@@ -19,38 +28,40 @@ export const PROVIDER_DEFAULTS: Record<AIProvider, Omit<AIConfig, "apiKey">> = {
   tronos: {
     provider: "tronos",
     model: "moonshotai/kimi-k2.5",
-    baseURL: (import.meta.env.VITE_TRONOS_API_BASE_URL || "https://ai.tronos.dev/api") + "/ai",
+    baseURL:
+      (import.meta.env.VITE_TRONOS_API_BASE_URL ||
+        "https://ai.tronos.dev/api") + "/ai",
     temperature: 0.7,
-    maxTokens: 4096
+    maxTokens: 4096,
   },
   anthropic: {
     provider: "anthropic",
     model: "claude-sonnet-4-6",
     baseURL: "https://api.anthropic.com",
     temperature: 0.7,
-    maxTokens: 4096
+    maxTokens: 4096,
   },
   openai: {
     provider: "openai",
     model: "gpt-4o",
     baseURL: "https://api.openai.com/v1",
     temperature: 0.7,
-    maxTokens: 4096
+    maxTokens: 4096,
   },
   ollama: {
     provider: "ollama",
     model: "llama3.2",
     baseURL: "http://localhost:11434",
     temperature: 0.7,
-    maxTokens: 4096
+    maxTokens: 4096,
   },
   openrouter: {
     provider: "openrouter",
     model: "anthropic/claude-sonnet-4-6",
     baseURL: "https://openrouter.ai/api/v1",
     temperature: 0.7,
-    maxTokens: 4096
-  }
+    maxTokens: 4096,
+  },
 };
 
 /** AI config state interface */
@@ -66,7 +77,9 @@ interface AIConfigState {
  */
 export function shouldClearApiKeyOnProviderChange(): boolean {
   const env = import.meta.env;
-  const envValue = env.VITE_TRONOS_CLEAR_API_KEY_ON_PROVIDER_CHANGE as string | undefined;
+  const envValue = env.VITE_TRONOS_CLEAR_API_KEY_ON_PROVIDER_CHANGE as
+    | string
+    | undefined;
 
   // Default to true if not set
   if (envValue === undefined || envValue === "") {
@@ -80,12 +93,12 @@ export function shouldClearApiKeyOnProviderChange(): boolean {
 /** Default configuration (TronOS - no API key required) */
 const DEFAULT_CONFIG: AIConfig = {
   ...PROVIDER_DEFAULTS.tronos,
-  apiKey: ""
+  apiKey: "",
 };
 
 export const [aiConfigState, setAIConfigState] = createStore<AIConfigState>({
   config: DEFAULT_CONFIG,
-  isConfigured: !providerRequiresApiKey(DEFAULT_CONFIG.provider)
+  isConfigured: !providerRequiresApiKey(DEFAULT_CONFIG.provider),
 });
 
 /**
@@ -119,7 +132,11 @@ export function setAIConfig(updates: Partial<AIConfig>): void {
   // Update isConfigured based on provider and API key
   // TronOS and Ollama don't require API keys
   const provider = updates.provider ?? aiConfigState.config.provider;
-  const hasApiKey = (updates.apiKey !== undefined ? updates.apiKey : aiConfigState.config.apiKey).length > 0;
+  const hasApiKey =
+    (updates.apiKey !== undefined
+      ? updates.apiKey
+      : aiConfigState.config.apiKey
+    ).length > 0;
   const isConfigured = !providerRequiresApiKey(provider) || hasApiKey;
   setAIConfigState("isConfigured", isConfigured);
 
@@ -138,11 +155,12 @@ export function setAIProvider(provider: AIProvider): void {
 
   setAIConfigState("config", {
     ...defaults,
-    apiKey: newApiKey
+    apiKey: newApiKey,
   });
 
   // Update isConfigured: tronos and ollama don't require API key
-  const isConfigured = !providerRequiresApiKey(provider) || newApiKey.length > 0;
+  const isConfigured =
+    !providerRequiresApiKey(provider) || newApiKey.length > 0;
   setAIConfigState("isConfigured", isConfigured);
 
   // Persist to localStorage
@@ -157,7 +175,7 @@ export function resetAIConfig(): void {
   const defaults = PROVIDER_DEFAULTS[currentProvider];
   setAIConfigState("config", {
     ...defaults,
-    apiKey: "" // Clear API key on reset
+    apiKey: "", // Clear API key on reset
   });
   setAIConfigState("isConfigured", false);
 
@@ -171,7 +189,8 @@ export function resetAIConfig(): void {
 export function initAIConfig(config: AIConfig): void {
   setAIConfigState("config", config);
   // TronOS and Ollama don't require API keys
-  const isConfigured = !providerRequiresApiKey(config.provider) || config.apiKey.length > 0;
+  const isConfigured =
+    !providerRequiresApiKey(config.provider) || config.apiKey.length > 0;
   setAIConfigState("isConfigured", isConfigured);
 }
 
@@ -204,7 +223,7 @@ export function maskApiKey(apiKey: string): string {
  * Returns { ok, error } — error describes what went wrong.
  */
 export async function checkOllamaConnection(
-  baseURL: string = PROVIDER_DEFAULTS.ollama.baseURL
+  baseURL: string = PROVIDER_DEFAULTS.ollama.baseURL,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const response = await fetch(`${baseURL}/api/tags`, {
@@ -251,7 +270,13 @@ export function loadEnvConfig(): boolean {
 
   // Validate and apply provider
   if (envProvider) {
-    const validProviders: AIProvider[] = ["tronos", "anthropic", "openai", "ollama", "openrouter"];
+    const validProviders: AIProvider[] = [
+      "tronos",
+      "anthropic",
+      "openai",
+      "ollama",
+      "openrouter",
+    ];
     if (validProviders.includes(envProvider as AIProvider)) {
       // Apply provider defaults first
       const defaults = PROVIDER_DEFAULTS[envProvider as AIProvider];
@@ -279,7 +304,8 @@ export function loadEnvConfig(): boolean {
 
     // Update isConfigured: tronos and ollama don't require API key
     const provider = updates.provider ?? aiConfigState.config.provider;
-    const hasApiKey = (updates.apiKey || aiConfigState.config.apiKey).length > 0;
+    const hasApiKey =
+      (updates.apiKey || aiConfigState.config.apiKey).length > 0;
     const isConfigured = !providerRequiresApiKey(provider) || hasApiKey;
     setAIConfigState("isConfigured", isConfigured);
 

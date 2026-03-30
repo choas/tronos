@@ -5,21 +5,21 @@ export {
   getAICommandPrefix,
   validateAICommand,
   type AIMode,
-  type AICommand
-} from './parser';
+  type AICommand,
+} from "./parser";
 
 export {
   buildSystemPrompt,
   buildUserMessage,
   getTerminalAPIReference,
   getExecutableFormatSpec,
-  type PromptContext
-} from './prompts';
+  type PromptContext,
+} from "./prompts";
 
 export {
   AIBridge,
   createAIBridge,
   type AIResponse,
   type ParsedResponse,
-  type Message
-} from './bridge';
+  type Message,
+} from "./bridge";

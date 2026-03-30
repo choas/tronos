@@ -19,7 +19,7 @@
  * @module engine/parser
  */
 
-import type { Token, ParsedCommand, SimpleCommand, Redirect } from './types';
+import type { Token, ParsedCommand, SimpleCommand, Redirect } from "./types";
 
 /**
  * Build an Abstract Syntax Tree from a token array.
@@ -48,7 +48,7 @@ export function buildAST(tokens: Token[]): ParsedCommand[] {
   if (!tokens.length) {
     return [];
   }
-  
+
   const commands: ParsedCommand[] = [];
   let current = 0;
 
@@ -61,7 +61,12 @@ export function buildAST(tokens: Token[]): ParsedCommand[] {
   }
 
   function parseSimpleCommand(): SimpleCommand {
-    if (!peek() || (peek()?.type !== 'word' && peek()?.type !== 'dstring' && peek()?.type !== 'sstring')) {
+    if (
+      !peek() ||
+      (peek()?.type !== "word" &&
+        peek()?.type !== "dstring" &&
+        peek()?.type !== "sstring")
+    ) {
       throw new Error(`Expected command name but got ${peek()?.type}`);
     }
     const command = consume().value;
@@ -70,13 +75,22 @@ export function buildAST(tokens: Token[]): ParsedCommand[] {
 
     while (peek()) {
       const token = peek()!;
-      if (token.type === 'word' || token.type === 'dstring' || token.type === 'sstring') {
+      if (
+        token.type === "word" ||
+        token.type === "dstring" ||
+        token.type === "sstring"
+      ) {
         args.push(consume().value);
-      } else if (token.type === 'redirect' || token.type === 'append') {
+      } else if (token.type === "redirect" || token.type === "append") {
         consume(); // consume the redirect operator
         const fileToken = peek();
-        if (!fileToken || (fileToken.type !== 'word' && fileToken.type !== 'dstring' && fileToken.type !== 'sstring')) {
-          throw new Error('Expected filename for redirection');
+        if (
+          !fileToken ||
+          (fileToken.type !== "word" &&
+            fileToken.type !== "dstring" &&
+            fileToken.type !== "sstring")
+        ) {
+          throw new Error("Expected filename for redirection");
         }
         redirects.push({ type: token.type, file: consume().value });
       } else {
@@ -84,19 +98,19 @@ export function buildAST(tokens: Token[]): ParsedCommand[] {
       }
     }
 
-    return { type: 'Command', command, args, redirects };
+    return { type: "Command", command, args, redirects };
   }
 
   function parsePipeline(): ParsedCommand {
     const commands: SimpleCommand[] = [parseSimpleCommand()];
 
-    while (peek()?.type === 'pipe') {
+    while (peek()?.type === "pipe") {
       consume(); // consume '|'
       commands.push(parseSimpleCommand());
     }
 
     if (commands.length > 1) {
-      return { type: 'Pipeline', commands };
+      return { type: "Pipeline", commands };
     }
 
     return commands[0];
@@ -105,10 +119,10 @@ export function buildAST(tokens: Token[]): ParsedCommand[] {
   function parseLogicalSequence(): ParsedCommand {
     let left = parsePipeline();
 
-    while (peek()?.type === 'and' || peek()?.type === 'or') {
-      const operator = consume().type as 'and' | 'or';
+    while (peek()?.type === "and" || peek()?.type === "or") {
+      const operator = consume().type as "and" | "or";
       const right = parsePipeline();
-      left = { type: 'LogicalSequence', left, operator, right };
+      left = { type: "LogicalSequence", left, operator, right };
     }
 
     return left;
@@ -116,7 +130,7 @@ export function buildAST(tokens: Token[]): ParsedCommand[] {
 
   while (current < tokens.length) {
     commands.push(parseLogicalSequence());
-    if (peek()?.type === 'semicolon') {
+    if (peek()?.type === "semicolon") {
       consume();
     } else if (peek()) {
       throw new Error(`Unexpected token: ${peek()?.type}`);
@@ -170,49 +184,52 @@ export function tokenize(input: string): Token[] {
       continue;
     }
 
-    if (char === '|') {
-      if (input[current + 1] === '|') {
-        tokens.push({ type: 'or', value: '||' });
+    if (char === "|") {
+      if (input[current + 1] === "|") {
+        tokens.push({ type: "or", value: "||" });
         current += 2;
         continue;
       }
-      tokens.push({ type: 'pipe', value: '|' });
+      tokens.push({ type: "pipe", value: "|" });
       current++;
       continue;
     }
 
-    if (char === '&') {
-      if (input[current + 1] === '&') {
-        tokens.push({ type: 'and', value: '&&' });
+    if (char === "&") {
+      if (input[current + 1] === "&") {
+        tokens.push({ type: "and", value: "&&" });
         current += 2;
         continue;
       }
     }
 
-    if (char === '>') {
-      if (input[current + 1] === '>') {
-        tokens.push({ type: 'append', value: '>>' });
+    if (char === ">") {
+      if (input[current + 1] === ">") {
+        tokens.push({ type: "append", value: ">>" });
         current += 2;
         continue;
       }
-      tokens.push({ type: 'redirect', value: '>' });
+      tokens.push({ type: "redirect", value: ">" });
       current++;
       continue;
     }
-    
-    if (char === ';') {
-      tokens.push({ type: 'semicolon', value: ';' });
+
+    if (char === ";") {
+      tokens.push({ type: "semicolon", value: ";" });
       current++;
       continue;
     }
 
     if (char === '"' || char === "'") {
       const quote = char;
-      const tokenType = quote === '"' ? 'dstring' : 'sstring';
-      let value = '';
+      const tokenType = quote === '"' ? "dstring" : "sstring";
+      let value = "";
       char = input[++current];
       while (char !== quote && current < input.length) {
-        if (char === '\\' && (input[current + 1] === quote || input[current + 1] === '\\')) {
+        if (
+          char === "\\" &&
+          (input[current + 1] === quote || input[current + 1] === "\\")
+        ) {
           value += input[current + 1];
           current += 2;
         } else {
@@ -222,14 +239,14 @@ export function tokenize(input: string): Token[] {
         char = input[current];
       }
       if (char !== quote) {
-        throw new Error('Unterminated string');
+        throw new Error("Unterminated string");
       }
       current++; // Skip closing quote
       tokens.push({ type: tokenType, value });
       continue;
     }
 
-    let value = '';
+    let value = "";
     while (char && !/(\s|\||&|>|;)/.test(char)) {
       // Handle quoted strings embedded in words (e.g., alias name='value with spaces')
       if (char === '"' || char === "'") {
@@ -237,7 +254,10 @@ export function tokenize(input: string): Token[] {
         value += char; // Include opening quote in the word
         char = input[++current];
         while (char !== quote && current < input.length) {
-          if (char === '\\' && (input[current + 1] === quote || input[current + 1] === '\\')) {
+          if (
+            char === "\\" &&
+            (input[current + 1] === quote || input[current + 1] === "\\")
+          ) {
             value += char;
             value += input[current + 1];
             current += 2;
@@ -257,7 +277,7 @@ export function tokenize(input: string): Token[] {
         char = input[++current];
       }
     }
-    tokens.push({ type: 'word', value });
+    tokens.push({ type: "word", value });
   }
 
   return tokens;
@@ -296,7 +316,7 @@ export function tokenize(input: string): Token[] {
 export function expandAliases(
   tokens: Token[],
   aliases: Map<string, string>,
-  expandedAliases: Set<string> = new Set()
+  expandedAliases: Set<string> = new Set(),
 ): Token[] {
   if (tokens.length === 0 || aliases.size === 0) {
     return tokens;
@@ -309,15 +329,23 @@ export function expandAliases(
     const token = tokens[i];
 
     // After pipe, semicolon, &&, or || we're in command position again
-    if (token.type === 'pipe' || token.type === 'semicolon' ||
-        token.type === 'and' || token.type === 'or') {
+    if (
+      token.type === "pipe" ||
+      token.type === "semicolon" ||
+      token.type === "and" ||
+      token.type === "or"
+    ) {
       result.push(token);
       isCommandPosition = true;
       continue;
     }
 
     // Expand aliases only in command position (first word)
-    if (isCommandPosition && token.type === 'word' && aliases.has(token.value)) {
+    if (
+      isCommandPosition &&
+      token.type === "word" &&
+      aliases.has(token.value)
+    ) {
       const aliasName = token.value;
 
       // Prevent infinite recursion
@@ -337,7 +365,11 @@ export function expandAliases(
       const aliasTokens = tokenize(aliasValue);
 
       // Recursively expand any aliases in the expanded value
-      const expandedAliasTokens = expandAliases(aliasTokens, aliases, newExpandedAliases);
+      const expandedAliasTokens = expandAliases(
+        aliasTokens,
+        aliases,
+        newExpandedAliases,
+      );
       result.push(...expandedAliasTokens);
 
       isCommandPosition = false;
@@ -347,7 +379,11 @@ export function expandAliases(
     result.push(token);
 
     // After a word/string token, we're no longer in command position
-    if (token.type === 'word' || token.type === 'dstring' || token.type === 'sstring') {
+    if (
+      token.type === "word" ||
+      token.type === "dstring" ||
+      token.type === "sstring"
+    ) {
       isCommandPosition = false;
     }
   }
@@ -386,26 +422,29 @@ export function expandAliases(
  * const expanded = expandVariables(tokens, env);
  * // Returns tokens with value 'test_file.txt'
  */
-export function expandVariables(tokens: Token[], env: { [key: string]: string }): Token[] {
+export function expandVariables(
+  tokens: Token[],
+  env: { [key: string]: string },
+): Token[] {
   const expandedTokens: Token[] = [];
 
   for (const token of tokens) {
-    if (token.type === 'word' || token.type === 'dstring') {
-      let value = '';
+    if (token.type === "word" || token.type === "dstring") {
+      let value = "";
       let current = 0;
       while (current < token.value.length) {
         let char = token.value[current];
-        if (char === '$') {
-          let varName = '';
+        if (char === "$") {
+          let varName = "";
           char = token.value[++current];
-          if (char === '{') {
+          if (char === "{") {
             char = token.value[++current];
-            while (char !== '}' && current < token.value.length) {
+            while (char !== "}" && current < token.value.length) {
               varName += char;
               char = token.value[++current];
             }
-            if (char !== '}') {
-              throw new Error('Unterminated variable expansion');
+            if (char !== "}") {
+              throw new Error("Unterminated variable expansion");
             }
             current++; // Skip closing brace
           } else {
@@ -414,7 +453,7 @@ export function expandVariables(tokens: Token[], env: { [key: string]: string })
               char = token.value[++current];
             }
           }
-          value += env[varName] || '';
+          value += env[varName] || "";
         } else {
           value += char;
           current++;
@@ -428,4 +467,3 @@ export function expandVariables(tokens: Token[], env: { [key: string]: string })
 
   return expandedTokens;
 }
-

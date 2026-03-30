@@ -1,20 +1,23 @@
-import type { TerminalAPI, KeyEvent } from '../../src/terminal/api';
+import type { TerminalAPI, KeyEvent } from "../../src/terminal/api";
 
 /**
  * Creates a mock terminal for testing purposes.
  * Records all writes and provides a way to inspect output.
  */
-export function createMockTerminal(): TerminalAPI & { output: string[]; getOutput: () => string } {
+export function createMockTerminal(): TerminalAPI & {
+  output: string[];
+  getOutput: () => string;
+} {
   const output: string[] = [];
 
   return {
     output,
-    getOutput: () => output.join(''),
+    getOutput: () => output.join(""),
     write: (data: string) => {
       output.push(data);
     },
     writeln: (data: string) => {
-      output.push(data + '\n');
+      output.push(data + "\n");
     },
     clear: () => {
       output.length = 0;
@@ -40,9 +43,9 @@ export function createMockTerminal(): TerminalAPI & { output: string[]; getOutpu
     },
     hasInput: () => false,
     hasSelection: () => false,
-    getSelection: () => '',
+    getSelection: () => "",
     clearSelection: () => {},
     flush: () => {},
-    dispose: () => {}
+    dispose: () => {},
   };
 }

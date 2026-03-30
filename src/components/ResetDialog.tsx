@@ -21,7 +21,9 @@ export function ResetDialog(props: ResetDialogProps) {
           <h2 class="modal-title">Factory Reset</h2>
 
           <div class="reset-warning">
-            <p><strong>Warning:</strong> This action cannot be undone!</p>
+            <p>
+              <strong>Warning:</strong> This action cannot be undone!
+            </p>
             <p>Factory reset will:</p>
             <ul>
               <li>Delete all files and directories you created</li>
@@ -33,16 +35,10 @@ export function ResetDialog(props: ResetDialogProps) {
           </div>
 
           <div class="modal-actions">
-            <button
-              class="btn btn-secondary"
-              onClick={props.onClose}
-            >
+            <button class="btn btn-secondary" onClick={props.onClose}>
               Cancel
             </button>
-            <button
-              class="btn btn-danger"
-              onClick={props.onConfirm}
-            >
+            <button class="btn btn-danger" onClick={props.onConfirm}>
               Reset Everything
             </button>
           </div>

@@ -10,8 +10,8 @@
  * @module engine/boot
  */
 
-import type { TerminalAPI, KeyEvent } from '../terminal/api';
-import { VERSION_STRING, REPO_URL } from '../version';
+import type { TerminalAPI, KeyEvent } from "../terminal/api";
+import { VERSION_STRING, REPO_URL } from "../version";
 
 /**
  * TronOS ASCII art logo - Blocky 8-bit style
@@ -30,14 +30,14 @@ const TRONOS_LOGO = `\x1b[36m\x1b[1m
 
 /** Boot messages to display in sequence */
 const BOOT_MESSAGES = [
-  { text: 'Initializing kernel...', delay: 200 },
-  { text: 'Loading virtual filesystem...', delay: 150 },
-  { text: 'Mounting /proc...', delay: 100 },
-  { text: 'Mounting /dev...', delay: 100 },
-  { text: 'Starting session manager...', delay: 150 },
-  { text: 'Loading user profile...', delay: 150 },
-  { text: 'Initializing AI subsystem...', delay: 200 },
-  { text: '\x1b[32mSystem ready.\x1b[0m', delay: 100 }
+  { text: "Initializing kernel...", delay: 200 },
+  { text: "Loading virtual filesystem...", delay: 150 },
+  { text: "Mounting /proc...", delay: 100 },
+  { text: "Mounting /dev...", delay: 100 },
+  { text: "Starting session manager...", delay: 150 },
+  { text: "Loading user profile...", delay: 150 },
+  { text: "Initializing AI subsystem...", delay: 200 },
+  { text: "\x1b[32mSystem ready.\x1b[0m", delay: 100 },
 ];
 
 /** Welcome message shown after boot */
@@ -51,7 +51,7 @@ Type '\x1b[33mhelp\x1b[0m' for available commands or '\x1b[33m@ai\x1b[0m' to cha
  * Sleep for a given number of milliseconds
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -86,7 +86,7 @@ export async function displayBootSequence(term: TerminalAPI): Promise<void> {
   // Clear screen and show logo
   term.clear();
   term.writeln(TRONOS_LOGO);
-  term.writeln('');
+  term.writeln("");
   term.flush();
 
   // Display boot messages with delays
@@ -94,7 +94,9 @@ export async function displayBootSequence(term: TerminalAPI): Promise<void> {
     if (skipped) break;
 
     // Show spinner while "processing"
-    term.write(`  \x1b[90m[\x1b[0m\x1b[33m*\x1b[0m\x1b[90m]\x1b[0m ${message.text}`);
+    term.write(
+      `  \x1b[90m[\x1b[0m\x1b[33m*\x1b[0m\x1b[90m]\x1b[0m ${message.text}`,
+    );
     term.flush();
 
     // Wait for delay or skip
@@ -102,17 +104,17 @@ export async function displayBootSequence(term: TerminalAPI): Promise<void> {
     await Promise.race([delayPromise, skipPromise]);
 
     if (skipped) {
-      term.writeln('');
+      term.writeln("");
       break;
     }
 
     // Move to next line
-    term.writeln('');
+    term.writeln("");
     term.flush();
   }
 
   // Show welcome message
-  term.writeln('');
+  term.writeln("");
   term.writeln(WELCOME_MESSAGE);
   term.flush();
 
@@ -131,8 +133,10 @@ export async function displayBootSequence(term: TerminalAPI): Promise<void> {
  */
 export function displayQuickBoot(term: TerminalAPI): void {
   term.clear();
-  term.writeln(`\x1b[36mTronOS\x1b[0m - AI-Native Operating System \x1b[90m(${VERSION_STRING})\x1b[0m`);
-  term.writeln('Type \'\x1b[33mhelp\x1b[0m\' for available commands.');
+  term.writeln(
+    `\x1b[36mTronOS\x1b[0m - AI-Native Operating System \x1b[90m(${VERSION_STRING})\x1b[0m`,
+  );
+  term.writeln("Type '\x1b[33mhelp\x1b[0m' for available commands.");
   term.writeln(`\x1b[90m${REPO_URL}\x1b[0m`);
-  term.writeln('');
+  term.writeln("");
 }

@@ -9,9 +9,13 @@ import {
   checkOllamaConnection,
   PROVIDER_DEFAULTS,
   type AIProvider,
-  type AIConfig
+  type AIConfig,
 } from "../stores/ai";
-import { hasAcceptedTerms, acceptTerms, resetTermsConfig } from "../stores/terms";
+import {
+  hasAcceptedTerms,
+  acceptTerms,
+  resetTermsConfig,
+} from "../stores/terms";
 
 interface ConfigModalProps {
   isOpen: boolean;
@@ -19,25 +23,49 @@ interface ConfigModalProps {
 }
 
 const PROVIDERS: { value: AIProvider; label: string; description: string }[] = [
-  { value: "tronos", label: "TronOS (Built-in)", description: "Free, no API key required" },
-  { value: "anthropic", label: "Anthropic", description: "Bring your own API key" },
+  {
+    value: "tronos",
+    label: "TronOS (Built-in)",
+    description: "Free, no API key required",
+  },
+  {
+    value: "anthropic",
+    label: "Anthropic",
+    description: "Bring your own API key",
+  },
   { value: "openai", label: "OpenAI", description: "Bring your own API key" },
-  { value: "ollama", label: "Ollama (Local)", description: "Run locally, no API key required" },
-  { value: "openrouter", label: "OpenRouter", description: "Bring your own API key" }
+  {
+    value: "ollama",
+    label: "Ollama (Local)",
+    description: "Run locally, no API key required",
+  },
+  {
+    value: "openrouter",
+    label: "OpenRouter",
+    description: "Bring your own API key",
+  },
 ];
 
 export function ConfigModal(props: ConfigModalProps) {
   // Local form state
-  const [provider, setProvider] = createSignal<AIProvider>(aiConfigState.config.provider);
+  const [provider, setProvider] = createSignal<AIProvider>(
+    aiConfigState.config.provider,
+  );
   const [apiKey, setApiKey] = createSignal(aiConfigState.config.apiKey);
   const [model, setModel] = createSignal(aiConfigState.config.model);
   const [baseURL, setBaseURL] = createSignal(aiConfigState.config.baseURL);
-  const [temperature, setTemperature] = createSignal(aiConfigState.config.temperature);
-  const [maxTokens, setMaxTokens] = createSignal(aiConfigState.config.maxTokens);
+  const [temperature, setTemperature] = createSignal(
+    aiConfigState.config.temperature,
+  );
+  const [maxTokens, setMaxTokens] = createSignal(
+    aiConfigState.config.maxTokens,
+  );
   const [termsAccepted, setTermsAccepted] = createSignal(hasAcceptedTerms());
 
   // Ollama CORS check state: null = not checked, true = ok, string = error
-  const [ollamaStatus, setOllamaStatus] = createSignal<null | true | string>(null);
+  const [ollamaStatus, setOllamaStatus] = createSignal<null | true | string>(
+    null,
+  );
   const [ollamaChecking, setOllamaChecking] = createSignal(false);
 
   const runOllamaCheck = async (url: string) => {
@@ -95,7 +123,7 @@ export function ConfigModal(props: ConfigModalProps) {
       model: model(),
       baseURL: baseURL(),
       temperature: temperature(),
-      maxTokens: maxTokens()
+      maxTokens: maxTokens(),
     };
 
     // First set provider to apply defaults, then override with our values
@@ -121,7 +149,9 @@ export function ConfigModal(props: ConfigModalProps) {
     setApiKey("");
     setModel(PROVIDER_DEFAULTS[aiConfigState.config.provider].model);
     setBaseURL(PROVIDER_DEFAULTS[aiConfigState.config.provider].baseURL);
-    setTemperature(PROVIDER_DEFAULTS[aiConfigState.config.provider].temperature);
+    setTemperature(
+      PROVIDER_DEFAULTS[aiConfigState.config.provider].temperature,
+    );
     setMaxTokens(PROVIDER_DEFAULTS[aiConfigState.config.provider].maxTokens);
   };
 
@@ -149,7 +179,9 @@ export function ConfigModal(props: ConfigModalProps) {
               <select
                 class="config-select"
                 value={provider()}
-                onChange={(e) => handleProviderChange(e.currentTarget.value as AIProvider)}
+                onChange={(e) =>
+                  handleProviderChange(e.currentTarget.value as AIProvider)
+                }
               >
                 <For each={PROVIDERS}>
                   {(p) => <option value={p.value}>{p.label}</option>}
@@ -195,7 +227,8 @@ export function ConfigModal(props: ConfigModalProps) {
                   Accept Terms &amp; Conditions
                 </label>
                 <span class="config-hint">
-                  Required to use TronOS AI. View terms with: <code>@ai show-terms</code>
+                  Required to use TronOS AI. View terms with:{" "}
+                  <code>@ai show-terms</code>
                 </span>
               </div>
             </Show>
@@ -206,14 +239,20 @@ export function ConfigModal(props: ConfigModalProps) {
                 <div class="config-ollama-note">
                   <strong>CORS required</strong>
                   <p>
-                    Ollama must allow requests from <code>{window.location.origin}</code>.
-                    Quit the Ollama desktop app first, then run from terminal:
+                    Ollama must allow requests from{" "}
+                    <code>{window.location.origin}</code>. Quit the Ollama
+                    desktop app first, then run from terminal:
                   </p>
-                  <code>OLLAMA_ORIGINS="{window.location.origin}" ollama serve</code>
+                  <code>
+                    OLLAMA_ORIGINS="{window.location.origin}" ollama serve
+                  </code>
                 </div>
                 <div style={{ "margin-top": "8px" }}>
                   <Show when={ollamaChecking()}>
-                    <span class="config-hint" style={{ color: "var(--fg-secondary)" }}>
+                    <span
+                      class="config-hint"
+                      style={{ color: "var(--fg-secondary)" }}
+                    >
                       Checking Ollama connectivity...
                     </span>
                   </Show>
@@ -222,14 +261,22 @@ export function ConfigModal(props: ConfigModalProps) {
                       Ollama is reachable - connection OK
                     </span>
                   </Show>
-                  <Show when={!ollamaChecking() && typeof ollamaStatus() === "string"}>
+                  <Show
+                    when={
+                      !ollamaChecking() && typeof ollamaStatus() === "string"
+                    }
+                  >
                     <span class="config-hint" style={{ color: "#ffa000" }}>
                       Connection failed - is Ollama running with CORS enabled?
                     </span>
                   </Show>
                   <button
                     class="config-btn config-btn-secondary"
-                    style={{ "margin-top": "6px", "font-size": "12px", padding: "4px 10px" }}
+                    style={{
+                      "margin-top": "6px",
+                      "font-size": "12px",
+                      padding: "4px 10px",
+                    }}
                     onClick={() => runOllamaCheck(baseURL())}
                   >
                     Test connection
@@ -265,7 +312,8 @@ export function ConfigModal(props: ConfigModalProps) {
             {/* Temperature Slider */}
             <div class="config-field">
               <label class="config-label">
-                Temperature: <span class="config-value">{temperature().toFixed(1)}</span>
+                Temperature:{" "}
+                <span class="config-value">{temperature().toFixed(1)}</span>
               </label>
               <input
                 type="range"
@@ -274,7 +322,9 @@ export function ConfigModal(props: ConfigModalProps) {
                 max="2"
                 step="0.1"
                 value={temperature()}
-                onInput={(e) => setTemperature(parseFloat(e.currentTarget.value))}
+                onInput={(e) =>
+                  setTemperature(parseFloat(e.currentTarget.value))
+                }
               />
               <div class="config-slider-labels">
                 <span>Focused (0)</span>
@@ -289,7 +339,9 @@ export function ConfigModal(props: ConfigModalProps) {
                 type="number"
                 class="config-input"
                 value={maxTokens()}
-                onInput={(e) => setMaxTokens(parseInt(e.currentTarget.value) || 4096)}
+                onInput={(e) =>
+                  setMaxTokens(parseInt(e.currentTarget.value) || 4096)
+                }
                 min="1"
                 max="100000"
               />
@@ -297,14 +349,23 @@ export function ConfigModal(props: ConfigModalProps) {
           </div>
 
           <div class="config-modal-footer">
-            <button class="config-btn config-btn-secondary" onClick={handleReset}>
+            <button
+              class="config-btn config-btn-secondary"
+              onClick={handleReset}
+            >
               Reset to Defaults
             </button>
             <div class="config-btn-group">
-              <button class="config-btn config-btn-secondary" onClick={props.onClose}>
+              <button
+                class="config-btn config-btn-secondary"
+                onClick={props.onClose}
+              >
                 Cancel
               </button>
-              <button class="config-btn config-btn-primary" onClick={handleSave}>
+              <button
+                class="config-btn config-btn-primary"
+                onClick={handleSave}
+              >
                 Save
               </button>
             </div>

@@ -1,4 +1,4 @@
-import type { BuiltinCommand } from '../types';
+import type { BuiltinCommand } from "../types";
 
 /**
  * alias - Define or display aliases
@@ -15,29 +15,30 @@ export const alias: BuiltinCommand = async (args, context) => {
   if (args.length === 0) {
     if (aliases.size === 0) {
       return {
-        stdout: '',
-        stderr: '',
-        exitCode: 0
+        stdout: "",
+        stderr: "",
+        exitCode: 0,
       };
     }
 
     const output = Array.from(aliases.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([name, command]) => `alias ${name}='${command}'`)
-      .join('\n');
+      .join("\n");
 
     return {
       stdout: output,
-      stderr: '',
-      exitCode: 0
+      stderr: "",
+      exitCode: 0,
     };
   }
 
   const errors: string[] = [];
-  const aliasRequests: Array<{ action: 'add'; name: string; command: string }> = [];
+  const aliasRequests: Array<{ action: "add"; name: string; command: string }> =
+    [];
 
   for (const arg of args) {
-    const equalIndex = arg.indexOf('=');
+    const equalIndex = arg.indexOf("=");
 
     if (equalIndex === -1) {
       // Just a name - display the alias if it exists
@@ -46,8 +47,8 @@ export const alias: BuiltinCommand = async (args, context) => {
         const command = aliases.get(name)!;
         return {
           stdout: `alias ${name}='${command}'`,
-          stderr: '',
-          exitCode: 0
+          stderr: "",
+          exitCode: 0,
         };
       } else {
         errors.push(`alias: ${name}: not found`);
@@ -60,8 +61,10 @@ export const alias: BuiltinCommand = async (args, context) => {
     let command = arg.slice(equalIndex + 1);
 
     // Remove surrounding quotes if present
-    if ((command.startsWith("'") && command.endsWith("'")) ||
-        (command.startsWith('"') && command.endsWith('"'))) {
+    if (
+      (command.startsWith("'") && command.endsWith("'")) ||
+      (command.startsWith('"') && command.endsWith('"'))
+    ) {
       command = command.slice(1, -1);
     }
 
@@ -74,7 +77,7 @@ export const alias: BuiltinCommand = async (args, context) => {
     }
 
     // Store the alias request for the shell to process
-    aliasRequests.push({ action: 'add', name, command });
+    aliasRequests.push({ action: "add", name, command });
   }
 
   // Store requests in context for shell to process
@@ -84,16 +87,16 @@ export const alias: BuiltinCommand = async (args, context) => {
 
   if (errors.length > 0) {
     return {
-      stdout: '',
-      stderr: errors.join('\n'),
-      exitCode: 1
+      stdout: "",
+      stderr: errors.join("\n"),
+      exitCode: 1,
     };
   }
 
   return {
-    stdout: '',
-    stderr: '',
-    exitCode: 0
+    stdout: "",
+    stderr: "",
+    exitCode: 0,
   };
 };
 
@@ -108,19 +111,21 @@ export const unalias: BuiltinCommand = async (args, context) => {
 
   if (args.length === 0) {
     return {
-      stdout: '',
-      stderr: 'unalias: usage: unalias [-a] name [name ...]',
-      exitCode: 1
+      stdout: "",
+      stderr: "unalias: usage: unalias [-a] name [name ...]",
+      exitCode: 1,
     };
   }
 
   const errors: string[] = [];
-  const unaliasRequests: Array<{ action: 'remove'; name: string } | { action: 'removeAll' }> = [];
+  const unaliasRequests: Array<
+    { action: "remove"; name: string } | { action: "removeAll" }
+  > = [];
 
   for (const arg of args) {
-    if (arg === '-a') {
+    if (arg === "-a") {
       // Remove all aliases
-      unaliasRequests.push({ action: 'removeAll' });
+      unaliasRequests.push({ action: "removeAll" });
       continue;
     }
 
@@ -136,7 +141,7 @@ export const unalias: BuiltinCommand = async (args, context) => {
       continue;
     }
 
-    unaliasRequests.push({ action: 'remove', name: arg });
+    unaliasRequests.push({ action: "remove", name: arg });
   }
 
   // Store requests in context for shell to process
@@ -146,15 +151,15 @@ export const unalias: BuiltinCommand = async (args, context) => {
 
   if (errors.length > 0) {
     return {
-      stdout: '',
-      stderr: errors.join('\n'),
-      exitCode: 1
+      stdout: "",
+      stderr: errors.join("\n"),
+      exitCode: 1,
     };
   }
 
   return {
-    stdout: '',
-    stderr: '',
-    exitCode: 0
+    stdout: "",
+    stderr: "",
+    exitCode: 0,
   };
 };

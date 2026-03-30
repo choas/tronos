@@ -25,7 +25,16 @@
  * { type: 'pipe', value: '|' }
  */
 export type Token = {
-  type: 'word' | 'sstring' | 'dstring' | 'pipe' | 'redirect' | 'append' | 'and' | 'or' | 'semicolon';
+  type:
+    | "word"
+    | "sstring"
+    | "dstring"
+    | "pipe"
+    | "redirect"
+    | "append"
+    | "and"
+    | "or"
+    | "semicolon";
   value: string;
 };
 
@@ -44,7 +53,7 @@ export type Token = {
  * { type: 'append', file: 'log.txt' }
  */
 export interface Redirect {
-  type: 'redirect' | 'append';
+  type: "redirect" | "append";
   file: string;
 }
 
@@ -69,7 +78,7 @@ export interface Redirect {
  * }
  */
 export interface SimpleCommand {
-  type: 'Command';
+  type: "Command";
   command: string;
   args: string[];
   redirects: Redirect[];
@@ -97,9 +106,9 @@ export interface SimpleCommand {
  * }
  */
 export interface LogicalSequence {
-  type: 'LogicalSequence';
+  type: "LogicalSequence";
   left: ParsedCommand;
-  operator: 'and' | 'or';
+  operator: "and" | "or";
   right: ParsedCommand;
 }
 
@@ -124,7 +133,7 @@ export interface LogicalSequence {
  * }
  */
 export interface Pipeline {
-  type: 'Pipeline';
+  type: "Pipeline";
   commands: SimpleCommand[];
 }
 
@@ -159,7 +168,7 @@ export interface CommandResult {
   directOutput?: boolean;
 }
 
-import { InMemoryVFS } from '../vfs/memory';
+import { InMemoryVFS } from "../vfs/memory";
 
 /**
  * Execution context passed to commands during execution.
@@ -212,20 +221,23 @@ export interface ExecutionContext {
  *   return { stdout: args.join(' ') + '\n', stderr: '', exitCode: 0 };
  * };
  */
-export type BuiltinCommand = (args: string[], context: ExecutionContext) => Promise<CommandResult>;
+export type BuiltinCommand = (
+  args: string[],
+  context: ExecutionContext,
+) => Promise<CommandResult>;
 
 /**
  * Metadata parsed from .trx file header comments.
  * See spec Section 7.3 for format details.
  */
 export interface ExeMetadata {
-  name: string;           // Required: program name
-  description?: string;   // Optional: brief description
-  version?: string;       // Optional: semver version
-  author?: string;        // Optional: author name or "@ai"
-  created?: string;       // Optional: ISO 8601 timestamp
-  license?: string;       // Optional: license identifier
-  requires?: string[];    // Optional: required features (e.g., ["network", "usb"])
+  name: string; // Required: program name
+  description?: string; // Optional: brief description
+  version?: string; // Optional: semver version
+  author?: string; // Optional: author name or "@ai"
+  created?: string; // Optional: ISO 8601 timestamp
+  license?: string; // Optional: license identifier
+  requires?: string[]; // Optional: required features (e.g., ["network", "usb"])
 }
 
 /**
@@ -234,6 +246,6 @@ export interface ExeMetadata {
 export interface ExeParseResult {
   success: boolean;
   metadata?: ExeMetadata;
-  body?: string;          // The function body (code after metadata)
-  error?: string;         // Error message if parsing failed
+  body?: string; // The function body (code after metadata)
+  error?: string; // Error message if parsing failed
 }

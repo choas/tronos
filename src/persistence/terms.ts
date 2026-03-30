@@ -13,7 +13,10 @@ export function loadTermsConfig(): TermsConfig | null {
       return null;
     }
     const config = JSON.parse(stored) as TermsConfig;
-    if (typeof config.accepted === "boolean" && typeof config.version === "string") {
+    if (
+      typeof config.accepted === "boolean" &&
+      typeof config.version === "string"
+    ) {
       return config;
     }
     return null;

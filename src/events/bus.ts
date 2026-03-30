@@ -12,18 +12,18 @@
  * @module events/bus
  */
 
-import { matchGlob } from '../utils/glob';
+import { matchGlob } from "../utils/glob";
 
 /**
  * Event types emitted by the system.
  */
 export type OSEventType =
-  | 'file-changed'
-  | 'context-changed'
-  | 'agent-action'
-  | 'mcp-result'
-  | 'session-start'
-  | 'network-change';
+  | "file-changed"
+  | "context-changed"
+  | "agent-action"
+  | "mcp-result"
+  | "session-start"
+  | "network-change";
 
 /**
  * An event emitted by the OS event bus.
@@ -40,7 +40,7 @@ export interface OSEvent {
  */
 export interface EventPattern {
   type?: OSEventType;
-  path?: string;       // for file-changed events, glob pattern
+  path?: string; // for file-changed events, glob pattern
 }
 
 /**
@@ -72,9 +72,9 @@ class EventBus {
   /**
    * Emit an event to all matching subscribers.
    */
-  emit(event: Omit<OSEvent, 'id' | 'ts'>): OSEvent {
+  emit(event: Omit<OSEvent, "id" | "ts">): OSEvent {
     const fullEvent: OSEvent = {
-      id: `evt-${String(++eventCounter).padStart(6, '0')}`,
+      id: `evt-${String(++eventCounter).padStart(6, "0")}`,
       ts: new Date().toISOString(),
       ...event,
     };
@@ -104,9 +104,9 @@ class EventBus {
   subscribe(
     pattern: EventPattern,
     callback: EventCallback,
-    command?: string
+    command?: string,
   ): string {
-    const id = `sub-${String(++eventCounter).padStart(6, '0')}`;
+    const id = `sub-${String(++eventCounter).padStart(6, "0")}`;
     this.subscribers.set(id, { id, pattern, callback, command });
     return id;
   }
@@ -149,7 +149,7 @@ class EventBus {
     if (pattern.type && pattern.type !== event.type) {
       return false;
     }
-    if (pattern.path && event.type === 'file-changed') {
+    if (pattern.path && event.type === "file-changed") {
       const eventPath = event.payload.path as string;
       if (!eventPath) return false;
       return matchGlob(eventPath, pattern.path);
@@ -157,7 +157,6 @@ class EventBus {
     return true;
   }
 }
-
 
 /** Singleton instance */
 let busInstance: EventBus | null = null;
@@ -177,10 +176,10 @@ export function getEventBus(): EventBus {
  */
 export function emitFileChanged(
   path: string,
-  operation: 'create' | 'write' | 'delete' | 'append'
+  operation: "create" | "write" | "delete" | "append",
 ): void {
   getEventBus().emit({
-    type: 'file-changed',
+    type: "file-changed",
     payload: { path, operation },
   });
 }
@@ -188,9 +187,9 @@ export function emitFileChanged(
 /**
  * Convenience: emit a context-changed event.
  */
-export function emitContextChanged(field: 'focus' | 'workspace'): void {
+export function emitContextChanged(field: "focus" | "workspace"): void {
   getEventBus().emit({
-    type: 'context-changed',
+    type: "context-changed",
     payload: { field },
   });
 }

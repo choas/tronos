@@ -16,7 +16,7 @@
  * Encryption key derivation constant.
  * Combined with a salt to create the encryption key.
  */
-const KEY_MATERIAL = 'aios-pkg-config-v1';
+const KEY_MATERIAL = "aios-pkg-config-v1";
 
 /**
  * Simple XOR-based encryption with a derived key.
@@ -42,11 +42,14 @@ export function encryptSecret(plaintext: string, salt: string): string {
  * @param expectedSalt - Expected salt for validation
  * @returns Decrypted plaintext, or null if decryption fails
  */
-export function decryptSecret(ciphertext: string, expectedSalt: string): string | null {
+export function decryptSecret(
+  ciphertext: string,
+  expectedSalt: string,
+): string | null {
   try {
     // Decode base64 then URI-encoded content
     const combined = decodeURIComponent(atob(ciphertext));
-    const colonIndex = combined.indexOf(':');
+    const colonIndex = combined.indexOf(":");
     if (colonIndex === -1) {
       return null;
     }
@@ -77,7 +80,7 @@ export function decryptSecret(ciphertext: string, expectedSalt: string): string 
 export function isEncryptedSecret(value: string): boolean {
   try {
     const decoded = decodeURIComponent(atob(value));
-    return decoded.includes(':');
+    return decoded.includes(":");
   } catch {
     return false;
   }
@@ -96,7 +99,7 @@ function deriveKey(salt: string): string {
  * XOR is symmetric - same function encrypts and decrypts.
  */
 function xorCipher(text: string, key: string): string {
-  let result = '';
+  let result = "";
   for (let i = 0; i < text.length; i++) {
     const textChar = text.charCodeAt(i);
     const keyChar = key.charCodeAt(i % key.length);

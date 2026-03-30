@@ -1,4 +1,4 @@
-import type { BuiltinCommand } from '../types';
+import type { BuiltinCommand } from "../types";
 
 /**
  * whoami - Print the current username
@@ -6,11 +6,11 @@ import type { BuiltinCommand } from '../types';
  * Prints the value of the USER environment variable
  */
 export const whoami: BuiltinCommand = async (_args, context) => {
-  const user = context.env.USER || 'unknown';
+  const user = context.env.USER || "unknown";
   return {
     stdout: user,
-    stderr: '',
-    exitCode: 0
+    stderr: "",
+    exitCode: 0,
   };
 };
 
@@ -24,21 +24,21 @@ export const env: BuiltinCommand = async (_args, context) => {
 
   if (entries.length === 0) {
     return {
-      stdout: '',
-      stderr: '',
-      exitCode: 0
+      stdout: "",
+      stderr: "",
+      exitCode: 0,
     };
   }
 
   const output = entries
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => `${key}=${value}`)
-    .join('\n');
+    .join("\n");
 
   return {
     stdout: output,
-    stderr: '',
-    exitCode: 0
+    stderr: "",
+    exitCode: 0,
   };
 };
 
@@ -55,18 +55,18 @@ export const exportCmd: BuiltinCommand = async (args, context) => {
     const output = entries
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, value]) => `declare -x ${key}="${value}"`)
-      .join('\n');
+      .join("\n");
 
     return {
       stdout: output,
-      stderr: '',
-      exitCode: 0
+      stderr: "",
+      exitCode: 0,
     };
   }
 
   // Process each argument
   for (const arg of args) {
-    const equalIndex = arg.indexOf('=');
+    const equalIndex = arg.indexOf("=");
 
     if (equalIndex === -1) {
       // Just a key name, display its value if set
@@ -86,9 +86,9 @@ export const exportCmd: BuiltinCommand = async (args, context) => {
 
     if (!key || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(key)) {
       return {
-        stdout: '',
+        stdout: "",
         stderr: `export: '${key}': not a valid identifier`,
-        exitCode: 1
+        exitCode: 1,
       };
     }
 
@@ -99,9 +99,9 @@ export const exportCmd: BuiltinCommand = async (args, context) => {
   }
 
   return {
-    stdout: '',
-    stderr: '',
-    exitCode: 0
+    stdout: "",
+    stderr: "",
+    exitCode: 0,
   };
 };
 
@@ -112,9 +112,9 @@ export const exportCmd: BuiltinCommand = async (args, context) => {
 export const unset: BuiltinCommand = async (args, context) => {
   if (args.length === 0) {
     return {
-      stdout: '',
-      stderr: '',
-      exitCode: 0
+      stdout: "",
+      stderr: "",
+      exitCode: 0,
     };
   }
 
@@ -135,15 +135,15 @@ export const unset: BuiltinCommand = async (args, context) => {
 
   if (errors.length > 0) {
     return {
-      stdout: '',
-      stderr: errors.join('\n'),
-      exitCode: 1
+      stdout: "",
+      stderr: errors.join("\n"),
+      exitCode: 1,
     };
   }
 
   return {
-    stdout: '',
-    stderr: '',
-    exitCode: 0
+    stdout: "",
+    stderr: "",
+    exitCode: 0,
   };
 };

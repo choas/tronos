@@ -6,8 +6,8 @@
  * Files are marked as 'virtual' type in stat output.
  */
 
-import { TERMS_CONTENT } from '../engine/terms-content';
-import { TRONOS_CONTENT, API_CONTENT, COMMANDS_CONTENT } from './docs-content';
+import { TERMS_CONTENT } from "../engine/terms-content";
+import { TRONOS_CONTENT, API_CONTENT, COMMANDS_CONTENT } from "./docs-content";
 
 /** Configuration for a documentation file */
 export interface DocsFileConfig {
@@ -22,36 +22,36 @@ export interface DocsFileConfig {
  * Maps path (e.g., '/docs/tronos.md') to its configuration
  */
 export const docsFiles: Record<string, DocsFileConfig> = {
-  '/docs/tronos.md': {
+  "/docs/tronos.md": {
     content: TRONOS_CONTENT,
-    description: 'TronOS main documentation and README'
+    description: "TronOS main documentation and README",
   },
-  '/docs/api.md': {
+  "/docs/api.md": {
     content: API_CONTENT,
-    description: 'TronOS executable API reference'
+    description: "TronOS executable API reference",
   },
-  '/docs/commands.md': {
+  "/docs/commands.md": {
     content: COMMANDS_CONTENT,
-    description: 'TronOS shell commands reference'
+    description: "TronOS shell commands reference",
   },
-  '/docs/terms.md': {
+  "/docs/terms.md": {
     content: TERMS_CONTENT,
-    description: 'TronOS AI Service Terms & Conditions'
-  }
+    description: "TronOS AI Service Terms & Conditions",
+  },
 };
 
 /**
  * Structure of /docs filesystem for directory listings
  */
 export const docsStructure: Record<string, string[]> = {
-  '/docs': Object.keys(docsFiles).map(p => p.replace('/docs/', ''))
+  "/docs": Object.keys(docsFiles).map((p) => p.replace("/docs/", "")),
 };
 
 /**
  * Check if a path is a /docs path
  */
 export function isDocsPath(path: string): boolean {
-  return path === '/docs' || path.startsWith('/docs/');
+  return path === "/docs" || path.startsWith("/docs/");
 }
 
 /**
@@ -112,7 +112,9 @@ export function getDocsSizeSync(path: string): number | null {
  * Get a read generator for a docs file (async)
  * Used by memory.ts for consistent interface with proc/dev
  */
-export function getDocsGenerator(path: string): (() => Promise<string>) | undefined {
+export function getDocsGenerator(
+  path: string,
+): (() => Promise<string>) | undefined {
   if (path in docsFiles) {
     return () => readDocsFile(path);
   }

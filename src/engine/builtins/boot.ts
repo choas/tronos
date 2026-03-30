@@ -12,13 +12,18 @@ import { getBootConfig, setSkipBootAnimation } from "../../stores/boot";
  *   boot noskip         - Show boot animation on next startup
  *   boot toggle         - Toggle boot animation skip preference
  */
-export const boot: BuiltinCommand = async (args: string[], _context: ExecutionContext): Promise<CommandResult> => {
+export const boot: BuiltinCommand = async (
+  args: string[],
+  _context: ExecutionContext,
+): Promise<CommandResult> => {
   const subcommand = args[0] || "show";
 
   switch (subcommand) {
     case "show": {
       const cfg = getBootConfig();
-      const skipStatus = cfg.skipBootAnimation ? "yes (animation skipped)" : "no (animation shown)";
+      const skipStatus = cfg.skipBootAnimation
+        ? "yes (animation skipped)"
+        : "no (animation shown)";
       const output = [
         "Boot Configuration:",
         `  Skip animation: ${skipStatus}`,
@@ -26,7 +31,7 @@ export const boot: BuiltinCommand = async (args: string[], _context: ExecutionCo
         "Commands:",
         "  boot skip    - Skip boot animation on startup",
         "  boot noskip  - Show boot animation on startup",
-        "  boot toggle  - Toggle the skip preference"
+        "  boot toggle  - Toggle the skip preference",
       ].join("\n");
 
       return { stdout: output + "\n", stderr: "", exitCode: 0 };
@@ -37,7 +42,7 @@ export const boot: BuiltinCommand = async (args: string[], _context: ExecutionCo
       return {
         stdout: "Boot animation will be skipped on next startup.\n",
         stderr: "",
-        exitCode: 0
+        exitCode: 0,
       };
     }
 
@@ -46,7 +51,7 @@ export const boot: BuiltinCommand = async (args: string[], _context: ExecutionCo
       return {
         stdout: "Boot animation will be shown on next startup.\n",
         stderr: "",
-        exitCode: 0
+        exitCode: 0,
       };
     }
 
@@ -57,7 +62,7 @@ export const boot: BuiltinCommand = async (args: string[], _context: ExecutionCo
       return {
         stdout: `Boot animation will be ${newStatus} on next startup.\n`,
         stderr: "",
-        exitCode: 0
+        exitCode: 0,
       };
     }
 
@@ -65,7 +70,7 @@ export const boot: BuiltinCommand = async (args: string[], _context: ExecutionCo
       return {
         stdout: "",
         stderr: "Usage: boot [show|skip|noskip|toggle]\n",
-        exitCode: 1
+        exitCode: 1,
       };
   }
 };

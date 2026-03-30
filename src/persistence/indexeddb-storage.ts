@@ -9,7 +9,14 @@
 
 import { openDB } from "idb";
 import type { DBSchema, IDBPDatabase } from "idb";
-import type { FSNode, Session, FileVersion, FileVersionHistory, ImportHistoryEntry, SessionSnapshot } from "../types";
+import type {
+  FSNode,
+  Session,
+  FileVersion,
+  FileVersionHistory,
+  ImportHistoryEntry,
+  SessionSnapshot,
+} from "../types";
 import type { AIConfig } from "../stores/ai";
 import type { StorageBackend, BootConfig, ThemeConfig } from "./storage";
 
@@ -82,13 +89,13 @@ function toPlainSession(session: Session): Session {
     history: [...session.history],
     aliases: { ...session.aliases },
     conversationHistory: session.conversationHistory
-      ? session.conversationHistory.map(msg => ({
+      ? session.conversationHistory.map((msg) => ({
           role: msg.role,
           content: msg.content,
           timestamp: msg.timestamp,
           mode: msg.mode,
         }))
-      : undefined
+      : undefined,
   };
 }
 
@@ -117,22 +124,28 @@ export class IndexedDBStorage implements StorageBackend {
           db.createObjectStore("config");
         }
         if (oldVersion < 2) {
-          const versionsStore = db.createObjectStore("fileVersions", { keyPath: "id" });
+          const versionsStore = db.createObjectStore("fileVersions", {
+            keyPath: "id",
+          });
           versionsStore.createIndex("by-filePath", "filePath");
           db.createObjectStore("fileVersionHistory", { keyPath: "filePath" });
         }
         if (oldVersion < 3) {
-          const importStore = db.createObjectStore("importHistory", { keyPath: "id" });
+          const importStore = db.createObjectStore("importHistory", {
+            keyPath: "id",
+          });
           importStore.createIndex("by-sessionId", "sessionId");
           importStore.createIndex("by-timestamp", "timestamp");
         }
         if (oldVersion < 4) {
-          const snapshotsStore = db.createObjectStore("snapshots", { keyPath: "id" });
+          const snapshotsStore = db.createObjectStore("snapshots", {
+            keyPath: "id",
+          });
           snapshotsStore.createIndex("by-sessionId", "sessionId");
           snapshotsStore.createIndex("by-timestamp", "timestamp");
           snapshotsStore.createIndex("by-name", "name");
         }
-      }
+      },
     });
   }
 
@@ -176,7 +189,10 @@ export class IndexedDBStorage implements StorageBackend {
     await db.delete("files", key);
   }
 
-  async syncFilesystem(namespace: string, nodes: Map<string, FSNode>): Promise<void> {
+  async syncFilesystem(
+    namespace: string,
+    nodes: Map<string, FSNode>,
+  ): Promise<void> {
     const db = this.getDB();
     const tx = db.transaction("files", "readwrite");
     const prefix = `${namespace}:`;

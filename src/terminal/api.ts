@@ -10,9 +10,9 @@
  * @module terminal/api
  */
 
-import { Terminal } from '@xterm/xterm';
-import type { IDisposable } from '@xterm/xterm';
-import { TerminalWriteBuffer } from './buffer';
+import { Terminal } from "@xterm/xterm";
+import type { IDisposable } from "@xterm/xterm";
+import { TerminalWriteBuffer } from "./buffer";
 
 /**
  * Keyboard event passed to key handlers.
@@ -103,7 +103,7 @@ export interface TerminalAPIOptions {
  */
 export const createTerminalAPI = (
   term: Terminal,
-  options: TerminalAPIOptions = {}
+  options: TerminalAPIOptions = {},
 ): TerminalAPI => {
   const { batchWrites = true } = options;
 
@@ -134,9 +134,9 @@ export const createTerminalAPI = (
     },
     clearLine: () => {
       if (writeBuffer) {
-        writeBuffer.write('\x1b[2K\r');
+        writeBuffer.write("\x1b[2K\r");
       } else {
-        term.write('\x1b[2K\r');
+        term.write("\x1b[2K\r");
       }
     },
     moveTo: (x: number, y: number) => {
@@ -148,7 +148,7 @@ export const createTerminalAPI = (
       }
     },
     moveBy: (dx: number, dy: number) => {
-      let cmd = '';
+      let cmd = "";
       if (dx > 0) {
         cmd += `\x1b[${dx}C`;
       } else if (dx < 0) {

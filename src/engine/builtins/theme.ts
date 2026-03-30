@@ -39,7 +39,10 @@ Subcommands:
   light                Switch to light theme
 `;
 
-export const theme: BuiltinCommand = async (args: string[], context: ExecutionContext): Promise<CommandResult> => {
+export const theme: BuiltinCommand = async (
+  args: string[],
+  context: ExecutionContext,
+): Promise<CommandResult> => {
   const subcommand = args[0];
 
   // No args: show current theme and colors
@@ -58,11 +61,15 @@ export const theme: BuiltinCommand = async (args: string[], context: ExecutionCo
     case "apply": {
       const presetName = args[1];
       if (!presetName) {
-        return err("Usage: theme apply <preset>\nUse 'theme list' to see available presets.\n");
+        return err(
+          "Usage: theme apply <preset>\nUse 'theme list' to see available presets.\n",
+        );
       }
       const success = applyPreset(presetName);
       if (!success) {
-        return err(`Unknown preset: ${presetName}\nUse 'theme list' to see available presets.\n`);
+        return err(
+          `Unknown preset: ${presetName}\nUse 'theme list' to see available presets.\n`,
+        );
       }
       return ok(`Theme applied: ${presetName}\n`);
     }
@@ -71,10 +78,16 @@ export const theme: BuiltinCommand = async (args: string[], context: ExecutionCo
       const colorKey = args[1];
       const colorValue = args[2];
       if (!colorKey || !colorValue) {
-        return err("Usage: theme set <color-key> <hex>\n\nValid color keys:\n  " + COLOR_KEYS.join(", ") + "\n");
+        return err(
+          "Usage: theme set <color-key> <hex>\n\nValid color keys:\n  " +
+            COLOR_KEYS.join(", ") +
+            "\n",
+        );
       }
       if (!COLOR_KEYS.includes(colorKey as ColorKey)) {
-        return err(`Unknown color key: ${colorKey}\nValid keys: ${COLOR_KEYS.join(", ")}\n`);
+        return err(
+          `Unknown color key: ${colorKey}\nValid keys: ${COLOR_KEYS.join(", ")}\n`,
+        );
       }
       setColor(colorKey as ColorKey, colorValue);
       return ok(`Set ${colorKey} = ${colorValue}\n`);
@@ -96,10 +109,13 @@ export const theme: BuiltinCommand = async (args: string[], context: ExecutionCo
       // Also save to /etc/themes/<name>.json in VFS
       if (context.vfs) {
         try {
-          if (!context.vfs.exists('/etc/themes')) {
-            context.vfs.mkdir('/etc/themes', true);
+          if (!context.vfs.exists("/etc/themes")) {
+            context.vfs.mkdir("/etc/themes", true);
           }
-          context.vfs.write(`/etc/themes/${name}.json`, JSON.stringify(preset, null, 2));
+          context.vfs.write(
+            `/etc/themes/${name}.json`,
+            JSON.stringify(preset, null, 2),
+          );
         } catch {
           // Non-fatal - preset is registered in memory regardless
         }
@@ -127,7 +143,9 @@ export const theme: BuiltinCommand = async (args: string[], context: ExecutionCo
       }
       const preset = getPreset(presetName);
       if (!preset) {
-        return err(`Unknown preset: ${presetName}\nUse 'theme list' to see available presets.\n`);
+        return err(
+          `Unknown preset: ${presetName}\nUse 'theme list' to see available presets.\n`,
+        );
       }
 
       let output = `Preview: ${presetName}\n\n`;

@@ -16,7 +16,7 @@ function toPlainSession(session: Session): Session {
     fsNamespace: session.fsNamespace,
     env: { ...session.env },
     history: [...session.history],
-    aliases: { ...session.aliases }
+    aliases: { ...session.aliases },
   };
 }
 
@@ -71,7 +71,9 @@ export async function deleteSessionFromDB(id: string): Promise<void> {
  * Each session is converted to a plain object to avoid DataCloneError
  * when sessions come from a Solid.js reactive store (Proxy objects).
  */
-export async function syncSessions(sessions: Record<string, Session>): Promise<void> {
+export async function syncSessions(
+  sessions: Record<string, Session>,
+): Promise<void> {
   try {
     const db = getDB();
     const tx = db.transaction("sessions", "readwrite");

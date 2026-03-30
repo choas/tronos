@@ -30,7 +30,7 @@ function generateId(): string {
  * @returns The saved snapshot with its ID
  */
 export async function saveSnapshot(
-  snapshot: Omit<SessionSnapshot, "id"> & { id?: string }
+  snapshot: Omit<SessionSnapshot, "id"> & { id?: string },
 ): Promise<SessionSnapshot> {
   const db = getDB();
   const fullSnapshot: SessionSnapshot = {
@@ -47,10 +47,14 @@ export async function saveSnapshot(
  * @returns Array of snapshots sorted by timestamp (newest first)
  */
 export async function getSessionSnapshots(
-  sessionId: string
+  sessionId: string,
 ): Promise<SessionSnapshot[]> {
   const db = getDB();
-  const snapshots = await db.getAllFromIndex("snapshots", "by-sessionId", sessionId);
+  const snapshots = await db.getAllFromIndex(
+    "snapshots",
+    "by-sessionId",
+    sessionId,
+  );
   return snapshots.sort((a, b) => b.timestamp - a.timestamp);
 }
 
@@ -60,7 +64,7 @@ export async function getSessionSnapshots(
  * @returns The snapshot or null if not found
  */
 export async function getSnapshot(
-  snapshotId: string
+  snapshotId: string,
 ): Promise<SessionSnapshot | null> {
   const db = getDB();
   const snapshot = await db.get("snapshots", snapshotId);
@@ -75,10 +79,10 @@ export async function getSnapshot(
  */
 export async function getSnapshotByName(
   sessionId: string,
-  name: string
+  name: string,
 ): Promise<SessionSnapshot | null> {
   const snapshots = await getSessionSnapshots(sessionId);
-  return snapshots.find(s => s.name === name) || null;
+  return snapshots.find((s) => s.name === name) || null;
 }
 
 /**
@@ -96,7 +100,11 @@ export async function deleteSnapshot(snapshotId: string): Promise<void> {
  */
 export async function clearSessionSnapshots(sessionId: string): Promise<void> {
   const db = getDB();
-  const snapshots = await db.getAllFromIndex("snapshots", "by-sessionId", sessionId);
+  const snapshots = await db.getAllFromIndex(
+    "snapshots",
+    "by-sessionId",
+    sessionId,
+  );
   const tx = db.transaction("snapshots", "readwrite");
   for (const snapshot of snapshots) {
     await tx.store.delete(snapshot.id);
@@ -109,9 +117,15 @@ export async function clearSessionSnapshots(sessionId: string): Promise<void> {
  * @param sessionId - The session ID
  * @returns Number of snapshots
  */
-export async function countSessionSnapshots(sessionId: string): Promise<number> {
+export async function countSessionSnapshots(
+  sessionId: string,
+): Promise<number> {
   const db = getDB();
-  const snapshots = await db.getAllFromIndex("snapshots", "by-sessionId", sessionId);
+  const snapshots = await db.getAllFromIndex(
+    "snapshots",
+    "by-sessionId",
+    sessionId,
+  );
   return snapshots.length;
 }
 
@@ -123,13 +137,13 @@ export async function countSessionSnapshots(sessionId: string): Promise<number> 
  */
 export async function enforceSnapshotLimit(
   sessionId: string,
-  maxSnapshots: number = DEFAULT_MAX_SNAPSHOTS
+  maxSnapshots: number = DEFAULT_MAX_SNAPSHOTS,
 ): Promise<number> {
   const snapshots = await getSessionSnapshots(sessionId);
 
   // Separate auto and manual snapshots
-  const autoSnapshots = snapshots.filter(s => s.isAuto);
-  const manualSnapshots = snapshots.filter(s => !s.isAuto);
+  const autoSnapshots = snapshots.filter((s) => s.isAuto);
+  const manualSnapshots = snapshots.filter((s) => !s.isAuto);
 
   // Keep up to maxSnapshots total, prioritizing manual over auto
   const toKeep = new Set<string>();
@@ -163,7 +177,7 @@ export async function enforceSnapshotLimit(
  * @returns The most recent snapshot or null if none exist
  */
 export async function getLatestSnapshot(
-  sessionId: string
+  sessionId: string,
 ): Promise<SessionSnapshot | null> {
   const snapshots = await getSessionSnapshots(sessionId);
   return snapshots[0] || null;
@@ -195,7 +209,7 @@ export async function createSnapshot(
   options: {
     description?: string;
     isAuto?: boolean;
-  } = {}
+  } = {},
 ): Promise<SessionSnapshot> {
   const snapshot: Omit<SessionSnapshot, "id"> = {
     sessionId,

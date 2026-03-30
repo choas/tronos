@@ -1,18 +1,18 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import ShellEngine from '../src/engine/shell';
-import { TerminalAPI } from '../src/terminal/api';
+import { describe, it, expect, beforeEach } from "vitest";
+import ShellEngine from "../src/engine/shell";
+import { TerminalAPI } from "../src/terminal/api";
 
 class MockTerminal implements TerminalAPI {
   private output: string[] = [];
   private onKeyCallback?: (key: any) => void;
-  private selectedText = '';
+  private selectedText = "";
 
   write(data: string): void {
     this.output.push(data);
   }
 
   writeln(data: string): void {
-    this.output.push(data + '\n');
+    this.output.push(data + "\n");
   }
 
   clear(): void {
@@ -21,7 +21,11 @@ class MockTerminal implements TerminalAPI {
 
   onKey(callback: (key: any) => void): { dispose: () => void } {
     this.onKeyCallback = callback;
-    return { dispose: () => { this.onKeyCallback = undefined; } };
+    return {
+      dispose: () => {
+        this.onKeyCallback = undefined;
+      },
+    };
   }
 
   onData(_callback: (data: string) => void): { dispose: () => void } {
@@ -38,7 +42,7 @@ class MockTerminal implements TerminalAPI {
   }
 
   clearSelection(): void {
-    this.selectedText = '';
+    this.selectedText = "";
   }
 
   clearLine(): void {
@@ -70,7 +74,7 @@ class MockTerminal implements TerminalAPI {
   }
 
   getOutput(): string {
-    return this.output.join('');
+    return this.output.join("");
   }
 
   clearOutput(): void {
@@ -84,7 +88,7 @@ class MockTerminal implements TerminalAPI {
   }
 }
 
-describe('Tab Completion', () => {
+describe("Tab Completion", () => {
   let shell: ShellEngine;
   let term: MockTerminal;
 
@@ -95,54 +99,54 @@ describe('Tab Completion', () => {
     await (shell as any).vfs.init();
   });
 
-  it('should have access to private getCompletion method through execution', () => {
+  it("should have access to private getCompletion method through execution", () => {
     // This test verifies that tab completion is integrated into the shell
     // We can't directly test the private method, but we verify the shell has the method
     expect(shell).toBeDefined();
-    expect(typeof (shell as any).getCompletion).toBe('function');
+    expect(typeof (shell as any).getCompletion).toBe("function");
   });
 
-  it('should return completion for single match', () => {
-    const completion = (shell as any).getCompletion('cd ho');
-    expect(completion.type).toBe('complete');
-    expect(completion.newLine).toBe('cd home');
+  it("should return completion for single match", () => {
+    const completion = (shell as any).getCompletion("cd ho");
+    expect(completion.type).toBe("complete");
+    expect(completion.newLine).toBe("cd home");
   });
 
-  it('should return multiple matches when ambiguous', () => {
-    const completion = (shell as any).getCompletion('cd ');
-    expect(completion.type).toBe('multiple');
-    expect(completion.matches).toContain('home');
-    expect(completion.matches).toContain('bin');
-    expect(completion.matches).toContain('tmp');
+  it("should return multiple matches when ambiguous", () => {
+    const completion = (shell as any).getCompletion("cd ");
+    expect(completion.type).toBe("multiple");
+    expect(completion.matches).toContain("home");
+    expect(completion.matches).toContain("bin");
+    expect(completion.matches).toContain("tmp");
     expect(completion.matches.length).toBeGreaterThan(1);
   });
 
-  it('should return none when no matches', () => {
-    const completion = (shell as any).getCompletion('cd nonexistent');
-    expect(completion.type).toBe('none');
+  it("should return none when no matches", () => {
+    const completion = (shell as any).getCompletion("cd nonexistent");
+    expect(completion.type).toBe("none");
   });
 
-  it('should complete partial filenames', () => {
-    const completion = (shell as any).getCompletion('ls bi');
-    expect(completion.type).toBe('complete');
-    expect(completion.newLine).toBe('ls bin');
+  it("should complete partial filenames", () => {
+    const completion = (shell as any).getCompletion("ls bi");
+    expect(completion.type).toBe("complete");
+    expect(completion.newLine).toBe("ls bin");
   });
 
-  it('should handle empty input by showing all files', () => {
-    const completion = (shell as any).getCompletion('');
-    expect(completion.type).toBe('multiple');
+  it("should handle empty input by showing all files", () => {
+    const completion = (shell as any).getCompletion("");
+    expect(completion.type).toBe("multiple");
     expect(completion.matches.length).toBeGreaterThan(0);
   });
 
-  it('should preserve command when completing arguments', () => {
-    const completion = (shell as any).getCompletion('cat ho');
-    expect(completion.type).toBe('complete');
-    expect(completion.newLine).toBe('cat home');
+  it("should preserve command when completing arguments", () => {
+    const completion = (shell as any).getCompletion("cat ho");
+    expect(completion.type).toBe("complete");
+    expect(completion.newLine).toBe("cat home");
   });
 
-  it('should handle multiple words and complete last word', () => {
-    const completion = (shell as any).getCompletion('cp bin ho');
-    expect(completion.type).toBe('complete');
-    expect(completion.newLine).toBe('cp bin home');
+  it("should handle multiple words and complete last word", () => {
+    const completion = (shell as any).getCompletion("cp bin ho");
+    expect(completion.type).toBe("complete");
+    expect(completion.newLine).toBe("cp bin home");
   });
 });

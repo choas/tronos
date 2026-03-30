@@ -6,7 +6,9 @@ import type { FSNode } from "../types";
  * @param namespace - The filesystem namespace (typically session ID)
  * @returns Map of paths to FSNodes
  */
-export async function loadFilesystem(namespace: string): Promise<Map<string, FSNode>> {
+export async function loadFilesystem(
+  namespace: string,
+): Promise<Map<string, FSNode>> {
   const db = getDB();
   const nodes = new Map<string, FSNode>();
 
@@ -31,7 +33,11 @@ export async function loadFilesystem(namespace: string): Promise<Map<string, FSN
  * @param path - The absolute path of the file/directory
  * @param node - The FSNode to save
  */
-export async function saveFile(namespace: string, path: string, node: FSNode): Promise<void> {
+export async function saveFile(
+  namespace: string,
+  path: string,
+  node: FSNode,
+): Promise<void> {
   const db = getDB();
 
   // Store with namespace prefix to separate session filesystems
@@ -49,7 +55,10 @@ export async function saveFile(namespace: string, path: string, node: FSNode): P
  * @param namespace - The filesystem namespace (typically session ID)
  * @param path - The absolute path of the file/directory to delete
  */
-export async function deleteFile(namespace: string, path: string): Promise<void> {
+export async function deleteFile(
+  namespace: string,
+  path: string,
+): Promise<void> {
   const db = getDB();
   const key = `${namespace}:${path}`;
 
@@ -62,7 +71,10 @@ export async function deleteFile(namespace: string, path: string): Promise<void>
  * @param namespace - The filesystem namespace (typically session ID)
  * @param nodes - Map of all nodes in the VFS
  */
-export async function syncFilesystem(namespace: string, nodes: Map<string, FSNode>): Promise<void> {
+export async function syncFilesystem(
+  namespace: string,
+  nodes: Map<string, FSNode>,
+): Promise<void> {
   const db = getDB();
   const tx = db.transaction("files", "readwrite");
 

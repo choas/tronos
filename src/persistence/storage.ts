@@ -183,11 +183,14 @@ export function isStorageInitialized(): boolean {
  *
  * @param forceBackend - Optional: force a specific backend type
  */
-export async function initStorage(forceBackend?: "indexeddb" | "filesystem"): Promise<void> {
+export async function initStorage(
+  forceBackend?: "indexeddb" | "filesystem",
+): Promise<void> {
   // Lazy import to avoid loading unnecessary code
   const { isCLI } = await import("../utils/environment");
 
-  const useCLI = forceBackend === "filesystem" || (forceBackend !== "indexeddb" && isCLI());
+  const useCLI =
+    forceBackend === "filesystem" || (forceBackend !== "indexeddb" && isCLI());
 
   if (useCLI) {
     const { FilesystemStorage } = await import("./filesystem-storage");

@@ -12,7 +12,7 @@ import type { BuiltinCommand, CommandResult, ExecutionContext } from "../types";
  */
 export const exit: BuiltinCommand = async (
   args: string[],
-  context: ExecutionContext
+  context: ExecutionContext,
 ): Promise<CommandResult> => {
   let code = 0;
 

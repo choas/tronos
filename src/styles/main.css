@@ -30,7 +30,8 @@
 }
 
 /* Global Styles */
-body, #root {
+body,
+#root {
   margin: 0;
   padding: 0;
   height: 100vh;
@@ -59,7 +60,9 @@ body, #root {
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 
 .tab:hover {
@@ -106,7 +109,9 @@ body, #root {
   font-size: 18px;
   line-height: 1;
   padding: 8px 16px;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 
 .tab-new:hover {
@@ -360,7 +365,9 @@ body, #root {
   font-size: 13px;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 
 .config-btn-primary {
@@ -432,7 +439,9 @@ body, #root {
   font-size: 13px;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
   border: none;
 }
 
@@ -601,7 +610,10 @@ body, #root {
   color: var(--fg-secondary);
   cursor: pointer;
   white-space: nowrap;
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    border-color 0.2s;
 }
 
 .marketplace-tab:hover {
@@ -690,14 +702,38 @@ body, #root {
   text-transform: uppercase;
 }
 
-.marketplace-badge-games { background: rgba(76, 175, 80, 0.2); color: #4caf50; }
-.marketplace-badge-editors { background: rgba(33, 150, 243, 0.2); color: #2196f3; }
-.marketplace-badge-devtools { background: rgba(255, 152, 0, 0.2); color: #ff9800; }
-.marketplace-badge-viz { background: rgba(156, 39, 176, 0.2); color: #ce93d8; }
-.marketplace-badge-productivity { background: rgba(0, 188, 212, 0.2); color: #00bcd4; }
-.marketplace-badge-network { background: rgba(255, 87, 34, 0.2); color: #ff5722; }
-.marketplace-badge-files { background: rgba(121, 85, 72, 0.2); color: #a1887f; }
-.marketplace-badge-enterprise { background: rgba(255, 215, 0, 0.2); color: #ffd700; }
+.marketplace-badge-games {
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+.marketplace-badge-editors {
+  background: rgba(33, 150, 243, 0.2);
+  color: #2196f3;
+}
+.marketplace-badge-devtools {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ff9800;
+}
+.marketplace-badge-viz {
+  background: rgba(156, 39, 176, 0.2);
+  color: #ce93d8;
+}
+.marketplace-badge-productivity {
+  background: rgba(0, 188, 212, 0.2);
+  color: #00bcd4;
+}
+.marketplace-badge-network {
+  background: rgba(255, 87, 34, 0.2);
+  color: #ff5722;
+}
+.marketplace-badge-files {
+  background: rgba(121, 85, 72, 0.2);
+  color: #a1887f;
+}
+.marketplace-badge-enterprise {
+  background: rgba(255, 215, 0, 0.2);
+  color: #ffd700;
+}
 
 /* Tier badges */
 .marketplace-badge-pro {
@@ -728,7 +764,9 @@ body, #root {
   border-radius: 4px;
   cursor: pointer;
   border: none;
-  transition: background-color 0.2s, opacity 0.2s;
+  transition:
+    background-color 0.2s,
+    opacity 0.2s;
 }
 
 .marketplace-btn-install {

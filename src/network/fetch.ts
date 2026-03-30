@@ -3,7 +3,7 @@
  * Provides enhanced fetch functionality with default headers and better error messages
  */
 
-import { VERSION } from '../version';
+import { VERSION } from "../version";
 
 /**
  * Enhanced fetch wrapper for TronOS
@@ -16,7 +16,7 @@ import { VERSION } from '../version';
  */
 export async function aiosFetch(
   url: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<Response> {
   // Add default headers
   const headers = new Headers(options.headers);
@@ -27,7 +27,7 @@ export async function aiosFetch(
   try {
     const response = await fetch(url, {
       ...options,
-      headers
+      headers,
     });
     return response;
   } catch (error) {
@@ -48,23 +48,28 @@ export async function aiosFetch(
           const origin = new URL(url).origin;
           throw new Error(
             `CORS error: The server at ${origin} doesn't allow requests from this browser. ` +
-            `Try using a CORS proxy or ensure the server sends appropriate CORS headers.`
+              `Try using a CORS proxy or ensure the server sends appropriate CORS headers.`,
           );
         } catch (urlError) {
           // If URL parsing fails, throw with generic CORS message
-          if (urlError instanceof Error && urlError.message.includes("CORS error")) {
+          if (
+            urlError instanceof Error &&
+            urlError.message.includes("CORS error")
+          ) {
             throw urlError;
           }
           throw new Error(
             `CORS error: The server doesn't allow requests from this browser. ` +
-            `Try using a CORS proxy or ensure the server sends appropriate CORS headers.`
+              `Try using a CORS proxy or ensure the server sends appropriate CORS headers.`,
           );
         }
       }
 
       // Check for network-related errors
       if (message.includes("network") || message.includes("connection")) {
-        throw new Error(`Network error: Unable to reach ${url}. Check your internet connection.`);
+        throw new Error(
+          `Network error: Unable to reach ${url}. Check your internet connection.`,
+        );
       }
     }
 

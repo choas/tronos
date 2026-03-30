@@ -25,18 +25,21 @@
  * @see spec Section 7.5 and 14.2 for security model details
  */
 
-import type { ExecutionContext, CommandResult } from '../engine/types';
-import type { InMemoryVFS } from '../vfs/memory';
-import type { KeyEvent } from '../terminal/api';
-import { getPackageConfigValue, setPackageConfigValue } from '../engine/builtins/tpkg';
-import { VERSION, VERSION_STRING } from '../version';
-import { getActiveSession } from '../stores/sessions';
+import type { ExecutionContext, CommandResult } from "../engine/types";
+import type { InMemoryVFS } from "../vfs/memory";
+import type { KeyEvent } from "../terminal/api";
+import {
+  getPackageConfigValue,
+  setPackageConfigValue,
+} from "../engine/builtins/tpkg";
+import { VERSION, VERSION_STRING } from "../version";
+import { getActiveSession } from "../stores/sessions";
 import {
   getFileVersions,
   getVersion,
   saveVersion,
   hasVersionHistory,
-} from '../persistence/versions';
+} from "../persistence/versions";
 
 /**
  * ExitSignal is thrown when an executable calls t.exit(code).
@@ -47,7 +50,7 @@ export class ExitSignal extends Error {
 
   constructor(code: number = 0) {
     super(`Exit with code ${code}`);
-    this.name = 'ExitSignal';
+    this.name = "ExitSignal";
     this.code = code;
   }
 }
@@ -64,7 +67,10 @@ export interface SandboxFS {
   list: (path: string) => string[];
   mkdir: (path: string) => void;
   remove: (path: string) => void;
-  stat: (path: string) => { type: 'file' | 'directory' | 'virtual'; name: string };
+  stat: (path: string) => {
+    type: "file" | "directory" | "virtual";
+    name: string;
+  };
   cwd: () => string;
   resolve: (path: string) => string;
   isFile: (path: string) => boolean;
@@ -230,23 +236,23 @@ export interface SandboxTerminalAPI {
  * ANSI escape codes for terminal styling
  */
 const ANSI = {
-  reset: '\x1b[0m',
-  bold: '\x1b[1m',
-  dim: '\x1b[2m',
-  italic: '\x1b[3m',
-  underline: '\x1b[4m',
-  inverse: '\x1b[7m',
-  hidden: '\x1b[8m',
-  strikethrough: '\x1b[9m',
+  reset: "\x1b[0m",
+  bold: "\x1b[1m",
+  dim: "\x1b[2m",
+  italic: "\x1b[3m",
+  underline: "\x1b[4m",
+  inverse: "\x1b[7m",
+  hidden: "\x1b[8m",
+  strikethrough: "\x1b[9m",
   // Foreground colors
-  red: '\x1b[31m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  blue: '\x1b[34m',
-  magenta: '\x1b[35m',
-  cyan: '\x1b[36m',
-  white: '\x1b[37m',
-  gray: '\x1b[90m',
+  red: "\x1b[31m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  cyan: "\x1b[36m",
+  white: "\x1b[37m",
+  gray: "\x1b[90m",
 };
 
 /**
@@ -260,7 +266,8 @@ function createStyleHelpers() {
     underline: (text: string) => `${ANSI.underline}${text}${ANSI.reset}`,
     inverse: (text: string) => `${ANSI.inverse}${text}${ANSI.reset}`,
     hidden: (text: string) => `${ANSI.hidden}${text}${ANSI.reset}`,
-    strikethrough: (text: string) => `${ANSI.strikethrough}${text}${ANSI.reset}`,
+    strikethrough: (text: string) =>
+      `${ANSI.strikethrough}${text}${ANSI.reset}`,
     red: (text: string) => `${ANSI.red}${text}${ANSI.reset}`,
     green: (text: string) => `${ANSI.green}${text}${ANSI.reset}`,
     yellow: (text: string) => `${ANSI.yellow}${text}${ANSI.reset}`,
@@ -280,8 +287,10 @@ function createStyleHelpers() {
 function createSandboxFS(vfs: InMemoryVFS): SandboxFS {
   return {
     read: (path: string) => vfs.read(vfs.resolve(path)),
-    write: (path: string, content: string) => vfs.write(vfs.resolve(path), content),
-    append: (path: string, content: string) => vfs.append(vfs.resolve(path), content),
+    write: (path: string, content: string) =>
+      vfs.write(vfs.resolve(path), content),
+    append: (path: string, content: string) =>
+      vfs.append(vfs.resolve(path), content),
     exists: (path: string) => vfs.exists(vfs.resolve(path)),
     list: (path: string) => vfs.list(vfs.resolve(path)),
     mkdir: (path: string) => vfs.mkdir(vfs.resolve(path), true),
@@ -302,7 +311,9 @@ function createSandboxFS(vfs: InMemoryVFS): SandboxFS {
  * Routes requests through the TronOS server to bypass CORS restrictions.
  */
 function getProxyUrl(url: string): string {
-  const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const isLocalhost =
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1";
   const proxyBase = isLocalhost
     ? `http://${window.location.hostname}:3000/api/proxy`
     : `${window.location.origin}/api/proxy`;
@@ -346,7 +357,10 @@ function createSandboxTimewarp(vfs: InMemoryVFS): SandboxTimewarp {
       }));
     },
 
-    getVersion: async (path: string, versionId: string): Promise<string | null> => {
+    getVersion: async (
+      path: string,
+      versionId: string,
+    ): Promise<string | null> => {
       const resolvedPath = vfs.resolve(path);
       const namespace = getActiveSession().fsNamespace;
       const versions = await getFileVersions(namespace, resolvedPath);
@@ -358,7 +372,10 @@ function createSandboxTimewarp(vfs: InMemoryVFS): SandboxTimewarp {
       return fullVersion?.content || null;
     },
 
-    save: async (path: string, message?: string): Promise<SandboxFileVersion> => {
+    save: async (
+      path: string,
+      message?: string,
+    ): Promise<SandboxFileVersion> => {
       const resolvedPath = vfs.resolve(path);
       const namespace = getActiveSession().fsNamespace;
       const content = vfs.readSync(resolvedPath);
@@ -387,7 +404,10 @@ function createSandboxTimewarp(vfs: InMemoryVFS): SandboxTimewarp {
  * Create a sandboxed config interface for package configuration access.
  * If no packageName is provided, returns a no-op interface that returns undefined.
  */
-function createSandboxConfig(ctx: ExecutionContext, packageName?: string): SandboxConfig {
+function createSandboxConfig(
+  ctx: ExecutionContext,
+  packageName?: string,
+): SandboxConfig {
   if (!packageName) {
     // No package context - return a no-op interface
     return {
@@ -455,13 +475,13 @@ export function createSandboxTerminalAPI(
   ctx: ExecutionContext,
   args: string[],
   execCommand: CommandExecutor,
-  options: SandboxOptions = {}
+  options: SandboxOptions = {},
 ): SandboxTerminalAPI {
   const terminal = ctx.terminal;
   const vfs = ctx.vfs!;
 
   // Create output buffer for non-terminal contexts (testing)
-  let outputBuffer = '';
+  let outputBuffer = "";
 
   const api: SandboxTerminalAPI = {
     // Output methods
@@ -477,7 +497,7 @@ export function createSandboxTerminalAPI(
       if (terminal?.writeln) {
         terminal.writeln(text);
       } else {
-        outputBuffer += text + '\n';
+        outputBuffer += text + "\n";
       }
     },
 
@@ -526,11 +546,11 @@ export function createSandboxTerminalAPI(
       return new Promise((resolve) => {
         if (!terminal?.onKey) {
           // No terminal - return empty string immediately
-          resolve('');
+          resolve("");
           return;
         }
 
-        let line = '';
+        let line = "";
         let cursorPos = 0; // Track cursor position within line
         if (prompt) {
           terminal.write(prompt);
@@ -539,7 +559,7 @@ export function createSandboxTerminalAPI(
         // Helper to redraw line with cursor at correct position
         const redrawLine = () => {
           // Clear line, redraw prompt and current input
-          terminal.write(`\x1b[2K\r${prompt || ''}${line}`);
+          terminal.write(`\x1b[2K\r${prompt || ""}${line}`);
           // Move cursor back if not at end
           if (cursorPos < line.length) {
             terminal.write(`\x1b[${line.length - cursorPos}D`);
@@ -554,10 +574,11 @@ export function createSandboxTerminalAPI(
             // Multi-character data is likely pasted text
             if (data.length > 1) {
               // Filter out newlines and sanitize
-              const sanitized = data.replace(/[\r\n]+/g, ' ').trim();
+              const sanitized = data.replace(/[\r\n]+/g, " ").trim();
               if (sanitized) {
                 // Insert at cursor position
-                line = line.slice(0, cursorPos) + sanitized + line.slice(cursorPos);
+                line =
+                  line.slice(0, cursorPos) + sanitized + line.slice(cursorPos);
                 cursorPos += sanitized.length;
                 redrawLine();
               }
@@ -566,67 +587,72 @@ export function createSandboxTerminalAPI(
         }
 
         const disposable = terminal.onKey((key: KeyEvent) => {
-          if (key.key === '\r') {
+          if (key.key === "\r") {
             // Enter - return the line
             disposable.dispose();
             if (dataDisposable) dataDisposable.dispose();
-            terminal.writeln('');
+            terminal.writeln("");
             resolve(line);
-          } else if (key.key === '\u007f') {
+          } else if (key.key === "\u007f") {
             // Backspace
             if (cursorPos > 0) {
               line = line.slice(0, cursorPos - 1) + line.slice(cursorPos);
               cursorPos--;
               redrawLine();
             }
-          } else if (key.key === '\x1b[D') {
+          } else if (key.key === "\x1b[D") {
             // Left arrow
             if (cursorPos > 0) {
               cursorPos--;
-              terminal.write('\x1b[D');
+              terminal.write("\x1b[D");
             }
-          } else if (key.key === '\x1b[C') {
+          } else if (key.key === "\x1b[C") {
             // Right arrow
             if (cursorPos < line.length) {
               cursorPos++;
-              terminal.write('\x1b[C');
+              terminal.write("\x1b[C");
             }
           } else if (key.domEvent.ctrlKey) {
             // Handle Ctrl key combinations
             switch (key.domEvent.key.toLowerCase()) {
-              case 'a': // Ctrl+A - Move to beginning
+              case "a": // Ctrl+A - Move to beginning
                 if (cursorPos > 0) {
                   terminal.write(`\x1b[${cursorPos}D`);
                   cursorPos = 0;
                 }
                 break;
-              case 'e': // Ctrl+E - Move to end
+              case "e": // Ctrl+E - Move to end
                 if (cursorPos < line.length) {
                   terminal.write(`\x1b[${line.length - cursorPos}C`);
                   cursorPos = line.length;
                 }
                 break;
-              case 'u': // Ctrl+U - Delete to beginning
+              case "u": // Ctrl+U - Delete to beginning
                 if (cursorPos > 0) {
                   line = line.slice(cursorPos);
                   cursorPos = 0;
                   redrawLine();
                 }
                 break;
-              case 'k': // Ctrl+K - Delete to end
+              case "k": // Ctrl+K - Delete to end
                 if (cursorPos < line.length) {
                   line = line.slice(0, cursorPos);
                   redrawLine();
                 }
                 break;
-              case 'c': // Ctrl+C - Return empty (cancel)
+              case "c": // Ctrl+C - Return empty (cancel)
                 disposable.dispose();
                 if (dataDisposable) dataDisposable.dispose();
-                terminal.writeln('^C');
-                resolve('');
+                terminal.writeln("^C");
+                resolve("");
                 break;
             }
-          } else if (key.key.length === 1 && !key.domEvent.ctrlKey && !key.domEvent.altKey && !key.domEvent.metaKey) {
+          } else if (
+            key.key.length === 1 &&
+            !key.domEvent.ctrlKey &&
+            !key.domEvent.altKey &&
+            !key.domEvent.metaKey
+          ) {
             // Printable character - insert at cursor position
             line = line.slice(0, cursorPos) + key.key + line.slice(cursorPos);
             cursorPos++;
@@ -646,7 +672,7 @@ export function createSandboxTerminalAPI(
       return new Promise((resolve) => {
         if (!terminal?.onKey) {
           // No terminal - return empty key immediately
-          resolve({ key: '' });
+          resolve({ key: "" });
           return;
         }
 
@@ -676,13 +702,18 @@ export function createSandboxTerminalAPI(
       return new Promise((resolve) => {
         if (!terminal?.onKey) {
           // No terminal - return empty string immediately
-          resolve('');
+          resolve("");
           return;
         }
 
         const disposable = terminal.onKey((key: KeyEvent) => {
           // Only return printable characters (single character keys)
-          if (key.key.length === 1 && !key.domEvent.ctrlKey && !key.domEvent.altKey && !key.domEvent.metaKey) {
+          if (
+            key.key.length === 1 &&
+            !key.domEvent.ctrlKey &&
+            !key.domEvent.altKey &&
+            !key.domEvent.metaKey
+          ) {
             disposable.dispose();
             resolve(key.key);
           }
@@ -710,7 +741,7 @@ export function createSandboxTerminalAPI(
     },
 
     sleep: (ms: number) => {
-      return new Promise<void>(resolve => setTimeout(resolve, ms));
+      return new Promise<void>((resolve) => setTimeout(resolve, ms));
     },
 
     // Filesystem
@@ -747,7 +778,7 @@ export function createSandboxTerminalAPI(
 export function getSandboxOutput(_api: SandboxTerminalAPI): string {
   // This is a hack for testing - in real use, output goes to terminal
   // We'd need to capture it differently in a real implementation
-  return '';
+  return "";
 }
 
 /**
@@ -769,12 +800,14 @@ export function getSandboxOutput(_api: SandboxTerminalAPI): string {
  */
 export function isFeatureAvailable(feature: string): boolean {
   switch (feature.toLowerCase()) {
-    case 'network':
-      return typeof fetch !== 'undefined';
-    case 'clipboard':
-      return typeof navigator !== 'undefined' && 'clipboard' in navigator;
-    case 'storage':
-      return typeof localStorage !== 'undefined' || typeof indexedDB !== 'undefined';
+    case "network":
+      return typeof fetch !== "undefined";
+    case "clipboard":
+      return typeof navigator !== "undefined" && "clipboard" in navigator;
+    case "storage":
+      return (
+        typeof localStorage !== "undefined" || typeof indexedDB !== "undefined"
+      );
     default:
       // Unknown features should not be assumed available
       return false;

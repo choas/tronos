@@ -1,14 +1,53 @@
-import type { BuiltinCommand } from '../types';
+import type { BuiltinCommand } from "../types";
 
 // Complete list of all builtin command names
 // Must be kept in sync with BUILTIN_COMMANDS in index.ts
 const BUILTIN_NAMES = new Set([
-  'ls', 'cd', 'pwd', 'cat', 'echo', 'mkdir', 'touch', 'rm', 'cp', 'mv',
-  'head', 'tail', 'grep', 'wc', 'clear', 'history', 'version', 'whoami',
-  'env', 'export', 'unset', 'alias', 'unalias', 'which', 'type',
-  'help', 'man', 'source', '.', 'session', 'config', '@ai',
-  'curl', 'fetch', 'theme', 'reset', 'factory-reset', 'boot',
-  'tpkg', 'feedback', 'timewarp', 'cron', 'update', 'exit', 'quit'
+  "ls",
+  "cd",
+  "pwd",
+  "cat",
+  "echo",
+  "mkdir",
+  "touch",
+  "rm",
+  "cp",
+  "mv",
+  "head",
+  "tail",
+  "grep",
+  "wc",
+  "clear",
+  "history",
+  "version",
+  "whoami",
+  "env",
+  "export",
+  "unset",
+  "alias",
+  "unalias",
+  "which",
+  "type",
+  "help",
+  "man",
+  "source",
+  ".",
+  "session",
+  "config",
+  "@ai",
+  "curl",
+  "fetch",
+  "theme",
+  "reset",
+  "factory-reset",
+  "boot",
+  "tpkg",
+  "feedback",
+  "timewarp",
+  "cron",
+  "update",
+  "exit",
+  "quit",
 ]);
 
 /**
@@ -22,9 +61,9 @@ const BUILTIN_NAMES = new Set([
 export const which: BuiltinCommand = async (args, context) => {
   if (args.length === 0) {
     return {
-      stdout: '',
-      stderr: '',
-      exitCode: 0
+      stdout: "",
+      stderr: "",
+      exitCode: 0,
     };
   }
 
@@ -61,9 +100,9 @@ export const which: BuiltinCommand = async (args, context) => {
   }
 
   return {
-    stdout: outputs.join('\n'),
-    stderr: errors.join('\n'),
-    exitCode: hasError ? 1 : 0
+    stdout: outputs.join("\n"),
+    stderr: errors.join("\n"),
+    exitCode: hasError ? 1 : 0,
   };
 };
 
@@ -78,9 +117,9 @@ export const which: BuiltinCommand = async (args, context) => {
 export const type: BuiltinCommand = async (args, context) => {
   if (args.length === 0) {
     return {
-      stdout: '',
-      stderr: 'type: usage: type name [name ...]',
-      exitCode: 1
+      stdout: "",
+      stderr: "type: usage: type name [name ...]",
+      exitCode: 1,
     };
   }
 
@@ -117,8 +156,8 @@ export const type: BuiltinCommand = async (args, context) => {
   }
 
   return {
-    stdout: outputs.join('\n'),
-    stderr: errors.join('\n'),
-    exitCode: hasError ? 1 : 0
+    stdout: outputs.join("\n"),
+    stderr: errors.join("\n"),
+    exitCode: hasError ? 1 : 0,
   };
 };

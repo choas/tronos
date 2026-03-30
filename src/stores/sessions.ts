@@ -6,8 +6,8 @@ import { getStorage } from "../persistence/storage";
 const MAX_CONVERSATION_HISTORY = 10;
 
 interface SessionState {
-  active: string;                      // Active session ID
-  sessions: Record<string, Session>;   // All sessions by ID
+  active: string; // Active session ID
+  sessions: Record<string, Session>; // All sessions by ID
 }
 
 export const [sessionState, setSessionState] = createStore<SessionState>({
@@ -22,9 +22,9 @@ export const [sessionState, setSessionState] = createStore<SessionState>({
       env: { HOME: "/home/tronos", PATH: "/bin", USER: "tronos" },
       history: [],
       aliases: { ll: "ls -la" },
-      conversationHistory: []
-    }
-  }
+      conversationHistory: [],
+    },
+  },
 });
 
 export function getActiveSession(): Session {
@@ -51,7 +51,7 @@ export async function initSessions(): Promise<void> {
           env: { HOME: "/home/tronos", PATH: "/bin", USER: "tronos" },
           history: [],
           aliases: { ll: "ls -la" },
-          conversationHistory: []
+          conversationHistory: [],
         };
       }
 
@@ -90,13 +90,15 @@ export function createSession(name: string): Session {
     env: { HOME: "/home/tronos", PATH: "/bin", USER: "tronos" },
     history: [],
     aliases: { ll: "ls -la" },
-    conversationHistory: []
+    conversationHistory: [],
   };
 
   setSessionState("sessions", id, session);
 
   // Persist to IndexedDB (fire-and-forget)
-  getStorage().saveSession(session).catch(err => console.error("Failed to persist session:", err));
+  getStorage()
+    .saveSession(session)
+    .catch((err) => console.error("Failed to persist session:", err));
 
   return session;
 }
@@ -110,7 +112,9 @@ export function switchSession(id: string): void {
 
   // Persist updated session (fire-and-forget)
   const session = sessionState.sessions[id];
-  getStorage().saveSession(session).catch(err => console.error("Failed to persist session:", err));
+  getStorage()
+    .saveSession(session)
+    .catch((err) => console.error("Failed to persist session:", err));
 }
 
 export function deleteSession(id: string): void {
@@ -125,13 +129,18 @@ export function deleteSession(id: string): void {
   setSessionState("sessions", { ...sessionState.sessions, [id]: undefined });
 
   // Delete from IndexedDB (fire-and-forget)
-  getStorage().deleteSession(id).catch(err => console.error("Failed to delete session from DB:", err));
+  getStorage()
+    .deleteSession(id)
+    .catch((err) => console.error("Failed to delete session from DB:", err));
 }
 
 /**
  * Update a session and persist changes to IndexedDB
  */
-export function updateSession(id: string, updates: Partial<Omit<Session, "id">>): void {
+export function updateSession(
+  id: string,
+  updates: Partial<Omit<Session, "id">>,
+): void {
   if (!sessionState.sessions[id]) {
     throw new Error(`Session ${id} not found`);
   }
@@ -141,16 +150,16 @@ export function updateSession(id: string, updates: Partial<Omit<Session, "id">>)
 
   // Persist to IndexedDB (fire-and-forget)
   const session = sessionState.sessions[id];
-  getStorage().saveSession(session).catch(err => console.error("Failed to persist session:", err));
+  getStorage()
+    .saveSession(session)
+    .catch((err) => console.error("Failed to persist session:", err));
 }
 
 /**
  * Add a message to the active session's conversation history
  * Limits history to MAX_CONVERSATION_HISTORY exchanges (user+assistant pairs)
  */
-export function addConversationMessage(
-  message: ConversationMessage
-): void {
+export function addConversationMessage(message: ConversationMessage): void {
   const activeId = sessionState.active;
   const session = sessionState.sessions[activeId];
   if (!session) return;
@@ -161,15 +170,18 @@ export function addConversationMessage(
   // Limit to MAX_CONVERSATION_HISTORY exchanges (pairs of user + assistant messages)
   // Each exchange = 2 messages, so max messages = MAX_CONVERSATION_HISTORY * 2
   const maxMessages = MAX_CONVERSATION_HISTORY * 2;
-  const trimmedHistory = newHistory.length > maxMessages
-    ? newHistory.slice(-maxMessages)
-    : newHistory;
+  const trimmedHistory =
+    newHistory.length > maxMessages
+      ? newHistory.slice(-maxMessages)
+      : newHistory;
 
   setSessionState("sessions", activeId, "conversationHistory", trimmedHistory);
 
   // Persist to IndexedDB (fire-and-forget)
   const updatedSession = sessionState.sessions[activeId];
-  getStorage().saveSession(updatedSession).catch(err => console.error("Failed to persist conversation:", err));
+  getStorage()
+    .saveSession(updatedSession)
+    .catch((err) => console.error("Failed to persist conversation:", err));
 }
 
 /**
@@ -193,5 +205,9 @@ export function clearConversationHistory(): void {
 
   // Persist to IndexedDB (fire-and-forget)
   const updatedSession = sessionState.sessions[activeId];
-  getStorage().saveSession(updatedSession).catch(err => console.error("Failed to persist cleared conversation:", err));
+  getStorage()
+    .saveSession(updatedSession)
+    .catch((err) =>
+      console.error("Failed to persist cleared conversation:", err),
+    );
 }

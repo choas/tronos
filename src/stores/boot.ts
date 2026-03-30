@@ -1,5 +1,9 @@
 import { createStore } from "solid-js/store";
-import { loadBootConfig, saveBootConfig, clearBootConfig } from "../persistence/boot";
+import {
+  loadBootConfig,
+  saveBootConfig,
+  clearBootConfig,
+} from "../persistence/boot";
 
 /** Boot configuration interface */
 export interface BootConfig {
@@ -13,12 +17,13 @@ interface BootConfigState {
 
 /** Default configuration */
 const DEFAULT_CONFIG: BootConfig = {
-  skipBootAnimation: false
+  skipBootAnimation: false,
 };
 
-export const [bootConfigState, setBootConfigState] = createStore<BootConfigState>({
-  config: DEFAULT_CONFIG
-});
+export const [bootConfigState, setBootConfigState] =
+  createStore<BootConfigState>({
+    config: DEFAULT_CONFIG,
+  });
 
 /**
  * Get the current boot configuration

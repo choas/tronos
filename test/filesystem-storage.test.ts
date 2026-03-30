@@ -16,7 +16,10 @@ describe("FilesystemStorage", () => {
 
   beforeEach(async () => {
     // Create a unique temporary directory for each test
-    testDir = path.join(os.tmpdir(), `aios-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    testDir = path.join(
+      os.tmpdir(),
+      `aios-test-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    );
     storage = new FilesystemStorage(testDir);
     await storage.init();
   });
@@ -48,7 +51,7 @@ describe("FilesystemStorage", () => {
       name: "test.txt",
       type: "file",
       parent: "/home/tronos",
-      meta: { createdAt: 1000, updatedAt: 2000 }
+      meta: { createdAt: 1000, updatedAt: 2000 },
     };
 
     it("should save and load a file", async () => {
@@ -74,9 +77,24 @@ describe("FilesystemStorage", () => {
 
     it("should sync entire filesystem", async () => {
       const nodes = new Map<string, FSNode>();
-      nodes.set("/", { name: "/", type: "directory", parent: null, meta: { createdAt: 1000, updatedAt: 1000 } } as FSNode);
-      nodes.set("/home", { name: "home", type: "directory", parent: "/", meta: { createdAt: 1000, updatedAt: 1000 } } as FSNode);
-      nodes.set("/home/tronos", { name: "aios", type: "directory", parent: "/home", meta: { createdAt: 1000, updatedAt: 1000 } } as FSNode);
+      nodes.set("/", {
+        name: "/",
+        type: "directory",
+        parent: null,
+        meta: { createdAt: 1000, updatedAt: 1000 },
+      } as FSNode);
+      nodes.set("/home", {
+        name: "home",
+        type: "directory",
+        parent: "/",
+        meta: { createdAt: 1000, updatedAt: 1000 },
+      } as FSNode);
+      nodes.set("/home/tronos", {
+        name: "aios",
+        type: "directory",
+        parent: "/home",
+        meta: { createdAt: 1000, updatedAt: 1000 },
+      } as FSNode);
 
       await storage.syncFilesystem("session1", nodes);
 
@@ -89,7 +107,10 @@ describe("FilesystemStorage", () => {
 
     it("should handle multiple namespaces independently", async () => {
       await storage.saveFile("session1", "/file1.txt", testNode);
-      await storage.saveFile("session2", "/file2.txt", { ...testNode, name: "file2.txt" });
+      await storage.saveFile("session2", "/file2.txt", {
+        ...testNode,
+        name: "file2.txt",
+      });
 
       const nodes1 = await storage.loadFilesystem("session1");
       const nodes2 = await storage.loadFilesystem("session2");
@@ -111,7 +132,7 @@ describe("FilesystemStorage", () => {
       fsNamespace: "test-ns",
       env: { HOME: "/home/tronos" },
       history: ["ls", "pwd"],
-      aliases: { ll: "ls -l" }
+      aliases: { ll: "ls -l" },
     };
 
     it("should save and load sessions", async () => {
@@ -137,8 +158,8 @@ describe("FilesystemStorage", () => {
 
     it("should sync all sessions", async () => {
       const sessions: Record<string, Session> = {
-        "s1": { ...testSession, id: "s1", name: "Session 1" },
-        "s2": { ...testSession, id: "s2", name: "Session 2" }
+        s1: { ...testSession, id: "s1", name: "Session 1" },
+        s2: { ...testSession, id: "s2", name: "Session 2" },
       };
 
       await storage.syncSessions(sessions);
@@ -155,7 +176,7 @@ describe("FilesystemStorage", () => {
         name: "test.txt",
         type: "file",
         parent: "/",
-        meta: { createdAt: 1000, updatedAt: 1000 }
+        meta: { createdAt: 1000, updatedAt: 1000 },
       } as FSNode);
 
       await storage.saveSession(testSession);
@@ -177,7 +198,7 @@ describe("FilesystemStorage", () => {
       model: "claude-3-opus",
       baseURL: "https://api.anthropic.com",
       temperature: 0.7,
-      maxTokens: 4096
+      maxTokens: 4096,
     };
 
     it("should save and load AI config", async () => {
