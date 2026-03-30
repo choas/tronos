@@ -210,18 +210,14 @@ async function main(t) {
  * This is prepended to every AI prompt so @ai is context-aware.
  */
 function buildSessionContextSection(sessionId: string): string {
-  try {
-    const state = getContextState(sessionId);
-    const parts: string[] = [];
-    parts.push("## Current Session Context");
-    parts.push(`Working directory: ${state.focus.cwd}`);
-    if (state.focus.recent_files.length > 0) {
-      parts.push(`Recent files: ${state.focus.recent_files.join(", ")}`);
-    }
-    return parts.join("\n") + "\n";
-  } catch {
-    return "";
+  const state = getContextState(sessionId);
+  const parts: string[] = [];
+  parts.push("## Current Session Context");
+  parts.push(`Working directory: ${state.focus.cwd}`);
+  if (state.focus.recent_files.length > 0) {
+    parts.push(`Recent files: ${state.focus.recent_files.join(", ")}`);
   }
+  return parts.join("\n") + "\n";
 }
 
 /**
@@ -506,15 +502,10 @@ export function buildUserMessage(
       break;
   }
 
-  // Append workspace context as a lower-trust user-message payload
-  try {
-    const state = getContextState(sessionId ?? getActiveSession());
-    const workspace = state.workspace;
-    if (Object.keys(workspace).length > 0) {
-      base += `\n\n[Workspace context: ${JSON.stringify(workspace)}]`;
-    }
-  } catch {
-    // No active session — skip workspace injection
+  const state = getContextState(sessionId ?? getActiveSession());
+  const workspace = state.workspace;
+  if (Object.keys(workspace).length > 0) {
+    base += `\n\n[Workspace context: ${JSON.stringify(workspace)}]`;
   }
 
   return base;
