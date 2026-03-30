@@ -382,10 +382,11 @@ export class AgentRuntime {
           throw new Error(`Agent not permitted to read ${resolvedPath}`);
         }
         const entries: string[] = vfs.list(resolvedPath);
+        const agent = runtime.getAgent(agentId);
         return entries.filter((name: string) => {
           const entryPath =
             resolvedPath === "/" ? `/${name}` : `${resolvedPath}/${name}`;
-          return runtime.checkPermission(agentId, "read", entryPath);
+          return agent ? canRead(agent.permissions, entryPath) : false;
         });
       },
       async readdir(
@@ -396,11 +397,12 @@ export class AgentRuntime {
           throw new Error(`Agent not permitted to read ${resolvedPath}`);
         }
         const entries = vfs.list(resolvedPath);
+        const agent = runtime.getAgent(agentId);
         return entries
           .filter((name: string) => {
             const entryPath =
               resolvedPath === "/" ? `/${name}` : `${resolvedPath}/${name}`;
-            return runtime.checkPermission(agentId, "read", entryPath);
+            return agent ? canRead(agent.permissions, entryPath) : false;
           })
           .map((name: string) => {
             const entryPath =
