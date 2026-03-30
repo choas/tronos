@@ -73,7 +73,9 @@ export interface AgentProcess {
   createdAt: Date;
   lastRunAt?: Date;
   /** The interval timer ID, if running on interval */
-  _timerId?: ReturnType<typeof setInterval>;
+  _intervalId?: ReturnType<typeof setInterval>;
+  /** The timeout timer ID, if running on cron */
+  _timeoutId?: ReturnType<typeof setTimeout>;
   /** Event subscription ID, if file/context trigger */
   _eventSubId?: string;
   /** The execution function for this agent */
@@ -376,13 +378,26 @@ export class AgentRuntime {
         }
         return vfs.exists(fullPath);
       },
-      list(path: string): string[] {
+      list(
+        path: string,
+        options?: { showHidden?: boolean },
+      ): string[] | Array<{ name: string; readable: boolean }> {
         const resolvedPath = vfs.resolve(path);
         if (!runtime.checkPermission(agentId, "read", resolvedPath)) {
           throw new Error(`Agent not permitted to read ${resolvedPath}`);
         }
         const entries: string[] = vfs.list(resolvedPath);
         const agent = runtime.getAgent(agentId);
+        if (options?.showHidden) {
+          return entries.map((name: string) => {
+            const entryPath =
+              resolvedPath === "/" ? `/${name}` : `${resolvedPath}/${name}`;
+            return {
+              name,
+              readable: agent ? canRead(agent.permissions, entryPath) : false,
+            };
+          });
+        }
         return entries.filter((name: string) => {
           const entryPath =
             resolvedPath === "/" ? `/${name}` : `${resolvedPath}/${name}`;
@@ -444,7 +459,7 @@ export class AgentRuntime {
 
   private setupTrigger(agent: AgentProcess): void {
     if (agent.trigger.type === "interval" && agent.trigger.intervalMs) {
-      agent._timerId = setInterval(() => {
+      agent._intervalId = setInterval(() => {
         if (agent.status === "running") {
           this.executeAgent(agent.id).catch((err) => {
             console.warn(`Agent ${agent.id} execution error:`, err);
@@ -482,7 +497,7 @@ export class AgentRuntime {
     if (nextRun === null) return;
 
     const delay = Math.max(0, nextRun - Date.now());
-    agent._timerId = setTimeout(() => {
+    agent._timeoutId = setTimeout(() => {
       if (agent.status === "running") {
         this.executeAgent(agent.id)
           .catch((err) => {
@@ -494,13 +509,17 @@ export class AgentRuntime {
             }
           });
       }
-    }, delay) as unknown as ReturnType<typeof setInterval>;
+    }, delay);
   }
 
   private clearTrigger(agent: AgentProcess): void {
-    if (agent._timerId) {
-      clearInterval(agent._timerId);
-      agent._timerId = undefined;
+    if (agent._intervalId) {
+      clearInterval(agent._intervalId);
+      agent._intervalId = undefined;
+    }
+    if (agent._timeoutId) {
+      clearTimeout(agent._timeoutId);
+      agent._timeoutId = undefined;
     }
     if (agent._eventSubId) {
       getEventBus().unsubscribe(agent._eventSubId);
