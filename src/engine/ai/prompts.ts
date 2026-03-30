@@ -247,9 +247,14 @@ function buildContextSection(context: PromptContext): string {
         const exeFiles = files.filter((f) => f.endsWith(".trx"));
         const otherFiles = files.filter((f) => !f.endsWith(".trx"));
 
-        if (exeFiles.length > 0) {
+        if (exeFiles.length > 0 && exeFiles.length <= 20) {
           parts.push(
             `\n### Executables in cwd:\n${exeFiles.map((f) => `- ${f}`).join("\n")}`,
+          );
+        } else if (exeFiles.length > 20) {
+          const shown = exeFiles.slice(0, 20);
+          parts.push(
+            `\n### Executables in cwd:\n${shown.map((f) => `- ${f}`).join("\n")}\n…and ${exeFiles.length - 20} more executables`,
           );
         }
         if (otherFiles.length > 0 && otherFiles.length <= 20) {
@@ -257,8 +262,9 @@ function buildContextSection(context: PromptContext): string {
             `\n### Files in cwd:\n${otherFiles.map((f) => `- ${f}`).join("\n")}`,
           );
         } else if (otherFiles.length > 20) {
+          const shown = otherFiles.slice(0, 20);
           parts.push(
-            `\n### Files in cwd: ${otherFiles.length} files (listing truncated)`,
+            `\n### Files in cwd:\n${shown.map((f) => `- ${f}`).join("\n")}\n…and ${otherFiles.length - 20} more files`,
           );
         }
       }
