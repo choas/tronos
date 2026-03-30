@@ -2,7 +2,7 @@
  * @fileoverview Event builtin command for TronOS.
  *
  * Commands:
- *   event watch <path> <event-type> --call <command>
+ *   event watch <path> [event-type] --call <command>  (--call is required)
  *   event list
  *   event unwatch <id>
  *   event log [limit]
@@ -29,7 +29,7 @@ export const event: BuiltinCommand = async (
       stdout: "",
       stderr:
         "Usage: event <watch|list|unwatch|log> [args...]\n" +
-        "  event watch <path> <event-type> --call <command>\n" +
+        "  event watch <path> [event-type] --call <command>  (--call required)\n" +
         "  event list\n" +
         "  event unwatch <id>\n" +
         "  event log [limit]\n",
@@ -42,8 +42,8 @@ export const event: BuiltinCommand = async (
 
   switch (subcommand) {
     case "watch": {
-      // event watch <path> <event-type> --call <command>
-      // or: event watch <path> --call <command> (defaults to file-changed)
+      // event watch <path> [event-type] --call <command>
+      // --call is required; event-type defaults to file-changed if omitted
       let pathPattern: string | undefined;
       let eventType: OSEventType = "file-changed";
       let command: string | undefined;

@@ -340,6 +340,7 @@ export const ai: BuiltinCommand = async (
             output_length: output.length,
           }),
           sessionId,
+          "ai-pipeline-step",
         );
       }
 

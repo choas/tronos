@@ -18,11 +18,15 @@
  * @module vfs/memory
  */
 
-import type { DirectoryNode, FileNode, FSNode } from '../types';
-import path from 'path-browserify';
-import { loadFilesystem, syncFilesystem } from '../persistence/filesystem';
-import { getBatchManager, type BatchManager } from '../persistence/batch';
-import { getStorage, isStorageInitialized, type StorageBackend } from '../persistence/storage';
+import type { DirectoryNode, FileNode, FSNode } from "../types";
+import path from "path-browserify";
+import { loadFilesystem, syncFilesystem } from "../persistence/filesystem";
+import { getBatchManager, type BatchManager } from "../persistence/batch";
+import {
+  getStorage,
+  isStorageInitialized,
+  type StorageBackend,
+} from "../persistence/storage";
 import {
   isProcPath,
   isProcDirectory,
@@ -31,23 +35,23 @@ import {
   setProcContext,
   setBootTime,
   getProcWriteHandler,
-} from './proc';
+} from "./proc";
 import {
   isDevPath,
   isDevDirectory,
   isDevFile,
   getDevHandler,
-  listDevDirectory
-} from './dev';
+  listDevDirectory,
+} from "./dev";
 import {
   isDocsPath,
   isDocsDirectory,
   isDocsFile,
   getDocsGenerator,
-  listDocsDirectory
-} from './docs';
-import { saveVersion, hasVersionHistory } from '../persistence/versions';
-import { emitFileChanged } from '../events/bus';
+  listDocsDirectory,
+} from "./docs";
+import { saveVersion, hasVersionHistory } from "../persistence/versions";
+import { emitFileChanged } from "../events/bus";
 
 /**
  * In-memory virtual filesystem with IndexedDB persistence.
@@ -74,7 +78,7 @@ import { emitFileChanged } from '../events/bus';
  */
 export class InMemoryVFS {
   private nodes: Map<string, FSNode> = new Map();
-  private _cwd = '/';
+  private _cwd = "/";
   private namespace: string;
   private initialized = false;
   private batchManager: BatchManager | null = null;
@@ -85,14 +89,14 @@ export class InMemoryVFS {
    *
    * @param namespace - Unique namespace for IndexedDB persistence (e.g., session ID)
    */
-  constructor(namespace = 'default') {
+  constructor(namespace = "default") {
     this.namespace = namespace;
     // Initialize boot time for /proc/system/uptime
     setBootTime(Date.now());
     // Initialize root directory
-    this.nodes.set('/', {
-      name: '/',
-      type: 'directory',
+    this.nodes.set("/", {
+      name: "/",
+      type: "directory",
       parent: null,
       meta: {
         createdAt: Date.now(),
@@ -130,10 +134,10 @@ export class InMemoryVFS {
           // Filesystem exists in storage, use it
           this.nodes = loadedNodes;
           // Ensure we have a root node
-          if (!this.nodes.has('/')) {
-            this.nodes.set('/', {
-              name: '/',
-              type: 'directory',
+          if (!this.nodes.has("/")) {
+            this.nodes.set("/", {
+              name: "/",
+              type: "directory",
               parent: null,
               meta: {
                 createdAt: Date.now(),
@@ -154,9 +158,9 @@ export class InMemoryVFS {
         // Version history uses IndexedDB, skip in CLI mode
       }
       // Check if IndexedDB is available (browser environment)
-      else if (typeof indexedDB !== 'undefined') {
+      else if (typeof indexedDB !== "undefined") {
         // Initialize IndexedDB
-        const { initDB } = await import('../persistence/db');
+        const { initDB } = await import("../persistence/db");
         await initDB();
 
         // Initialize the batch manager for this namespace
@@ -169,10 +173,10 @@ export class InMemoryVFS {
           // Filesystem exists in IndexedDB, use it
           this.nodes = loadedNodes;
           // Ensure we have a root node
-          if (!this.nodes.has('/')) {
-            this.nodes.set('/', {
-              name: '/',
-              type: 'directory',
+          if (!this.nodes.has("/")) {
+            this.nodes.set("/", {
+              name: "/",
+              type: "directory",
               parent: null,
               meta: {
                 createdAt: Date.now(),
@@ -197,7 +201,10 @@ export class InMemoryVFS {
       }
     } catch (error) {
       // If persistence fails, fall back to in-memory only
-      console.warn('Failed to initialize persistence, using in-memory only:', error);
+      console.warn(
+        "Failed to initialize persistence, using in-memory only:",
+        error,
+      );
       this.initDefaultFS();
     }
 
@@ -214,12 +221,12 @@ export class InMemoryVFS {
    */
   private migrateExeToTrx(): void {
     try {
-      if (!this.exists('/bin') || !this.isDirectory('/bin')) return;
-      const files = this.list('/bin');
+      if (!this.exists("/bin") || !this.isDirectory("/bin")) return;
+      const files = this.list("/bin");
       for (const file of files) {
-        if (file.endsWith('.exe')) {
+        if (file.endsWith(".exe")) {
           const oldPath = `/bin/${file}`;
-          const newPath = `/bin/${file.replace(/\.exe$/, '.trx')}`;
+          const newPath = `/bin/${file.replace(/\.exe$/, ".trx")}`;
           if (!this.exists(newPath)) {
             const content = this.readSync(oldPath);
             this.write(newPath, content);
@@ -249,31 +256,36 @@ export class InMemoryVFS {
     };
 
     // Create essential directories
-    this.mkdir('/home/tronos', true);
-    this.mkdir('/bin', true);
-    this.mkdir('/tmp', true);
-    this.mkdir('/dev', true);
-    this.mkdir('/etc', true);
-    this.mkdir('/proc', true);
-    this.mkdir('/usr/share/man/man1', true);
+    this.mkdir("/home/tronos", true);
+    this.mkdir("/bin", true);
+    this.mkdir("/tmp", true);
+    this.mkdir("/dev", true);
+    this.mkdir("/etc", true);
+    this.mkdir("/proc", true);
+    this.mkdir("/usr/share/man/man1", true);
 
     // Create a welcome message
-    writeDefault('/etc/motd',
-`Welcome to TronOS!
+    writeDefault(
+      "/etc/motd",
+      `Welcome to TronOS!
 This is a simulated operating system running in your browser.
-`);
+`,
+    );
 
     // Create a default user profile with aliases
-    writeDefault('/home/tronos/.profile',
-`# Default aliases
+    writeDefault(
+      "/home/tronos/.profile",
+      `# Default aliases
 alias ll='ls -l'
 alias la='ls -la'
 alias ..='cd ..'
-`);
+`,
+    );
 
     // Create /bin/help.trx - Display help information
-    writeDefault('/bin/help.trx',
-`#!/tronos
+    writeDefault(
+      "/bin/help.trx",
+      `#!/tronos
 // @name: help
 // @description: Display help information
 // @version: 1.0.0
@@ -312,11 +324,13 @@ alias ..='cd ..'
 
   t.exit(0);
 })
-`);
+`,
+    );
 
     // Create /bin/countdown.trx - Countdown timer with argument support
-    writeDefault('/bin/countdown.trx',
-`#!/tronos
+    writeDefault(
+      "/bin/countdown.trx",
+      `#!/tronos
 // @name: countdown
 // @description: Countdown timer with argument support
 // @version: 1.0.0
@@ -346,11 +360,13 @@ alias ..='cd ..'
 
   t.exit(0);
 })
-`);
+`,
+    );
 
     // Create /bin/tictactoe.trx - Two-player tic-tac-toe game
-    writeDefault('/bin/tictactoe.trx',
-`#!/tronos
+    writeDefault(
+      "/bin/tictactoe.trx",
+      `#!/tronos
 // @name: tictactoe
 // @description: Two-player tic-tac-toe game
 // @version: 1.0.0
@@ -496,14 +512,16 @@ alias ..='cd ..'
   await playGame();
   t.exit(0);
 })
-`);
+`,
+    );
 
     // Create /usr/share/tronos directory for system documentation
-    this.mkdir('/usr/share/tronos', true);
+    this.mkdir("/usr/share/tronos", true);
 
     // Create AI context documentation file for user reference
-    writeDefault('/usr/share/tronos/ai-context.md',
-`# TronOS AI Context Documentation
+    writeDefault(
+      "/usr/share/tronos/ai-context.md",
+      `# TronOS AI Context Documentation
 
 This file documents the Terminal API and executable format for TronOS.
 AI assistants use this information when generating .trx programs.
@@ -581,11 +599,13 @@ async function main(t) {
 \`\`\`
 
 For more examples, run: cat /bin/*.trx
-`);
+`,
+    );
 
     // Create update mechanism concept document
-    writeDefault('/usr/share/tronos/update-concept.md',
-`# TronOS Update Mechanism
+    writeDefault(
+      "/usr/share/tronos/update-concept.md",
+      `# TronOS Update Mechanism
 
 ## Overview
 
@@ -666,7 +686,8 @@ The update mechanism reuses existing TronOS infrastructure:
 - Incremental updates (only download changed files)
 - Package-aware updates (update tpkg packages alongside system)
 - Update channels (stable, beta, dev)
-`);
+`,
+    );
   }
 
   /**
@@ -676,9 +697,9 @@ The update mechanism reuses existing TronOS infrastructure:
   private async initDefaultVersions(): Promise<void> {
     // All default files that should have an initial version saved
     const defaultFiles = [
-      '/bin/help.trx',
-      '/bin/countdown.trx',
-      '/bin/tictactoe.trx',
+      "/bin/help.trx",
+      "/bin/countdown.trx",
+      "/bin/tictactoe.trx",
     ];
 
     for (const filePath of defaultFiles) {
@@ -686,11 +707,16 @@ The update mechanism reuses existing TronOS infrastructure:
         const hasHistory = await hasVersionHistory(this.namespace, filePath);
         if (!hasHistory) {
           const node = this.nodes.get(filePath);
-          if (node && node.type === 'file') {
-            await saveVersion(this.namespace, filePath, (node as FileNode).content, {
-              message: 'Initial system version',
-              author: 'system',
-            });
+          if (node && node.type === "file") {
+            await saveVersion(
+              this.namespace,
+              filePath,
+              (node as FileNode).content,
+              {
+                message: "Initial system version",
+                author: "system",
+              },
+            );
           }
         }
       } catch (err) {
@@ -740,7 +766,7 @@ The update mechanism reuses existing TronOS infrastructure:
       throw new Error(`chdir: no such file or directory: ${p}`);
     }
 
-    if (node.type !== 'directory') {
+    if (node.type !== "directory") {
       throw new Error(`chdir: not a directory: ${p}`);
     }
 
@@ -757,7 +783,10 @@ The update mechanism reuses existing TronOS infrastructure:
     const resolvedPath = this.resolve(p);
     // Check for /proc paths
     if (isProcPath(resolvedPath)) {
-      return isProcDirectory(resolvedPath) || getProcGenerator(resolvedPath) !== undefined;
+      return (
+        isProcDirectory(resolvedPath) ||
+        getProcGenerator(resolvedPath) !== undefined
+      );
     }
     // Check for /dev paths
     if (isDevPath(resolvedPath)) {
@@ -782,24 +811,24 @@ The update mechanism reuses existing TronOS infrastructure:
 
     // Handle /proc paths
     if (isProcPath(resolvedPath)) {
-      const name = path.basename(resolvedPath) || 'proc';
+      const name = path.basename(resolvedPath) || "proc";
       const parent = path.dirname(resolvedPath);
       const now = Date.now();
 
       if (isProcDirectory(resolvedPath)) {
         return {
           name,
-          type: 'directory',
+          type: "directory",
           parent: parent === resolvedPath ? null : parent,
-          meta: { createdAt: now, updatedAt: now }
+          meta: { createdAt: now, updatedAt: now },
         } as DirectoryNode;
       }
       if (getProcGenerator(resolvedPath)) {
         return {
           name,
-          type: 'file',
+          type: "file",
           parent,
-          meta: { createdAt: now, updatedAt: now }
+          meta: { createdAt: now, updatedAt: now },
         } as FSNode;
       }
       throw new Error(`stat: no such file or directory: ${p}`);
@@ -807,24 +836,24 @@ The update mechanism reuses existing TronOS infrastructure:
 
     // Handle /dev paths
     if (isDevPath(resolvedPath)) {
-      const name = path.basename(resolvedPath) || 'dev';
+      const name = path.basename(resolvedPath) || "dev";
       const parent = path.dirname(resolvedPath);
       const now = Date.now();
 
       if (isDevDirectory(resolvedPath)) {
         return {
           name,
-          type: 'directory',
+          type: "directory",
           parent: parent === resolvedPath ? null : parent,
-          meta: { createdAt: now, updatedAt: now }
+          meta: { createdAt: now, updatedAt: now },
         } as DirectoryNode;
       }
       if (isDevFile(resolvedPath)) {
         return {
           name,
-          type: 'file',
+          type: "file",
           parent,
-          meta: { createdAt: now, updatedAt: now }
+          meta: { createdAt: now, updatedAt: now },
         } as FSNode;
       }
       throw new Error(`stat: no such file or directory: ${p}`);
@@ -832,25 +861,25 @@ The update mechanism reuses existing TronOS infrastructure:
 
     // Handle /docs paths (virtual documentation files)
     if (isDocsPath(resolvedPath)) {
-      const name = path.basename(resolvedPath) || 'docs';
+      const name = path.basename(resolvedPath) || "docs";
       const parent = path.dirname(resolvedPath);
       const now = Date.now();
 
       if (isDocsDirectory(resolvedPath)) {
         return {
           name,
-          type: 'directory',
+          type: "directory",
           parent: parent === resolvedPath ? null : parent,
-          meta: { createdAt: now, updatedAt: now }
+          meta: { createdAt: now, updatedAt: now },
         } as DirectoryNode;
       }
       if (isDocsFile(resolvedPath)) {
         // Mark documentation files as 'virtual' type
         return {
           name,
-          type: 'virtual',
+          type: "virtual",
           parent,
-          meta: { createdAt: now, updatedAt: now }
+          meta: { createdAt: now, updatedAt: now },
         } as FSNode;
       }
       throw new Error(`stat: no such file or directory: ${p}`);
@@ -927,7 +956,7 @@ The update mechanism reuses existing TronOS infrastructure:
       throw new Error(`read: no such file or directory: ${p}`);
     }
 
-    if (node.type !== 'file') {
+    if (node.type !== "file") {
       throw new Error(`read: not a file: ${p}`);
     }
 
@@ -962,7 +991,7 @@ The update mechanism reuses existing TronOS infrastructure:
       throw new Error(`readSync: no such file or directory: ${p}`);
     }
 
-    if (node.type !== 'file') {
+    if (node.type !== "file") {
       throw new Error(`readSync: not a file: ${p}`);
     }
 
@@ -989,7 +1018,14 @@ The update mechanism reuses existing TronOS infrastructure:
       }
       const writeHandler = getProcWriteHandler(resolvedPath);
       if (writeHandler) {
-        return writeHandler(content);
+        const result = writeHandler(content);
+        // Guard against unhandled rejections from async handlers (e.g. MCP tool invocations)
+        if (result && typeof (result as Promise<void>).catch === "function") {
+          (result as Promise<void>).catch((err) => {
+            console.error(`proc write error for ${resolvedPath}:`, err);
+          });
+        }
+        return result;
       }
       if (getProcGenerator(resolvedPath)) {
         throw new Error(`write: read-only proc file: ${p}`);
@@ -1024,14 +1060,14 @@ The update mechanism reuses existing TronOS infrastructure:
 
     const parentNode = this.nodes.get(dirname);
 
-    if (!parentNode || parentNode.type !== 'directory') {
+    if (!parentNode || parentNode.type !== "directory") {
       throw new Error(`write: no such file or directory: ${dirname}`);
     }
 
     const existingNode = this.nodes.get(resolvedPath);
 
     if (existingNode) {
-      if (existingNode.type !== 'file') {
+      if (existingNode.type !== "file") {
         throw new Error(`write: not a file: ${p}`);
       }
       // Overwrite existing file
@@ -1041,7 +1077,7 @@ The update mechanism reuses existing TronOS infrastructure:
       // Create new file
       const newNode: FileNode = {
         name: basename,
-        type: 'file',
+        type: "file",
         parent: dirname,
         content,
         meta: {
@@ -1062,7 +1098,7 @@ The update mechanism reuses existing TronOS infrastructure:
     this.persistNode(dirname); // Also persist parent (updated children list)
 
     // Emit file-changed event
-    emitFileChanged(resolvedPath, existingNode ? 'write' : 'create');
+    emitFileChanged(resolvedPath, existingNode ? "write" : "create");
   }
 
   /**
@@ -1076,15 +1112,15 @@ The update mechanism reuses existing TronOS infrastructure:
     const resolvedPath = this.resolve(p);
     const node = this.nodes.get(resolvedPath);
 
-    if (node && node.type === 'file') {
+    if (node && node.type === "file") {
       (node as FileNode).content += content;
       node.meta.updatedAt = Date.now();
       // Persist to IndexedDB
       this.persistNode(resolvedPath);
-      emitFileChanged(resolvedPath, 'append');
+      emitFileChanged(resolvedPath, "append");
     } else if (!node) {
       this.write(p, content);
-    } else if (node && node.type !== 'file') {
+    } else if (node && node.type !== "file") {
       throw new Error(`append: not a file: ${p}`);
     }
   }
@@ -1110,7 +1146,7 @@ The update mechanism reuses existing TronOS infrastructure:
       return isDocsDirectory(resolvedPath);
     }
     const node = this.nodes.get(resolvedPath);
-    return !!node && node.type === 'directory';
+    return !!node && node.type === "directory";
   }
 
   /**
@@ -1134,7 +1170,7 @@ The update mechanism reuses existing TronOS infrastructure:
       return isDocsFile(resolvedPath);
     }
     const node = this.nodes.get(resolvedPath);
-    return !!node && node.type === 'file';
+    return !!node && node.type === "file";
   }
 
   /**
@@ -1188,18 +1224,18 @@ The update mechanism reuses existing TronOS infrastructure:
 
     const node = this.nodes.get(resolvedPath);
 
-    if (!node || node.type !== 'directory') {
+    if (!node || node.type !== "directory") {
       throw new Error(`list: no such directory: ${p}`);
     }
 
     const children = [...(node as DirectoryNode).children];
 
     // When listing root directory, append virtual directories
-    if (resolvedPath === '/') {
+    if (resolvedPath === "/") {
       // Add virtual directories if not already present
-      if (!children.includes('proc')) children.push('proc');
-      if (!children.includes('dev')) children.push('dev');
-      if (!children.includes('docs')) children.push('docs');
+      if (!children.includes("proc")) children.push("proc");
+      if (!children.includes("dev")) children.push("dev");
+      if (!children.includes("docs")) children.push("docs");
     }
 
     return children;
@@ -1220,14 +1256,14 @@ The update mechanism reuses existing TronOS infrastructure:
       const contents = listProcDirectory(resolvedPath);
       if (contents) {
         const now = Date.now();
-        return contents.map(childName => {
+        return contents.map((childName) => {
           const childPath = path.join(resolvedPath, childName);
           const isDir = isProcDirectory(childPath);
           return {
             name: childName,
-            type: isDir ? 'directory' : 'file',
+            type: isDir ? "directory" : "file",
             parent: resolvedPath,
-            meta: { createdAt: now, updatedAt: now }
+            meta: { createdAt: now, updatedAt: now },
           } as FSNode;
         });
       }
@@ -1243,12 +1279,12 @@ The update mechanism reuses existing TronOS infrastructure:
       const contents = listDevDirectory(resolvedPath);
       if (contents) {
         const now = Date.now();
-        return contents.map(childName => {
+        return contents.map((childName) => {
           return {
             name: childName,
-            type: 'file', // All /dev entries are device files
+            type: "file", // All /dev entries are device files
             parent: resolvedPath,
-            meta: { createdAt: now, updatedAt: now }
+            meta: { createdAt: now, updatedAt: now },
           } as FSNode;
         });
       }
@@ -1264,12 +1300,12 @@ The update mechanism reuses existing TronOS infrastructure:
       const contents = listDocsDirectory(resolvedPath);
       if (contents) {
         const now = Date.now();
-        return contents.map(childName => {
+        return contents.map((childName) => {
           return {
             name: childName,
-            type: 'virtual', // Mark /docs entries as virtual files
+            type: "virtual", // Mark /docs entries as virtual files
             parent: resolvedPath,
-            meta: { createdAt: now, updatedAt: now }
+            meta: { createdAt: now, updatedAt: now },
           } as FSNode;
         });
       }
@@ -1282,12 +1318,12 @@ The update mechanism reuses existing TronOS infrastructure:
 
     const node = this.nodes.get(resolvedPath);
 
-    if (!node || node.type !== 'directory') {
+    if (!node || node.type !== "directory") {
       throw new Error(`listDetailed: no such directory: ${p}`);
     }
 
     const result = (node as DirectoryNode).children
-      .map(childName => {
+      .map((childName) => {
         const childPath = path.join(resolvedPath, childName);
         const childNode = this.nodes.get(childPath);
         if (!childNode) {
@@ -1299,37 +1335,37 @@ The update mechanism reuses existing TronOS infrastructure:
       .filter((n): n is FSNode => n !== null);
 
     // When listing root directory, append virtual directories
-    if (resolvedPath === '/') {
+    if (resolvedPath === "/") {
       const now = Date.now();
-      const existingNames = new Set(result.map(n => n.name));
+      const existingNames = new Set(result.map((n) => n.name));
 
       // Add /proc if not already present
-      if (!existingNames.has('proc')) {
+      if (!existingNames.has("proc")) {
         result.push({
-          name: 'proc',
-          type: 'directory',
-          parent: '/',
-          meta: { createdAt: now, updatedAt: now }
+          name: "proc",
+          type: "directory",
+          parent: "/",
+          meta: { createdAt: now, updatedAt: now },
         } as FSNode);
       }
 
       // Add /dev if not already present
-      if (!existingNames.has('dev')) {
+      if (!existingNames.has("dev")) {
         result.push({
-          name: 'dev',
-          type: 'directory',
-          parent: '/',
-          meta: { createdAt: now, updatedAt: now }
+          name: "dev",
+          type: "directory",
+          parent: "/",
+          meta: { createdAt: now, updatedAt: now },
         } as FSNode);
       }
 
       // Add /docs if not already present
-      if (!existingNames.has('docs')) {
+      if (!existingNames.has("docs")) {
         result.push({
-          name: 'docs',
-          type: 'directory',
-          parent: '/',
-          meta: { createdAt: now, updatedAt: now }
+          name: "docs",
+          type: "directory",
+          parent: "/",
+          meta: { createdAt: now, updatedAt: now },
         } as FSNode);
       }
     }
@@ -1348,7 +1384,7 @@ The update mechanism reuses existing TronOS infrastructure:
     const resolvedPath = this.resolve(p);
     if (this.nodes.has(resolvedPath)) {
       // Per POSIX: mkdir -p silently succeeds on existing directories
-      if (recursive && this.nodes.get(resolvedPath)!.type === 'directory') {
+      if (recursive && this.nodes.get(resolvedPath)!.type === "directory") {
         return;
       }
       throw new Error(`mkdir: file exists: ${p}`);
@@ -1373,13 +1409,13 @@ The update mechanism reuses existing TronOS infrastructure:
       throw new Error(`mkdir: failed to create parent directory: ${dirname}`);
     }
 
-    if (parentNode.type !== 'directory') {
-        throw new Error(`mkdir: not a directory: ${dirname}`);
+    if (parentNode.type !== "directory") {
+      throw new Error(`mkdir: not a directory: ${dirname}`);
     }
 
     const newNode: DirectoryNode = {
       name: basename,
-      type: 'directory',
+      type: "directory",
       parent: dirname,
       children: [],
       meta: {
@@ -1421,12 +1457,16 @@ The update mechanism reuses existing TronOS infrastructure:
       throw new Error(`remove: no such file or directory: ${p}`);
     }
 
-    if (node.type === 'directory' && (node as DirectoryNode).children.length > 0 && !recursive) {
+    if (
+      node.type === "directory" &&
+      (node as DirectoryNode).children.length > 0 &&
+      !recursive
+    ) {
       throw new Error(`remove: directory not empty: ${p}`);
     }
 
     // Recursively remove children
-    if (node.type === 'directory' && recursive) {
+    if (node.type === "directory" && recursive) {
       for (const childName of [...(node as DirectoryNode).children]) {
         const childPath = path.join(resolvedPath, childName);
         this.remove(childPath, true);
@@ -1438,7 +1478,9 @@ The update mechanism reuses existing TronOS infrastructure:
     if (parentPath) {
       const parentNode = this.nodes.get(parentPath) as DirectoryNode;
       if (parentNode) {
-        parentNode.children = parentNode.children.filter(child => child !== node.name);
+        parentNode.children = parentNode.children.filter(
+          (child) => child !== node.name,
+        );
         parentNode.meta.updatedAt = Date.now();
         // Persist updated parent
         this.persistNode(parentPath);
@@ -1451,7 +1493,7 @@ The update mechanism reuses existing TronOS infrastructure:
     this.deletePersistedNode(resolvedPath);
 
     // Emit file-changed event
-    emitFileChanged(resolvedPath, 'delete');
+    emitFileChanged(resolvedPath, "delete");
   }
 
   /**
@@ -1465,7 +1507,7 @@ The update mechanism reuses existing TronOS infrastructure:
   public copy(src: string, dest: string, recursive = false): void {
     const srcPath = this.resolve(src);
     const destPath = this.resolve(dest);
-    
+
     const srcNode = this.nodes.get(srcPath);
     if (!srcNode) {
       throw new Error(`copy: no such file or directory: ${src}`);
@@ -1475,18 +1517,21 @@ The update mechanism reuses existing TronOS infrastructure:
       throw new Error(`copy: destination already exists: ${dest}`);
     }
 
-    if (srcNode.type === 'directory') {
+    if (srcNode.type === "directory") {
       if (!recursive) {
-        throw new Error(`copy: source is a directory (and recursive option is not used): ${src}`);
+        throw new Error(
+          `copy: source is a directory (and recursive option is not used): ${src}`,
+        );
       }
-      
+
       this.mkdir(destPath);
       for (const childName of (srcNode as DirectoryNode).children) {
         const srcChildPath = path.join(srcPath, childName);
         const destChildPath = path.join(destPath, childName);
         this.copy(srcChildPath, destChildPath, true);
       }
-    } else { // 'file'
+    } else {
+      // 'file'
       const content = (srcNode as FileNode).content;
       this.write(destPath, content);
     }
@@ -1513,8 +1558,11 @@ The update mechanism reuses existing TronOS infrastructure:
     }
 
     const destDir = path.dirname(destPath);
-    if (!this.nodes.has(destDir) || this.nodes.get(destDir)!.type !== 'directory') {
-        throw new Error(`move: no such directory: ${destDir}`);
+    if (
+      !this.nodes.has(destDir) ||
+      this.nodes.get(destDir)!.type !== "directory"
+    ) {
+      throw new Error(`move: no such directory: ${destDir}`);
     }
 
     // This is a naive implementation. A more robust one would avoid the double work.
@@ -1537,8 +1585,8 @@ The update mechanism reuses existing TronOS infrastructure:
     // Use storage abstraction if available (CLI mode)
     if (this.storage) {
       // In CLI mode, persist directly (no batching needed for filesystem)
-      this.storage.saveFile(this.namespace, p, node).catch(err => {
-        console.warn('Failed to persist node:', err);
+      this.storage.saveFile(this.namespace, p, node).catch((err) => {
+        console.warn("Failed to persist node:", err);
       });
       return;
     }
@@ -1557,8 +1605,8 @@ The update mechanism reuses existing TronOS infrastructure:
   private deletePersistedNode(p: string): void {
     // Use storage abstraction if available (CLI mode)
     if (this.storage) {
-      this.storage.deleteFile(this.namespace, p).catch(err => {
-        console.warn('Failed to delete persisted node:', err);
+      this.storage.deleteFile(this.namespace, p).catch((err) => {
+        console.warn("Failed to delete persisted node:", err);
       });
       return;
     }
@@ -1582,7 +1630,7 @@ The update mechanism reuses existing TronOS infrastructure:
     }
 
     // Use IndexedDB (browser mode)
-    if (typeof indexedDB === 'undefined') return;
+    if (typeof indexedDB === "undefined") return;
 
     // First, flush any pending batched operations
     if (this.batchManager) {
@@ -1624,7 +1672,7 @@ The update mechanism reuses existing TronOS infrastructure:
       persistedNodes = await this.storage.loadFilesystem(this.namespace);
     }
     // Use IndexedDB (browser mode)
-    else if (typeof indexedDB !== 'undefined') {
+    else if (typeof indexedDB !== "undefined") {
       persistedNodes = await loadFilesystem(this.namespace);
     } else {
       // No storage available, nothing to verify
@@ -1633,7 +1681,9 @@ The update mechanism reuses existing TronOS infrastructure:
 
     // Compare node counts
     if (persistedNodes.size !== this.nodes.size) {
-      console.warn(`Integrity check failed: node count mismatch (memory: ${this.nodes.size}, persisted: ${persistedNodes.size})`);
+      console.warn(
+        `Integrity check failed: node count mismatch (memory: ${this.nodes.size}, persisted: ${persistedNodes.size})`,
+      );
       return false;
     }
 
@@ -1641,20 +1691,26 @@ The update mechanism reuses existing TronOS infrastructure:
     for (const [path, memNode] of this.nodes.entries()) {
       const persistedNode = persistedNodes.get(path);
       if (!persistedNode) {
-        console.warn(`Integrity check failed: missing persisted node for ${path}`);
+        console.warn(
+          `Integrity check failed: missing persisted node for ${path}`,
+        );
         return false;
       }
 
       // Compare basic properties
-      if (memNode.type !== persistedNode.type ||
-          memNode.name !== persistedNode.name) {
+      if (
+        memNode.type !== persistedNode.type ||
+        memNode.name !== persistedNode.name
+      ) {
         console.warn(`Integrity check failed: node mismatch at ${path}`);
         return false;
       }
 
       // For files, compare content
-      if (memNode.type === 'file' && persistedNode.type === 'file') {
-        if ((memNode as FileNode).content !== (persistedNode as FileNode).content) {
+      if (memNode.type === "file" && persistedNode.type === "file") {
+        if (
+          (memNode as FileNode).content !== (persistedNode as FileNode).content
+        ) {
           console.warn(`Integrity check failed: content mismatch at ${path}`);
           return false;
         }
@@ -1681,9 +1737,9 @@ The update mechanism reuses existing TronOS infrastructure:
 
     // Reset state
     this.nodes = new Map();
-    this.nodes.set('/', {
-      name: '/',
-      type: 'directory',
+    this.nodes.set("/", {
+      name: "/",
+      type: "directory",
       parent: null,
       meta: {
         createdAt: Date.now(),
@@ -1691,11 +1747,11 @@ The update mechanism reuses existing TronOS infrastructure:
       },
       children: [],
     } as DirectoryNode);
-    this._cwd = '/';
+    this._cwd = "/";
     this.initialized = false;
 
     // Update batch manager for new namespace
-    if (typeof indexedDB !== 'undefined') {
+    if (typeof indexedDB !== "undefined") {
       this.batchManager = getBatchManager(this.namespace);
     }
 

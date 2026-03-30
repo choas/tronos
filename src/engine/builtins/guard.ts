@@ -13,17 +13,18 @@
  * @module engine/builtins/guard
  */
 
-import type { BuiltinCommand, CommandResult, ExecutionContext } from '../types';
-import { getGuardQueue } from '../../agents/guard';
+import type { BuiltinCommand, CommandResult, ExecutionContext } from "../types";
+import { getGuardQueue } from "../../agents/guard";
 
 export const guard: BuiltinCommand = async (
   args: string[],
-  _context: ExecutionContext
+  _context: ExecutionContext,
 ): Promise<CommandResult> => {
   if (args.length === 0) {
     return {
-      stdout: '',
-      stderr: 'Usage: guard <list|approve|reject|approve-all|log|policy> [args...]\n',
+      stdout: "",
+      stderr:
+        "Usage: guard <list|approve|reject|approve-all|log|policy> [args...]\n",
       exitCode: 1,
     };
   }
@@ -32,99 +33,126 @@ export const guard: BuiltinCommand = async (
   const queue = getGuardQueue();
 
   switch (subcommand) {
-    case 'list': {
+    case "list": {
       const pending = queue.getPending();
       if (pending.length === 0) {
-        return { stdout: 'No pending approval requests.\n', stderr: '', exitCode: 0 };
+        return {
+          stdout: "No pending approval requests.\n",
+          stderr: "",
+          exitCode: 0,
+        };
       }
 
-      const lines = ['ID            AGENT            ACTION   TARGET'];
+      const lines = ["ID            AGENT            ACTION   TARGET"];
       for (const req of pending) {
         lines.push(
-          `${req.id.padEnd(14)}${req.agent_name.padEnd(17)}${req.action.padEnd(9)}${req.target}`
+          `${req.id.padEnd(14)}${req.agent_name.padEnd(17)}${req.action.padEnd(9)}${req.target}`,
         );
         if (req.reason) {
           lines.push(`  Reason: ${req.reason}`);
         }
       }
-      return { stdout: lines.join('\n') + '\n', stderr: '', exitCode: 0 };
+      return { stdout: lines.join("\n") + "\n", stderr: "", exitCode: 0 };
     }
 
-    case 'approve': {
+    case "approve": {
       const id = args[1];
-      if (!id) return { stdout: '', stderr: 'Usage: guard approve <id>\n', exitCode: 1 };
+      if (!id)
+        return {
+          stdout: "",
+          stderr: "Usage: guard approve <id>\n",
+          exitCode: 1,
+        };
       const ok = queue.approve(id);
       return {
-        stdout: ok ? `Approved ${id}\n` : '',
-        stderr: ok ? '' : `Request not found: ${id}\n`,
+        stdout: ok ? `Approved ${id}\n` : "",
+        stderr: ok ? "" : `Request not found: ${id}\n`,
         exitCode: ok ? 0 : 1,
       };
     }
 
-    case 'reject': {
+    case "reject": {
       const id = args[1];
-      if (!id) return { stdout: '', stderr: 'Usage: guard reject <id>\n', exitCode: 1 };
+      if (!id)
+        return {
+          stdout: "",
+          stderr: "Usage: guard reject <id>\n",
+          exitCode: 1,
+        };
       const ok = queue.reject(id);
       return {
-        stdout: ok ? `Rejected ${id}\n` : '',
-        stderr: ok ? '' : `Request not found: ${id}\n`,
+        stdout: ok ? `Rejected ${id}\n` : "",
+        stderr: ok ? "" : `Request not found: ${id}\n`,
         exitCode: ok ? 0 : 1,
       };
     }
 
-    case 'approve-all': {
+    case "approve-all": {
       const count = queue.approveAll();
       return {
         stdout: `Approved ${count} request(s).\n`,
-        stderr: '',
+        stderr: "",
         exitCode: 0,
       };
     }
 
-    case 'log': {
+    case "log": {
       const log = queue.getLog();
       if (log.length === 0) {
-        return { stdout: 'No approval history.\n', stderr: '', exitCode: 0 };
+        return { stdout: "No approval history.\n", stderr: "", exitCode: 0 };
       }
-      const lines = log.map(r => JSON.stringify(r));
-      return { stdout: lines.join('\n') + '\n', stderr: '', exitCode: 0 };
+      const lines = log.map((r) => JSON.stringify(r));
+      return { stdout: lines.join("\n") + "\n", stderr: "", exitCode: 0 };
     }
 
-    case 'policy': {
-      if (args[1] === 'set' && args[2] && args[3]) {
+    case "policy": {
+      if (args[1] === "set" && args[2] && args[3]) {
         const agentName = args[2];
         const ruleStr = args[3];
 
         // Parse rule like "auto-approve-read" or "auto-approve-write"
-        const allowedActions = new Set(['read', 'write', 'mcp', 'network', 'spawn']);
-        const match = ruleStr.match(/^auto-approve-(\w+)$/);
+        const allowedActions = new Set([
+          "read",
+          "write",
+          "mcp",
+          "network",
+          "spawn",
+        ]);
+        const match = ruleStr.match(
+          /^auto-approve-(read|write|mcp|network|spawn)$/,
+        );
         if (!match || !allowedActions.has(match[1])) {
           return {
-            stdout: '',
-            stderr: 'Usage: guard policy set <agent> auto-approve-<action>\n' +
-              'Actions: read, write, mcp, network, spawn\n',
+            stdout: "",
+            stderr:
+              "Usage: guard policy set <agent> auto-approve-<action>\n" +
+              "Actions: read, write, mcp, network, spawn\n",
             exitCode: 1,
           };
         }
 
-        const pathPattern = args[4] || '**';
+        const pathPattern = args[4] || "**";
         queue.addAutoApprove(agentName, match[1], pathPattern);
         return {
           stdout: `Added auto-approve rule: ${agentName} can ${match[1]} ${pathPattern}\n`,
-          stderr: '',
+          stderr: "",
           exitCode: 0,
         };
       }
 
       const policy = queue.getPolicy();
       return {
-        stdout: JSON.stringify(policy, null, 2) + '\n',
-        stderr: '',
+        stdout: JSON.stringify(policy, null, 2) + "\n",
+        stderr: "",
         exitCode: 0,
       };
     }
 
     default:
-      return { stdout: '', stderr: `guard: unknown subcommand: ${subcommand}\n`, exitCode: 1 };
+      return {
+        stdout: "",
+        stderr: `guard: unknown subcommand: ${subcommand}\n`,
+        exitCode: 1,
+      };
   }
 };

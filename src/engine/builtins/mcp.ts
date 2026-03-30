@@ -11,22 +11,23 @@
  * @module engine/builtins/mcp
  */
 
-import type { BuiltinCommand, CommandResult, ExecutionContext } from '../types';
-import { getMCPClient } from '../../mcp/client';
+import type { BuiltinCommand, CommandResult, ExecutionContext } from "../types";
+import { getMCPClient } from "../../mcp/client";
 
 export const mcp: BuiltinCommand = async (
   args: string[],
-  context: ExecutionContext
+  context: ExecutionContext,
 ): Promise<CommandResult> => {
   if (args.length === 0) {
     return {
-      stdout: '',
-      stderr: 'Usage: mcp <connect|list|disconnect|tools|invoke> [args...]\n' +
-        '  mcp connect <name> <url>           Connect an MCP server\n' +
-        '  mcp list                            Show connected servers\n' +
-        '  mcp disconnect <name>               Disconnect a server\n' +
-        '  mcp tools <name>                    List tools for a server\n' +
-        '  mcp invoke <name> <tool> [json]     Invoke a tool\n',
+      stdout: "",
+      stderr:
+        "Usage: mcp <connect|list|disconnect|tools|invoke> [args...]\n" +
+        "  mcp connect <name> <url>           Connect an MCP server\n" +
+        "  mcp list                            Show connected servers\n" +
+        "  mcp disconnect <name>               Disconnect a server\n" +
+        "  mcp tools <name>                    List tools for a server\n" +
+        "  mcp invoke <name> <tool> [json]     Invoke a tool\n",
       exitCode: 1,
     };
   }
@@ -35,13 +36,13 @@ export const mcp: BuiltinCommand = async (
   const client = getMCPClient();
 
   switch (subcommand) {
-    case 'connect': {
+    case "connect": {
       const name = args[1];
       const url = args[2];
       if (!name || !url) {
         return {
-          stdout: '',
-          stderr: 'Usage: mcp connect <name> <url>\n',
+          stdout: "",
+          stderr: "Usage: mcp connect <name> <url>\n",
           exitCode: 1,
         };
       }
@@ -55,7 +56,7 @@ export const mcp: BuiltinCommand = async (
         await client.connect(name, url);
 
         if (context.terminal) {
-          context.terminal.write('\r\x1b[K');
+          context.terminal.write("\r\x1b[K");
         }
 
         const server = client.getServer(name);
@@ -72,95 +73,108 @@ export const mcp: BuiltinCommand = async (
 
         return {
           stdout: `Connected to ${name} (${toolCount} tools available)\nMounted at /proc/mcp/${name}/\n`,
-          stderr: '',
+          stderr: "",
           exitCode: 0,
         };
       } catch (err) {
         if (context.terminal) {
-          context.terminal.write('\r\x1b[K');
+          context.terminal.write("\r\x1b[K");
         }
         const msg = err instanceof Error ? err.message : String(err);
         return {
-          stdout: '',
+          stdout: "",
           stderr: `Failed to connect to ${name}: ${msg}\n`,
           exitCode: 1,
         };
       }
     }
 
-    case 'list': {
+    case "list": {
       const servers = client.listServers();
       if (servers.length === 0) {
         return {
-          stdout: 'No MCP servers connected.\nUse "mcp connect <name> <url>" to connect one.\n',
-          stderr: '',
+          stdout:
+            'No MCP servers connected.\nUse "mcp connect <name> <url>" to connect one.\n',
+          stderr: "",
           exitCode: 0,
         };
       }
 
-      const lines = ['NAME            STATUS       TOOLS  URL'];
+      const lines = ["NAME            STATUS       TOOLS  URL"];
       for (const server of servers) {
-        const status = server.status === 'connected' ? '\x1b[32mconnected\x1b[0m   ' :
-          server.status === 'error' ? '\x1b[31merror\x1b[0m       ' :
-          `${server.status.padEnd(12)}`;
+        const status =
+          server.status === "connected"
+            ? "\x1b[32mconnected\x1b[0m   "
+            : server.status === "error"
+              ? "\x1b[31merror\x1b[0m       "
+              : `${server.status.padEnd(12)}`;
         lines.push(
-          `${server.name.padEnd(16)}${status}${String(server.tools.length).padEnd(7)}${server.url}`
+          `${server.name.padEnd(16)}${status}${String(server.tools.length).padEnd(7)}${server.url}`,
         );
       }
-      return { stdout: lines.join('\n') + '\n', stderr: '', exitCode: 0 };
+      return { stdout: lines.join("\n") + "\n", stderr: "", exitCode: 0 };
     }
 
-    case 'disconnect': {
+    case "disconnect": {
       const name = args[1];
       if (!name) {
-        return { stdout: '', stderr: 'Usage: mcp disconnect <name>\n', exitCode: 1 };
+        return {
+          stdout: "",
+          stderr: "Usage: mcp disconnect <name>\n",
+          exitCode: 1,
+        };
       }
       try {
         await client.disconnect(name);
         return {
           stdout: `Disconnected from ${name}\n`,
-          stderr: '',
+          stderr: "",
           exitCode: 0,
         };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        return { stdout: '', stderr: `${msg}\n`, exitCode: 1 };
+        return { stdout: "", stderr: `${msg}\n`, exitCode: 1 };
       }
     }
 
-    case 'tools': {
+    case "tools": {
       const name = args[1];
       if (!name) {
-        return { stdout: '', stderr: 'Usage: mcp tools <name>\n', exitCode: 1 };
+        return { stdout: "", stderr: "Usage: mcp tools <name>\n", exitCode: 1 };
       }
-      const tools = client.listTools(name);
-      if (tools.length === 0) {
-        return {
-          stdout: `No tools available for ${name}.\n`,
-          stderr: '',
-          exitCode: 0,
-        };
-      }
-
-      const lines = [`Tools for ${name}:\n`];
-      for (const tool of tools) {
-        lines.push(`  ${tool.name}`);
-        if (tool.description) {
-          lines.push(`    ${tool.description}`);
+      try {
+        const tools = client.listTools(name);
+        if (tools.length === 0) {
+          return {
+            stdout: `No tools available for ${name}.\n`,
+            stderr: "",
+            exitCode: 0,
+          };
         }
+
+        const lines = [`Tools for ${name}:\n`];
+        for (const tool of tools) {
+          lines.push(`  ${tool.name}`);
+          if (tool.description) {
+            lines.push(`    ${tool.description}`);
+          }
+        }
+        return { stdout: lines.join("\n") + "\n", stderr: "", exitCode: 0 };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return { stdout: "", stderr: `${msg}\n`, exitCode: 1 };
       }
-      return { stdout: lines.join('\n') + '\n', stderr: '', exitCode: 0 };
     }
 
-    case 'invoke': {
+    case "invoke": {
       const name = args[1];
       const tool = args[2];
-      const jsonStr = args.slice(3).join(' ') || '{}';
+      const jsonStr = args.slice(3).join(" ") || "{}";
 
       if (!name || !tool) {
         return {
-          stdout: '',
-          stderr: 'Usage: mcp invoke <name> <tool> [json]\n',
+          stdout: "",
+          stderr: "Usage: mcp invoke <name> <tool> [json]\n",
           exitCode: 1,
         };
       }
@@ -175,19 +189,19 @@ export const mcp: BuiltinCommand = async (
 
         const result = await client.invokeTool(name, tool, input);
         return {
-          stdout: JSON.stringify(result, null, 2) + '\n',
-          stderr: '',
+          stdout: JSON.stringify(result, null, 2) + "\n",
+          stderr: "",
           exitCode: 0,
         };
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        return { stdout: '', stderr: `${msg}\n`, exitCode: 1 };
+        return { stdout: "", stderr: `${msg}\n`, exitCode: 1 };
       }
     }
 
     default:
       return {
-        stdout: '',
+        stdout: "",
         stderr: `mcp: unknown subcommand: ${subcommand}\n`,
         exitCode: 1,
       };
@@ -201,7 +215,7 @@ async function saveMCPConfig(context: ExecutionContext): Promise<void> {
   const client = getMCPClient();
   const servers = client.listServers();
   const config = {
-    servers: servers.map(s => ({
+    servers: servers.map((s) => ({
       name: s.name,
       url: s.url,
       transport: s.transport,
@@ -210,6 +224,6 @@ async function saveMCPConfig(context: ExecutionContext): Promise<void> {
   };
 
   if (context.vfs) {
-    context.vfs.write('/etc/mcp.json', JSON.stringify(config, null, 2));
+    context.vfs.write("/etc/mcp.json", JSON.stringify(config, null, 2));
   }
 }

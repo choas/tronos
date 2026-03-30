@@ -52,6 +52,9 @@ const SANDBOXED_GLOBALS = [
   // Escape hatches — block eval/Function to prevent trivial sandbox bypass
   "eval",
   "Function",
+  // NOTE: dynamic import() cannot be blocked via parameter shadowing because
+  // it is a syntax keyword, not a variable. Agent code must be treated as
+  // semi-trusted, or a proper sandbox (Worker/iframe) must be used.
   // Other host resources
   "Notification",
   "BroadcastChannel",
@@ -265,7 +268,7 @@ export async function startFromManifest(
 
       executor = async () => {
         if (!id) return; // Guard against execution before id is assigned
-        const agent = runtime.listAgents().find((a) => a.id === id);
+        const agent = runtime.getAgent(id);
         if (!agent) return;
 
         // Build the agent API (a)

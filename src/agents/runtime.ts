@@ -311,7 +311,30 @@ export class AgentRuntime {
       async read(path: string): Promise<string> {
         const fullPath = vfs.resolve(path);
         if (!runtime.checkPermission(agentId, "read", fullPath)) {
-          throw new Error(`Agent not permitted to read ${fullPath}`);
+          const agent = runtime.getAgent(agentId);
+          if (agent?.escalate !== "never") {
+            const approved = await guardQueue.request({
+              agent_id: agentId,
+              agent_name: agent?.name || agentId,
+              action: "read",
+              target: fullPath,
+              reason: "Read outside declared permissions",
+            });
+            if (!approved) {
+              throw new Error(`Read of ${fullPath} rejected by guard`);
+            }
+            // Re-check agent liveness after awaiting guard approval
+            const current = runtime.getAgent(agentId);
+            if (
+              !current ||
+              current.status === "suspended" ||
+              current.status === "done"
+            ) {
+              throw new AgentCancelledError(agentId);
+            }
+          } else {
+            throw new Error(`Agent not permitted to read ${fullPath}`);
+          }
         }
         return vfs.read(fullPath);
       },
@@ -460,7 +483,7 @@ export class AgentRuntime {
   private setupTrigger(agent: AgentProcess): void {
     if (agent.trigger.type === "interval" && agent.trigger.intervalMs) {
       agent._intervalId = setInterval(() => {
-        if (agent.status === "running") {
+        if (agent.status === "running" && !agent._inflight) {
           this.executeAgent(agent.id).catch((err) => {
             console.warn(`Agent ${agent.id} execution error:`, err);
           });
@@ -471,7 +494,7 @@ export class AgentRuntime {
       agent._eventSubId = bus.subscribe(
         { type: "file-changed", path: agent.trigger.value },
         () => {
-          if (agent.status === "running") {
+          if (agent.status === "running" && !agent._inflight) {
             this.executeAgent(agent.id).catch((err) => {
               console.warn(`Agent ${agent.id} execution error:`, err);
             });
@@ -481,7 +504,7 @@ export class AgentRuntime {
     } else if (agent.trigger.type === "context-change") {
       const bus = getEventBus();
       agent._eventSubId = bus.subscribe({ type: "context-changed" }, () => {
-        if (agent.status === "running") {
+        if (agent.status === "running" && !agent._inflight) {
           this.executeAgent(agent.id).catch((err) => {
             console.warn(`Agent ${agent.id} execution error:`, err);
           });
@@ -498,7 +521,7 @@ export class AgentRuntime {
 
     const delay = Math.max(0, nextRun - Date.now());
     agent._timeoutId = setTimeout(() => {
-      if (agent.status === "running") {
+      if (agent.status === "running" && !agent._inflight) {
         this.executeAgent(agent.id)
           .catch((err) => {
             console.warn(`Agent ${agent.id} cron execution error:`, err);
@@ -508,6 +531,9 @@ export class AgentRuntime {
               this.scheduleCronRun(agent);
             }
           });
+      } else if (agent.status === "running") {
+        // Still in-flight from a previous run — reschedule without executing
+        this.scheduleCronRun(agent);
       }
     }, delay);
   }

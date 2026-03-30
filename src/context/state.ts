@@ -221,11 +221,12 @@ export function appendAIHistory(
   cwd: string,
   contextSnapshot: string | undefined,
   sessionId: string,
+  type: "ai" | "ai-pipeline-step" = "ai",
 ): void {
   const ctx = getSessionContext(sessionId);
   ctx.history.push({
     ts: new Date().toISOString(),
-    type: "ai",
+    type,
     prompt,
     cwd,
     context_snapshot: contextSnapshot,
@@ -410,7 +411,7 @@ export function extractFilesFromCommand(cmd: string, cwd: string): string[] {
           const resolved = target.startsWith("/")
             ? target
             : target.startsWith("~")
-              ? target.replace("~", "/home/tronos")
+              ? target.replace(/^~/, "/home/tronos")
               : cwd === "/"
                 ? "/" + target
                 : cwd + "/" + target;
@@ -424,7 +425,7 @@ export function extractFilesFromCommand(cmd: string, cwd: string): string[] {
       const resolved = arg.startsWith("/")
         ? arg
         : arg.startsWith("~")
-          ? arg.replace("~", "/home/tronos")
+          ? arg.replace(/^~/, "/home/tronos")
           : cwd === "/"
             ? "/" + arg
             : cwd + "/" + arg;
